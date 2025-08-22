@@ -1,11 +1,16 @@
 -- opts
 vim.opt.number = true
 vim.opt.relativenumber = true
+vim.opt.expandtab = true
 vim.opt.shiftwidth = 4
 vim.opt.tabstop = 4
+vim.opt.softtabstop = 4
 vim.opt.mouse = "a"
 vim.opt.winborder="rounded"
 vim.opt.completeopt = 'menu,menuone,noselect'
+vim.opt.ignorecase = true
+vim.g.clipboard = "osc52"
+vim.opt.clipboard = "unnamedplus"
 
 vim.api.nvim_create_autocmd('LspAttach', {
     callback = function(ev)
