@@ -13,10 +13,8 @@ if [ -x /opt/homebrew/bin/brew ]; then
 fi
 
 # fnm
-FNM_PATH="/home/joseph/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  export PATH="$FNM_PATH:$PATH"
-  eval "`fnm env`"
+if command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env)"
 fi
 
 # .NET global tools
