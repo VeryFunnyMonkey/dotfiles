@@ -11,3 +11,13 @@ export XDG_CACHE_HOME="$HOME/.cache"
 if [ -x /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
+
+# fnm
+FNM_PATH="/home/joseph/.local/share/fnm"
+if [ -d "$FNM_PATH" ]; then
+  export PATH="$FNM_PATH:$PATH"
+  eval "`fnm env`"
+fi
+
+# .NET global tools
+export PATH="$HOME/.dotnet/tools:$PATH"
