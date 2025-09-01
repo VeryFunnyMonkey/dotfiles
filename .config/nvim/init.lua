@@ -33,5 +33,3 @@ vim.keymap.set({'n', 'v', 'i', 'c'}, '<Right>', '<Nop>')
 -- lazy.nvim setup
 require("config.lazy")
 
--- lsp.lua setup
-require("lsp")
