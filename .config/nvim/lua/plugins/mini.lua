@@ -7,7 +7,9 @@ return {
     require('mini.statusline').setup({
       use_icons = true,
       set_vim_settings = true,
-})
+    })
+    require('mini.comment').setup()
+    require('mini.pairs').setup()
 
     vim.keymap.set('n', '<leader>f', '<Cmd>Pick files<CR>', { desc = 'Find Files' })
     vim.keymap.set('n', '<leader>s', '<Cmd>Pick grep_live<CR>', { desc = 'Search Word (Grep)' })
