@@ -2,8 +2,8 @@ return {
   'echasnovski/mini.nvim',
   version = false,
   config = function()
-    require('mini.pick').use_icons
-    :require('mini.files').setup()
+    require('mini.pick').setup()
+    require('mini.files').setup()
     require('mini.statusline').setup({
       use_icons = true,
       set_vim_settings = true,
