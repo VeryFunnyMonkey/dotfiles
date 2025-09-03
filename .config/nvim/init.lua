@@ -1,10 +1,9 @@
--- opts
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.expandtab = true
-vim.opt.shiftwidth = 4
-vim.opt.tabstop = 4
-vim.opt.softtabstop = 4
+vim.opt.shiftwidth = 2
+vim.opt.tabstop = 2
+vim.opt.softtabstop = 2
 vim.opt.mouse = "a"
 vim.opt.winborder="rounded"
 vim.opt.completeopt = 'menu,menuone,noselect'
@@ -20,15 +19,10 @@ vim.api.nvim_create_autocmd('LspAttach', {
     end,
 })
 
-vim.keymap.set('i', '<C-Space>', '<C-x><C-o>', { noremap = true, silent = true })
-vim.keymap.set('i', '<C-@>', '<C-x><C-o>', { noremap = true, silent = true })
-
 -- unbind arrow keys (while learning)
 vim.keymap.set({'n', 'v', 'i', 'c'}, '<Up>', '<Nop>')
 vim.keymap.set({'n', 'v', 'i', 'c'}, '<Down>', '<Nop>')
 vim.keymap.set({'n', 'v', 'i', 'c'}, '<Left>', '<Nop>')
 vim.keymap.set({'n', 'v', 'i', 'c'}, '<Right>', '<Nop>')
 
--- lazy.nvim setup
 require("config.lazy")
-
