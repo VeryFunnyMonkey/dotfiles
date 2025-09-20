@@ -13,8 +13,12 @@ if [ -x /opt/homebrew/bin/brew ]; then
 fi
 
 # fnm
+if [ -d "$XDG_DATA_HOME/fnm" ]; then
+  export PATH="$XDG_DATA_HOME/fnm:$PATH"
+fi
+
 if command -v fnm >/dev/null 2>&1; then
-  eval "$(fnm env)"
+  eval "$(fnm env --use-on-cd)"
 fi
 
 # .NET global tools
