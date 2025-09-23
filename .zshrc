@@ -36,9 +36,16 @@ function y() {
 	rm -f -- "$tmp"
 }
 
+# return current git branch if in a repo
+function git_branch() {
+  local branch
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return
+  echo " ($branch)"
+}
+
 # prompt config
 
-PROMPT='%K{236}%F{223} %n %f%k%K{237}%F{223} %~ %f%k %F{223}>%f '
+PROMPT='%K{236}%F{223} %n %f%k%K{237}%F{223} %~%f%k$(git_branch) %F{223}>%f '
 
 if [ -f "$XDG_CONFIG_HOME/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
   source "$XDG_CONFIG_HOME/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
