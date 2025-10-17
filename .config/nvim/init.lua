@@ -15,4 +15,9 @@ vim.keymap.set({'n', 'v', 'i', 'c'}, '<Down>', '<Nop>')
 vim.keymap.set({'n', 'v', 'i', 'c'}, '<Left>', '<Nop>')
 vim.keymap.set({'n', 'v', 'i', 'c'}, '<Right>', '<Nop>')
 
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*",
+  command = "silent! lcd %:p:h"
+})
+
 require("config.lazy")
