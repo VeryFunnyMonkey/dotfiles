@@ -1,0 +1,25 @@
+search() {
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: search <query>"
+    return 1
+  fi
+
+  case "$MY_OS" in
+    macos)
+      brew search "$@"
+      ;;
+    arch)
+      yay -Ss "$@"
+      ;;
+    fedora)
+      dnf search "$@"
+      ;;
+    debian)
+      apt search "$@"
+      ;;
+    *)
+      echo "No search command for $MY_OS"
+      return 1
+      ;;
+  esac
+}

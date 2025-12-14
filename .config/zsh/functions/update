@@ -1,0 +1,20 @@
+update() {
+  case "$MY_OS" in
+    macos)
+      brew update && brew upgrade
+      ;;
+    arch)
+      yay -Syu
+      ;;
+    fedora)
+      sudo dnf upgrade --refresh
+      ;;
+    debian)
+      sudo apt update && sudo apt upgrade
+      ;;
+    *)
+      echo "No update command for $MY_OS"
+      return 1
+      ;;
+  esac
+}

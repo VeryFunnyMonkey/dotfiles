@@ -1,0 +1,25 @@
+remove() {
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: remove <package> [package...]"
+    return 1
+  fi
+
+  case "$MY_OS" in
+    macos)
+      brew uninstall "$@"
+      ;;
+    arch)
+      yay -Rns "$@"
+      ;;
+    fedora)
+      sudo dnf remove "$@"
+      ;;
+    debian)
+      sudo apt remove "$@"
+      ;;
+    *)
+      echo "No remove command for $MY_OS"
+      return 1
+      ;;
+  esac
+}
