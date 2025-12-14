@@ -4,6 +4,10 @@
 # source global shell alias
 [[ -f "$XDG_CONFIG_HOME/zsh/aliases.zsh" ]] && source "$XDG_CONFIG_HOME/zsh/aliases.zsh"
 
+# custom zsh functions
+fpath=("$XDG_CONFIG_HOME/zsh/functions" $fpath)
+autoload -Uz install remove update search
+
 # load modules
 autoload -U compinit && compinit
 autoload -U colors && colors
