@@ -17,4 +17,11 @@ update() {
       return 1
       ;;
   esac
+
+  if command -v flatpak >/dev/null 2>&1; then
+    echo "Updating Flatpak apps and runtimes..."
+    flatpak update -y
+  else
+    echo "Flatpak not installed, skipping Flatpak updates."
+  fi
 }
