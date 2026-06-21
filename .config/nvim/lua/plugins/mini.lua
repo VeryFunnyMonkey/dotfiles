@@ -1,29 +1,11 @@
-return {
-  'echasnovski/mini.nvim',
-  version = false,
-  config = function()
-    require('mini.icons').setup()
-    require('mini.snippets').setup()
-    require('mini.completion').setup()
-    require('mini.pick').setup()
-    require('mini.files').setup()
-    require('mini.statusline').setup({
-      use_icons = true,
-      set_vim_settings = true,
-    })
-    require('mini.comment').setup()
-    require('mini.pairs').setup()
+require('mini.icons').setup()
+require('mini.comment').setup()
+require('mini.pairs').setup()
+require('mini.files').setup()
 
-    vim.keymap.set('n', '<leader>f', '<Cmd>Pick files<CR>', { desc = 'Find Files' })
-    vim.keymap.set('n', '<leader>s', '<Cmd>Pick grep_live<CR>', { desc = 'Search Word (Grep)' })
-    vim.keymap.set('n', '<leader>h', '<Cmd>Pick help<CR>', { desc = 'Help' })
-
-    vim.keymap.set("n", "<leader>e", function()
-      if not MiniFiles.close() then
-    MiniFiles.open(vim.api.nvim_buf_get_name(0))
-      end
-    end, { desc = "Toggle file explorer" })
-
-
-  end,
-}
+vim.keymap.set("n", "<leader>e", function()
+  local mf = require('mini.files')
+  if not mf.close() then 
+    mf.open(vim.api.nvim_buf_get_name(0)) 
+  end
+end, { desc = "toggle explorer" })

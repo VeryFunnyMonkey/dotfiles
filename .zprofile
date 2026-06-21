@@ -7,39 +7,11 @@ export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CACHE_HOME="$HOME/.cache"
 
-# Detect OS and set MY_OS
-case "$OSTYPE" in
-  darwin*)
-    export MY_OS="macos"
-    ;;
+# source shared lib
+[[ -f "$HOME/dotfiles/lib.sh" ]] && source "$HOME/dotfiles/lib.sh"
 
-  linux*)
-    # Read /etc/os-release for distro
-    if [[ -f /etc/os-release ]]; then
-      source /etc/os-release
-      case "$ID" in
-        arch)
-          export MY_OS="arch"
-          ;;
-        fedora)
-          export MY_OS="fedora"
-          ;;
-        ubuntu|debian)
-          export MY_OS="debian"
-          ;;
-        *)
-          export MY_OS="linux-unknown"
-          ;;
-      esac
-    else
-      export MY_OS="linux-unknown"
-    fi
-    ;;
-
-  *)
-    export MY_OS="unknown"
-    ;;
-esac
+# initialize detection
+detect_os
 
 # brew setup (if on mac)
 if [ -x /opt/homebrew/bin/brew ]; then

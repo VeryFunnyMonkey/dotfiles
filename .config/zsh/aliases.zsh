@@ -1,2 +1,6 @@
 # shell aliases
 alias ls="ls --color=auto"
+
+alias vim="nvim"
+alias vi="nvim"
+alias v="nvim"
