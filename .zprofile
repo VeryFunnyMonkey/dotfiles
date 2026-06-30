@@ -8,7 +8,7 @@ export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CACHE_HOME="$HOME/.cache"
 
 # source shared lib
-[[ -f "$HOME/dotfiles/lib.sh" ]] && source "$HOME/dotfiles/lib.sh"
+[[ -f "$HOME/.lib.sh" ]] && source "$HOME/.lib.sh"
 
 # initialize detection
 detect_os
@@ -29,3 +29,6 @@ fi
 
 # .NET global tools
 export PATH="$HOME/.dotnet/tools:$PATH"
+
+# user local bin
+export PATH="$HOME/.local/bin:$PATH"

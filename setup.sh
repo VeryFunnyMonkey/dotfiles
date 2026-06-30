@@ -2,7 +2,7 @@
 set -e # Exit immediately if any command fails
 
 # Source the library
-source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/.lib.sh"
 
 # Detect OS
 detect_os
