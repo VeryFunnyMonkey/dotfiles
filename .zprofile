@@ -7,12 +7,6 @@ export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CACHE_HOME="$HOME/.cache"
 
-# source shared lib
-[[ -f "$HOME/.lib.sh" ]] && source "$HOME/.lib.sh"
-
-# initialize detection
-detect_os
-
 # brew setup (if on mac)
 if [ -x /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"

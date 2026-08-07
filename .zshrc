@@ -1,12 +1,12 @@
 # main zsh settings. env in ~/.zprofile
 # this file is read after ~/.zprofile
 
+# source shared lib and initialize detection
+[[ -f "$HOME/.lib.sh" ]] && source "$HOME/.lib.sh"
+detect_os
+
 # source global shell alias
 [[ -f "$XDG_CONFIG_HOME/zsh/aliases.zsh" ]] && source "$XDG_CONFIG_HOME/zsh/aliases.zsh"
-
-# custom zsh functions
-fpath=("$XDG_CONFIG_HOME/zsh/functions" $fpath)
-autoload -Uz install remove update search
 
 # load modules
 autoload -U compinit && compinit
