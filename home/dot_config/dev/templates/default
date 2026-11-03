@@ -1,0 +1,11 @@
+# dev workspace. Each [name] is a tmux window; an optional tmux layout follows
+# the name (main-vertical, main-horizontal, even-horizontal, even-vertical,
+# tiled). Each line below it is one pane's command:
+#   agent  your coding agent (dev agent set <command>)
+#   shell  a plain shell
+#   anything else is typed into the pane's shell, so you're back at a prompt
+#   when it stops.
+
+[code] main-vertical
+agent
+nvim

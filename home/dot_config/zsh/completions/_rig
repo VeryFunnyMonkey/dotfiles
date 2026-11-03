@@ -1,0 +1,35 @@
+#compdef rig
+local -a cmds
+cmds=(
+  'sync:install everything declared that is missing'
+  'install:install and declare a package'
+  'remove:undeclare a package (and uninstall it if rig installed it)'
+  'search:search the package managers'
+  'drift:installed-but-undeclared and declared-but-missing'
+  'update:update dotfiles, packages and plugins'
+  'doctor:check this machine'
+  'git:git accounts'
+  'edit:edit the dotfiles'
+  'diff:chezmoi diff'
+  'apply:chezmoi apply'
+  'profile:re-answer the machine questions'
+  'reset:rebuild a part that misbehaves'
+  'uninstall:put the machine back as it was'
+  'help:show help'
+)
+if (( CURRENT == 2 )); then
+  _describe 'rig command' cmds
+  return
+fi
+case $words[2] in
+  reset) _values 'part' nvim mason zsh chezmoi all ;;
+  git)
+    if (( CURRENT == 3 )); then _values 'git command' add list which remove clone doctor
+    elif [[ $words[3] == (remove|rm|clone) && CURRENT == 4 ]]; then
+      _values 'account' ${(f)"$(ls ${XDG_CONFIG_HOME:-$HOME/.config}/git/identities/*.meta(N:t:r) 2>/dev/null)"}
+    fi ;;
+  uninstall) _values -w 'flag' --packages --runtimes --identities --agents --everything --run --restore ;;
+  install) _arguments '--group[package group]:group:(base github gui yazi wsl darwin)' '*:package:' ;;
+  remove)
+    _values 'package' ${(f)"$(cut -f3 ${XDG_CONFIG_HOME:-$HOME/.config}/rig/packages.tsv 2>/dev/null | sort -u)"} ;;
+esac

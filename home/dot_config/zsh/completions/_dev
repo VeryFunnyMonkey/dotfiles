@@ -1,0 +1,23 @@
+#compdef dev
+local -a cmds
+cmds=(
+  'ls:pick a workspace or running session'
+  'init:create a workspace here'
+  'edit:edit this project'"'"'s workspace'
+  'agent:show or set the agent'
+  'wt:worktrees'
+  'forget:drop a project from the picker'
+  'help:show help'
+)
+if (( CURRENT == 2 )); then
+  _describe 'dev command' cmds
+  _files -/
+  return
+fi
+case $words[2] in
+  init) _values 'template' ${(f)"$(ls ${XDG_CONFIG_HOME:-$HOME/.config}/dev/templates 2>/dev/null)"} --local --repo ;;
+  agent) _values 'agent command' set unset ;;
+  wt)
+    if (( CURRENT == 3 )); then _values 'worktree' ls rm ${(f)"$(git branch --format='%(refname:short)' 2>/dev/null)"}
+    else _values 'branch' ${(f)"$(git branch --format='%(refname:short)' 2>/dev/null)"}; fi ;;
+esac

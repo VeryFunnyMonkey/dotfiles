@@ -1,0 +1,9 @@
+# dev workspace: a web project. See the default template for the format.
+
+[code] main-vertical
+agent
+nvim
+
+[run] even-horizontal
+npm run dev
+shell

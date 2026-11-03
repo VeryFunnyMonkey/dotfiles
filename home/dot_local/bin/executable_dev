@@ -1,0 +1,320 @@
+#!/usr/bin/env bash
+# dev: tmux workspaces. A workspace is a `.dev` file (in the repo, or kept on
+# this machine in ~/.config/dev/projects/); `dev` builds a tmux session from it
+# and attaches. Without one you get the default: your agent + nvim.
+# Run `dev help`.
+set -euo pipefail
+
+DEV_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/dev"
+REGISTRY="$DEV_CFG/registry"
+LOCAL_STORE="$DEV_CFG/projects"
+TEMPLATES="$DEV_CFG/templates"
+AGENT_FILE="$DEV_CFG/agent"
+PATH="$HOME/.local/bin:$PATH"
+
+if [[ -t 1 ]]; then B=$'\e[1m' DIM=$'\e[2m' G=$'\e[32m' Y=$'\e[33m' R=$'\e[31m' N=$'\e[0m'; else B='' DIM='' G='' Y='' R='' N=''; fi
+ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
+warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*" >&2; }
+die()  { printf '%sdev:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+have tmux || die "tmux isn't installed"
+
+is_work() { grep -qs '^RIG_WORK=true' "${XDG_CONFIG_HOME:-$HOME/.config}/rig/machine.env"; }
+
+# ------------------------------------------------------------- projects -------
+project_root() { # dir -> git toplevel (or the dir itself)
+  local d; d=$(cd "$1" 2>/dev/null && pwd -P) || return 1
+  git -C "$d" rev-parse --show-toplevel 2>/dev/null || printf '%s\n' "$d"
+}
+session_name() { local n; n=$(basename "$1"); printf '%s' "${n//[.:]/_}"; }
+workspace_file() { # root -> the .dev file in use, if any
+  if [[ -f $1/.dev ]]; then printf '%s\n' "$1/.dev"
+  elif [[ -f $LOCAL_STORE/$(session_name "$1") ]]; then printf '%s\n' "$LOCAL_STORE/$(session_name "$1")"
+  else return 1; fi
+}
+register() { mkdir -p "$DEV_CFG"; touch "$REGISTRY"; grep -qxF "$1" "$REGISTRY" || printf '%s\n' "$1" >>"$REGISTRY"; }
+prune_registry() {
+  [[ -f $REGISTRY ]] || return 0
+  local tmp; tmp=$(mktemp)
+  while IFS= read -r p; do [[ -d $p ]] && workspace_file "$p" >/dev/null && printf '%s\n' "$p"; done <"$REGISTRY" | sort -u >"$tmp"
+  mv "$tmp" "$REGISTRY"
+}
+
+# ------------------------------------------------------------- agent ----------
+agent_cmd() { # honours --agent / --no-agent (DEV_AGENT_OVERRIDE), $DEV_AGENT, the saved file
+  if [[ ${DEV_NO_AGENT:-0} == 1 ]]; then return 0; fi
+  if [[ -n ${DEV_AGENT_OVERRIDE:-} ]]; then printf '%s' "$DEV_AGENT_OVERRIDE"
+  elif [[ -n ${DEV_AGENT:-} ]]; then printf '%s' "$DEV_AGENT"
+  elif [[ -s $AGENT_FILE ]]; then head -n1 "$AGENT_FILE"; fi
+}
+cmd_agent() {
+  case ${1:-} in
+    set) shift; (($#)) || die "usage: dev agent set <command>"; mkdir -p "$DEV_CFG"; printf '%s\n' "$*" >"$AGENT_FILE"
+         ok "dev starts '$*' in the left pane"; have "${1%% *}" || warn "'${1%% *}' isn't installed yet" ;;
+    unset) rm -f "$AGENT_FILE"; ok "no agent: the left pane is a plain shell" ;;
+    '') if [[ -s $AGENT_FILE ]]; then echo "$(head -n1 "$AGENT_FILE")"; else echo "(none: dev agent set <command>)"; fi ;;
+    *) die "usage: dev agent [set <command> | unset]" ;;
+  esac
+}
+
+# ------------------------------------------------------------- build ----------
+# Type a command into a pane's shell, so you're back at a prompt when it ends.
+pane_run() { # target command
+  local target=$1 cmd=$2
+  if [[ -z $cmd || $cmd == shell ]]; then return 0; fi
+  if [[ $cmd == agent ]]; then
+    cmd=$(agent_cmd)
+    if [[ -z $cmd ]]; then return 0; fi
+    if ! have "${cmd%% *}"; then
+      tmux send-keys -t "$target" "printf 'dev: %s not found. Set one with: dev agent set <command>\\n' '${cmd%% *}'" Enter
+      return 0
+    fi
+  fi
+  tmux send-keys -t "$target" "$cmd" Enter
+}
+
+default_workspace() { printf '[code]\nagent\nnvim\n'; }
+
+# Build session $1 in $2 from a workspace (on stdin).
+build_session() {
+  local name=$1 root=$2 win='' layout='' first=1 panes=0 line cmds=()
+  flush_window() {
+    [[ -n $win ]] || return 0
+    local target="$name:$win" i
+    ((${#cmds[@]})) || cmds=(shell)
+    if ((first)); then tmux new-session -d -s "$name" -n "$win" -c "$root"; first=0
+    else tmux new-window -d -t "$name:" -n "$win" -c "$root"; fi
+    for ((i = 1; i < ${#cmds[@]}; i++)); do tmux split-window -d -t "$target" -c "$root"; done
+    # agent on the left (40%), the rest on the right
+    tmux set-window-option -t "$target" main-pane-width '40%' >/dev/null 2>&1 || true
+    tmux select-layout -t "$target" "${layout:-main-vertical}" >/dev/null
+    local idx=0 pane
+    while IFS= read -r pane; do
+      pane_run "$pane" "${cmds[$idx]:-shell}"; ((idx++)) || true
+    done < <(tmux list-panes -t "$target" -F '#{pane_id}')
+    tmux select-pane -t "$target.{last}" 2>/dev/null || true
+    cmds=(); panes=$((panes + 1))
+  }
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%$'\r'}
+    if [[ $line =~ ^[[:space:]]*# || -z ${line//[[:space:]]/} ]]; then continue; fi
+    if [[ $line =~ ^\[([^]]+)\][[:space:]]*([a-z-]*) ]]; then
+      flush_window
+      win=${BASH_REMATCH[1]}; layout=${BASH_REMATCH[2]}
+    else
+      [[ -n $win ]] || { win=code; layout=''; }
+      cmds+=("${line#"${line%%[![:space:]]*}"}")
+    fi
+  done
+  flush_window
+  ((first == 0)) || tmux new-session -d -s "$name" -c "$root"
+  tmux select-window -t "$name:^" 2>/dev/null || true
+}
+
+attach() {
+  if [[ ${DEV_NO_ATTACH:-0} == 1 ]]; then return 0; fi  # tests / scripts
+  if [[ -n ${TMUX:-} ]]; then tmux switch-client -t "$1"; else tmux attach-session -t "$1"; fi
+}
+
+open_project() { # root
+  local root=$1 name ws
+  name=$(session_name "$root")
+  if tmux has-session -t "=$name" 2>/dev/null; then attach "$name"; return; fi
+  if ws=$(workspace_file "$root"); then
+    register "$root"
+    build_session "$name" "$root" <"$ws"
+  else
+    default_workspace | build_session "$name" "$root"
+  fi
+  attach "$name"
+}
+
+# ------------------------------------------------------------- init/edit ------
+cmd_init() {
+  local tmpl=default where='' root
+  while (($#)); do
+    case $1 in
+      --local) where=local ;;
+      --repo) where=repo ;;
+      -*) die "unknown option $1" ;;
+      *) tmpl=$1 ;;
+    esac
+    shift
+  done
+  root=$(project_root "$PWD")
+  [[ -f $TEMPLATES/$tmpl ]] || die "no template '$tmpl' (have: $(ls "$TEMPLATES" 2>/dev/null | tr '\n' ' '))"
+  [[ -n $where ]] || { if is_work; then where=local; else where=repo; fi; }
+  local file
+  if [[ $where == local ]]; then mkdir -p "$LOCAL_STORE"; file="$LOCAL_STORE/$(session_name "$root")"
+  else file="$root/.dev"; fi
+  if [[ -e $file ]]; then die "a workspace already exists: $file (dev edit)"; fi
+  cp "$TEMPLATES/$tmpl" "$file"
+  register "$root"
+  ok "workspace ${file/#$HOME/~} (from template $tmpl)"
+  if [[ $where == local ]]; then printf '  %skept on this machine, not in the repo%s\n' "$DIM" "$N"; fi
+  "${EDITOR:-nvim}" "$file"
+}
+cmd_edit() {
+  local root ws; root=$(project_root "${1:-$PWD}")
+  ws=$(workspace_file "$root") || die "no workspace here (dev init)"
+  "${EDITOR:-nvim}" "$ws"
+}
+cmd_forget() {
+  local root; root=$(project_root "${1:-$PWD}") || root=${1:-$PWD}
+  [[ -f $REGISTRY ]] && { grep -vxF "$root" "$REGISTRY" >"$REGISTRY.new" || true; mv "$REGISTRY.new" "$REGISTRY"; }
+  ok "forgot $root"
+}
+
+# ------------------------------------------------------------- picker ---------
+picker_items() {
+  prune_registry
+  local s p seen=$'\n'
+  # running sessions
+  while IFS=$'\t' read -r s p; do
+    printf '●\t%s\t%s\n' "$s" "$p"; seen+="$p"$'\n'
+  done < <(tmux list-sessions -F '#{session_name}	#{session_path}' 2>/dev/null || true)
+  # workspaces
+  if [[ -f $REGISTRY ]]; then
+    while IFS= read -r p; do
+      if [[ $seen == *$'\n'"$p"$'\n'* ]]; then continue; fi
+      printf '★\t%s\t%s\n' "$(session_name "$p")" "$p"; seen+="$p"$'\n'
+    done <"$REGISTRY"
+  fi
+  # frequent folders without a workspace
+  if have zoxide; then
+    while IFS= read -r p; do
+      if [[ $seen == *$'\n'"$p"$'\n'* || $p == "$HOME" ]]; then continue; fi
+      printf '·\t%s\t%s\n' "$(session_name "$p")" "$p"
+    done < <(zoxide query -l 2>/dev/null | head -n 50)
+  fi
+}
+cmd_preview() { # mark name path
+  local mark=$1 name=$2 path=$3 ws
+  if [[ $mark == ● ]]; then
+    printf 'running session %s\n\n' "$name"
+    tmux list-windows -t "=$name" -F '  #{window_index}: #{window_name}  (#{window_panes} panes)' 2>/dev/null
+  elif ws=$(workspace_file "$path"); then
+    printf '%s\n\n' "${ws/#$HOME/~}"
+    if have bat; then bat --style=plain --color=always --language=ini "$ws"; else cat "$ws"; fi
+  else
+    printf '%s\n\nno workspace: opens the default (agent + nvim)\nctrl-n creates one\n' "${path/#$HOME/~}"
+  fi
+}
+cmd_ls() {
+  have fzf || die "fzf isn't installed"
+  local out key line mark name path
+  out=$(picker_items | fzf --ansi --delimiter='\t' --with-nth=1,2,3 --no-sort \
+        --prompt='workspace> ' --header='enter open · ctrl-e edit · ctrl-x close session · ctrl-n new workspace' \
+        --preview="$0 _preview {1} {2} {3}" --preview-window=right,50% \
+        --expect=ctrl-e,ctrl-x,ctrl-n) || return 0
+  key=$(head -n1 <<<"$out"); line=$(sed -n 2p <<<"$out")
+  [[ -n $line ]] || return 0
+  IFS=$'\t' read -r mark name path <<<"$line"
+  case $key in
+    ctrl-e) (cd "$path" && cmd_edit) ;;
+    ctrl-x) tmux kill-session -t "=$name" 2>/dev/null && ok "closed $name" ;;
+    ctrl-n) (cd "$path" && cmd_init) ;;
+    *) [[ -d $path ]] || die "$path doesn't exist"; open_project "$(project_root "$path")" ;;
+  esac
+}
+
+# ------------------------------------------------------------- worktrees ------
+cmd_wt() {
+  local sub=${1:-}; (($#)) && shift
+  local root; root=$(git rev-parse --show-toplevel 2>/dev/null) || die "not in a git repo"
+  # worktrees live next to the main checkout
+  local main; main=$(git -C "$root" worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+  local base; base="$(dirname "$main")/$(basename "$main").wt"
+  case $sub in
+    ls) git -C "$main" worktree list ;;
+    rm)
+      local br=${1:-}; [[ -n $br ]] || die "usage: dev wt rm <branch>"
+      local path="$base/$br"
+      [[ -d $path ]] || die "no worktree at $path"
+      [[ -z $(git -C "$path" status --porcelain) ]] || die "$br has uncommitted changes; commit or stash first"
+      local w; w=$(tmux list-windows -a -F '#{session_name}:#{window_index} #{pane_current_path}' 2>/dev/null | awk -v p="$path" '$2==p || index($2, p "/")==1 {print $1}' | sort -u)
+      git -C "$main" worktree remove "$path"
+      [[ -n $w ]] && while IFS= read -r t; do tmux kill-window -t "$t" 2>/dev/null || true; done <<<"$w"
+      ok "removed worktree $br" ;;
+    ''|-*) die "usage: dev wt <branch> | dev wt ls | dev wt rm <branch>" ;;
+    *)
+      local br=$sub path="$base/$sub"
+      if [[ ! -d $path ]]; then
+        mkdir -p "$base"
+        if git -C "$main" show-ref --verify --quiet "refs/heads/$br"; then git -C "$main" worktree add "$path" "$br"
+        else git -C "$main" worktree add -b "$br" "$path"; fi
+      fi
+      local session; session=$(session_name "$main")
+      tmux has-session -t "=$session" 2>/dev/null || default_workspace | build_session "$session" "$main"
+      local win="wt:${br//[.:]/_}"
+      if ! tmux list-windows -t "=$session" -F '#{window_name}' | grep -qxF "$win"; then
+        tmux new-window -d -t "$session:" -n "$win" -c "$path"
+        tmux split-window -d -h -t "$session:$win" -c "$path"
+        tmux set-window-option -t "$session:$win" main-pane-width '40%' >/dev/null 2>&1
+        tmux select-layout -t "$session:$win" main-vertical >/dev/null
+        local panes; mapfile -t panes < <(tmux list-panes -t "$session:$win" -F '#{pane_id}')
+        pane_run "${panes[0]}" agent
+        pane_run "${panes[1]}" nvim
+      fi
+      tmux select-window -t "$session:$win"
+      attach "$session" ;;
+  esac
+}
+
+# ------------------------------------------------------------- main -----------
+cmd_help() {
+  cat <<EOF
+${B}dev${N}: tmux workspaces
+
+  ${B}dev${N} [dir]               open this project's workspace (or the picker, outside a project)
+  ${B}dev ls${N}                  pick a workspace or running session (also: prefix f, Alt-p)
+  ${B}dev init${N} [template] [--local|--repo]   create a workspace (.dev) here; templates: $(ls "$TEMPLATES" 2>/dev/null | tr '\n' ' ')
+  ${B}dev edit${N}                edit this project's workspace
+  ${B}dev agent${N} [set <cmd> | unset]   the agent the 'agent' pane runs
+  ${B}dev wt${N} <branch>         a worktree + window for parallel work; ${B}dev wt ls${N}, ${B}dev wt rm${N} <branch>
+  ${B}dev forget${N} [dir]        drop a project from the picker
+  options: --agent <cmd> (this time only), --no-agent
+
+  A workspace file: each [name] is a window (optional tmux layout after it:
+  main-vertical, main-horizontal, even-horizontal, even-vertical, tiled);
+  each line under it is a pane's command. 'agent' = your agent, 'shell' = a plain shell.
+EOF
+}
+
+main() {
+  local args=()
+  while (($#)); do
+    case $1 in
+      --agent) DEV_AGENT_OVERRIDE=${2:-}; shift ;;
+      --no-agent) DEV_NO_AGENT=1 ;;
+      *) args+=("$1") ;;
+    esac
+    shift
+  done
+  set -- "${args[@]+"${args[@]}"}"
+  local cmd=${1:-}
+  case $cmd in
+    ls|pick) cmd_ls ;;
+    init) shift; cmd_init "$@" ;;
+    edit) shift; cmd_edit "$@" ;;
+    agent) shift; cmd_agent "$@" ;;
+    wt) shift; cmd_wt "$@" ;;
+    forget) shift; cmd_forget "$@" ;;
+    _preview) shift; cmd_preview "$@" ;;
+    _items) picker_items ;;
+    help|-h|--help) cmd_help ;;
+    '')
+      # In a project (a git repo, or a folder with a workspace): open it.
+      # Anywhere else (e.g. ~): the picker.
+      local root; root=$(project_root "$PWD")
+      if [[ $root != "$HOME" ]] && { git -C "$PWD" rev-parse >/dev/null 2>&1 || workspace_file "$root" >/dev/null; }; then
+        open_project "$root"
+      else
+        cmd_ls
+      fi ;;
+    *)
+      [[ -d $cmd ]] || die "no such directory or command: $cmd (dev help)"
+      open_project "$(project_root "$cmd")" ;;
+  esac
+}
+main "$@"

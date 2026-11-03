@@ -25,6 +25,13 @@ fi
 # fnm (Node): switches version on cd when a project has .nvmrc/.node-version
 (( $+commands[fnm] )) && eval "$(fnm env --use-on-cd --shell zsh)"
 
+# Alt-p: the dev workspace picker (prefix f does the same inside tmux)
+if (( $+commands[dev] )); then
+  _dev_picker() { zle -I; dev ls </dev/tty; zle reset-prompt; }
+  zle -N _dev_picker
+  bindkey '^[p' _dev_picker
+fi
+
 # zsh plugins; syntax highlighting must be last
 [[ -r $_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] &&
   source "$_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
