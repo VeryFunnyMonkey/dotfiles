@@ -1,0 +1,17 @@
+# Rendered from .chezmoidata/theme.yaml. Edit the theme there, then `chezmoi apply`.
+{{- $t := .theme }}
+export RIG_PROMPT_FG={{ $t.prompt_fg }}
+export RIG_PROMPT_BG1={{ $t.prompt_bg1 }}
+export RIG_PROMPT_BG2={{ $t.prompt_bg2 }}
+
+export BAT_THEME={{ $t.bat | quote }}
+export FZF_DEFAULT_OPTS="--height=40% --layout=reverse --border \
+--color=bg+:{{ $t.bg1 }},bg:-1,spinner:{{ $t.aqua }},hl:{{ $t.blue }} \
+--color=fg:{{ $t.fg }},header:{{ $t.blue }},info:{{ $t.yellow }},pointer:{{ $t.aqua }} \
+--color=marker:{{ $t.aqua }},fg+:{{ $t.fg }},prompt:{{ $t.yellow }},hl+:{{ $t.blue }},border:{{ $t.bg2 }}"
+
+# man pages through bat, when it's installed
+if (( $+commands[bat] )); then
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+  export MANROFFOPT="-c"
+fi

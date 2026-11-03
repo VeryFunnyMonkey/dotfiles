@@ -1,0 +1,22 @@
+# Read by every zsh (login, interactive, scripts). Environment only; the
+# interactive setup lives in $ZDOTDIR/.zshrc.
+
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_STATE_HOME="$HOME/.local/state"
+export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+
+export EDITOR=nvim
+export VISUAL=nvim
+
+# Ubuntu's /etc/zsh/zshrc runs compinit; ours does it faster.
+skip_global_compinit=1
+
+# SSH agent: the systemd user socket on Linux (enabled by rig). macOS sets
+# SSH_AUTH_SOCK itself (launchd + Keychain).
+if [[ -z $SSH_AUTH_SOCK && -n $XDG_RUNTIME_DIR && -S $XDG_RUNTIME_DIR/ssh-agent.socket ]]; then
+  export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+fi
+
+[[ -r $ZDOTDIR/path.zsh ]] && source "$ZDOTDIR/path.zsh"

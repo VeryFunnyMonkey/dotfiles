@@ -1,0 +1,3 @@
+# Login shells. PATH is set in path.zsh (from ~/.zshenv); repeat it here so it
+# survives macOS's path_helper, which runs between .zshenv and this file.
+[[ -r $ZDOTDIR/path.zsh ]] && source "$ZDOTDIR/path.zsh"
