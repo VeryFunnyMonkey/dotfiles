@@ -1,0 +1,4 @@
+# Templated: files only some machines get. (Module files are added in phase 3.)
+{{- if ne .chezmoi.os "darwin" }}
+Library/**
+{{- end }}

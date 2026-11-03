@@ -1,0 +1,48 @@
+{{- /*
+  This machine's resolved package list, rendered from .chezmoidata/packages.yaml.
+  One line per package: <manager> TAB <name(s)> TAB <logical> TAB <group>
+  Managers: pacman, apt, dnf, brew, download.
+*/ -}}
+{{- $p := .packages -}}
+{{- $platform := includeTemplate "platform" . | trim -}}
+{{- $native := "pacman" -}}
+{{- if eq $platform "debian" }}{{ $native = "apt" }}{{ end -}}
+{{- if eq $platform "fedora" }}{{ $native = "dnf" }}{{ end -}}
+
+{{- /* which groups apply to this machine */ -}}
+{{- $groups := list "base" -}}
+{{- if or (eq .session "gui") (eq .session "tui") -}}{{- $groups = append $groups "gui" -}}{{- end -}}
+{{- if or (eq .session "tui") (eq .session "headless") -}}{{- $groups = append $groups "yazi" -}}{{- end -}}
+{{- if .wsl -}}{{- $groups = append $groups "wsl" -}}{{- end -}}
+{{- if eq $platform "darwin" -}}{{- $groups = append $groups "darwin" -}}{{- end -}}
+
+{{- range $group := $groups -}}
+{{-   range $pkg := index $p.groups $group -}}
+{{-     $mgr := "brew" -}}
+{{-     if eq $platform "arch" -}}
+{{-       $mgr = "pacman" -}}
+{{-     else if eq $platform "darwin" -}}
+{{-       $mgr = "brew" -}}
+{{-     else if has $pkg $p.download -}}
+{{-       $mgr = "download" -}}
+{{-     else if and (eq $pkg "nerd-font") (ne $platform "arch") -}}
+{{-       $mgr = "download" -}}
+{{-     else if has $pkg $p.native -}}
+{{-       $mgr = $native -}}
+{{-     end -}}
+{{-     if and (eq $pkg "win32yank") (eq $platform "arch") -}}{{- $mgr = "download" -}}{{- end -}}
+{{-     $name := $pkg -}}
+{{-     if eq $pkg "clipboard" -}}
+{{-       $name = "-" -}}
+{{-       if eq $.display "wayland" }}{{ $name = "wl-clipboard" }}{{ end -}}
+{{-       if eq $.display "x11" }}{{ $name = "xclip" }}{{ end -}}
+{{-     else if hasKey $p.names $mgr -}}
+{{-       $map := index $p.names $mgr -}}
+{{-       if hasKey $map $pkg }}{{ $name = index $map $pkg }}{{ end -}}
+{{-     end -}}
+{{-     if and (eq $pkg "wslu") (ne $mgr "apt") -}}{{- $name = "-" -}}{{- end -}}
+{{-     if ne $name "-" }}
+{{ $mgr }}	{{ $name }}	{{ $pkg }}	{{ $group }}
+{{-     end -}}
+{{-   end -}}
+{{- end }}

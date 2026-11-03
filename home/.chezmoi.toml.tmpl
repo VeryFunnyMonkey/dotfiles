@@ -1,0 +1,95 @@
+{{- /*
+  Machine profile. Asked once per machine at `chezmoi init`, stored in
+  ~/.config/chezmoi/chezmoi.toml. Change answers with `rig profile`.
+
+  The preset comes first and fills in everything else; only "custom" asks
+  question by question. Presets are defined here (the config template can't
+  read .chezmoidata).
+*/ -}}
+
+{{- $wsl := false -}}
+{{- if and (eq .chezmoi.os "linux") (hasKey .chezmoi "kernel") -}}
+{{-   if contains "microsoft" (lower .chezmoi.kernel.osrelease) -}}
+{{-     $wsl = true -}}
+{{-   end -}}
+{{- end -}}
+
+{{- $presets := list "personal-desktop" "work" "tui" "headless" "custom" -}}
+{{- $preset := promptChoiceOnce . "preset" "Machine preset (personal-desktop / work / tui / headless / custom)" $presets "personal-desktop" -}}
+
+{{- /* defaults, overridden per preset below */ -}}
+{{- $work := false -}}
+{{- $session := "gui" -}}
+{{- $modules := dict "wm" false "homelab" false "lang-python" false "lang-web" false "lang-ops" false "lang-go" false "lang-rust" false -}}
+
+{{- if eq $preset "personal-desktop" -}}
+{{-   $session = "gui" -}}
+{{-   $_ := set $modules "homelab" true -}}
+{{-   $_ := set $modules "lang-python" true -}}
+{{-   $_ := set $modules "lang-web" true -}}
+{{-   $_ := set $modules "lang-ops" true -}}
+{{- else if eq $preset "work" -}}
+{{-   $work = true -}}
+{{-   $session = "gui" -}}
+{{-   $_ := set $modules "lang-python" true -}}
+{{-   $_ := set $modules "lang-web" true -}}
+{{-   $_ := set $modules "lang-ops" true -}}
+{{- else if eq $preset "tui" -}}
+{{-   $session = "tui" -}}
+{{-   $_ := set $modules "homelab" true -}}
+{{-   $_ := set $modules "lang-python" true -}}
+{{-   $_ := set $modules "lang-web" true -}}
+{{-   $_ := set $modules "lang-ops" true -}}
+{{- else if eq $preset "headless" -}}
+{{-   $session = "headless" -}}
+{{-   $_ := set $modules "homelab" true -}}
+{{- else -}}
+{{-   $work = promptBoolOnce . "work" "Work machine" false -}}
+{{-   if not $wsl -}}
+{{-     $session = promptChoiceOnce . "session" "Session (gui / tui / headless)" (list "gui" "tui" "headless") "gui" -}}
+{{-   end -}}
+{{-   $stored := dict -}}
+{{-   if hasKey . "modules" -}}{{- $stored = .modules -}}{{- end -}}
+{{-   range $name := list "homelab" "lang-python" "lang-web" "lang-ops" "lang-go" "lang-rust" "wm" -}}
+{{-     $_ := set $modules $name (promptBoolOnce $stored $name (printf "Enable module %s" $name) false) -}}
+{{-   end -}}
+{{- end -}}
+
+{{- /* WSL has no Linux desktop: terminal-only, with Windows behind it */ -}}
+{{- if $wsl -}}
+{{-   $session = "headless" -}}
+{{- end -}}
+
+{{- /* answers already stored on this machine win over the preset */ -}}
+{{- if hasKey . "modules" -}}
+{{-   range $k, $v := .modules -}}
+{{-     $_ := set $modules $k $v -}}
+{{-   end -}}
+{{- end -}}
+
+{{- $display := "none" -}}
+{{- if eq .chezmoi.os "darwin" -}}
+{{-   $display = "darwin" -}}
+{{- else if $wsl -}}
+{{-   $display = "wsl" -}}
+{{- else if ne $session "headless" -}}
+{{-   $display = "wayland" -}}
+{{-   if and (env "XDG_SESSION_TYPE") (eq (env "XDG_SESSION_TYPE") "x11") -}}
+{{-     $display = "x11" -}}
+{{-   end -}}
+{{- end -}}
+
+sourceDir = {{ .chezmoi.sourceDir | quote }}
+mode = "symlink"
+
+[data]
+    preset = {{ $preset | quote }}
+    work = {{ $work }}
+    session = {{ $session | quote }}
+    wsl = {{ $wsl }}
+    display = {{ $display | quote }}
+
+[data.modules]
+{{- range $k := keys $modules | sortAlpha }}
+    {{ $k | quote }} = {{ index $modules $k }}
+{{- end }}

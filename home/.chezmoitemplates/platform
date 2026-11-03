@@ -1,0 +1,19 @@
+{{- /* Prints one of: arch, fedora, debian, darwin, unknown */ -}}
+{{- if eq .chezmoi.os "darwin" -}}
+darwin
+{{- else if eq .chezmoi.os "linux" -}}
+{{-   $id := dig "id" "" .chezmoi.osRelease -}}
+{{-   $like := dig "idLike" "" .chezmoi.osRelease -}}
+{{-   $all := printf "%s %s" $id $like -}}
+{{-   if or (contains "arch" $all) (eq $id "manjaro") (eq $id "endeavouros") -}}
+arch
+{{-   else if or (contains "fedora" $all) (contains "rhel" $all) -}}
+fedora
+{{-   else if or (contains "debian" $all) (contains "ubuntu" $all) -}}
+debian
+{{-   else -}}
+unknown
+{{-   end -}}
+{{- else -}}
+unknown
+{{- end -}}

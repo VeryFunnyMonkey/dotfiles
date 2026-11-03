@@ -1,2 +1,4 @@
-.config/zsh/plugins/
-.config/nvim/nvim-pack-lock.json
+# Machine-local files that live next to managed ones (never commit these)
+home/dot_config/zsh/local.zsh
+*.local
+.DS_Store

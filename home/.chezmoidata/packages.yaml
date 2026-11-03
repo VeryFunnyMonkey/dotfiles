@@ -1,0 +1,72 @@
+# The declared system: every package this machine should have.
+# `rig install <pkg>` / `rig remove <pkg>` edit this file for you.
+#
+# Entries are logical names. Where each one comes from, and what it's called
+# there, is worked out per machine (see dot_config/rig/packages.tsv.tmpl):
+#   - Arch:          pacman for everything (yay/paru if present, for AUR names)
+#   - macOS:         Homebrew for everything
+#   - Debian/Ubuntu,
+#     Fedora:        the distro for the base system only (`native` below),
+#                    Homebrew on Linux for the developer tools, which the
+#                    distros ship too old or not at all
+packages:
+  groups:
+    base:
+      - zsh
+      - tmux
+      - neovim
+      - git
+      - openssh
+      - curl
+      - unzip
+      - build-tools
+      - gh
+      - lazygit
+      - delta
+      - fzf
+      - ripgrep
+      - fd
+      - zoxide
+      - eza
+      - bat
+      - tree-sitter-cli
+    gui: # session gui|tui
+      - nerd-font
+      - clipboard
+    yazi: # session tui|headless
+      - yazi
+    wsl: # WSL only
+      - wslu
+      - win32yank
+    darwin: [] # mac-specific core; more when the Mac arrives
+
+  # On Debian/Ubuntu and Fedora these come from the distro, everything else from brew.
+  native: [zsh, git, openssh, curl, unzip, build-tools, clipboard, wslu]
+
+  # Installed by rig itself (not packaged anywhere suitable).
+  download: [win32yank]
+
+  # Per-manager names, where they differ from the logical name. "-" = not needed there.
+  names:
+    pacman:
+      build-tools: base-devel
+      delta: git-delta
+      gh: github-cli
+      nerd-font: ttf-jetbrains-mono-nerd
+    apt:
+      openssh: openssh-client
+      build-tools: build-essential
+    dnf:
+      openssh: openssh-clients
+      build-tools: gcc make
+    brew:
+      delta: git-delta
+      # macOS ships these
+      zsh: "-"
+      git: "-"
+      openssh: "-"
+      curl: "-"
+      unzip: "-"
+      build-tools: "-"
+      clipboard: "-"
+      nerd-font: "--cask font-jetbrains-mono-nerd-font"
