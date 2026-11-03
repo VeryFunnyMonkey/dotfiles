@@ -1,0 +1,8 @@
+# Global ignores
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.direnv/
+.env.local
+.dev.local

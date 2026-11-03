@@ -1,0 +1,40 @@
+# Git preferences. No identity here: names, emails and keys are per account,
+# machine-local, and written by `rig git add` into identities.gitconfig.
+
+[init]
+	defaultBranch = main
+[core]
+	editor = nvim
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true          # n / N jump between files
+	line-numbers = true
+[diff]
+	algorithm = histogram
+	colorMoved = default
+[merge]
+	conflictstyle = zdiff3
+[pull]
+	rebase = true
+[rebase]
+	autoStash = true
+[push]
+	autoSetupRemote = true
+[fetch]
+	prune = true
+[rerere]
+	enabled = true
+[branch]
+	sort = -committerdate
+[column]
+	ui = auto
+[help]
+	autocorrect = prompt
+
+# theme (rendered from theme.yaml), then machine-local identities
+[include]
+	path = theme.gitconfig
+[include]
+	path = identities.gitconfig

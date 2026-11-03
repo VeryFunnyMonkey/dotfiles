@@ -1,0 +1,16 @@
+# lazygit: delta for diffs, nvim for editing, gruvbox colours.
+git:
+  pagers:
+    - pager: delta --dark --paging=never
+os:
+  editPreset: nvim
+gui:
+  nerdFontsVersion: "3"
+  theme:
+    activeBorderColor: ["#83a598", bold]
+    inactiveBorderColor: ["#504945"]
+    selectedLineBgColor: ["#3c3836"]
+    optionsTextColor: ["#83a598"]
+    cherryPickedCommitBgColor: ["#504945"]
+    cherryPickedCommitFgColor: ["#8ec07c"]
+    unstagedChangesColor: ["#fb4934"]
