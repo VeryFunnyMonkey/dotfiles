@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# SSH agent: on Linux (and WSL with systemd) the systemd user socket, so a key
+# passphrase is asked once per login. macOS uses its own agent + Keychain.
+set -euo pipefail
+{{- if eq .chezmoi.os "linux" }}
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
+mkdir -p "$STATE"; touch "$STATE/system.log"
+record() { printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$(date +%Y-%m-%dT%H:%M:%S)" >>"$STATE/system.log"; }
+
+if ! command -v systemctl >/dev/null || ! systemctl --user show-environment >/dev/null 2>&1; then
+  echo "rig: no systemd user session; skipping the ssh-agent socket" >&2
+  exit 0
+fi
+if ! systemctl --user list-unit-files ssh-agent.socket >/dev/null 2>&1 ||
+   [[ -z $(systemctl --user list-unit-files ssh-agent.socket --no-legend 2>/dev/null) ]]; then
+  echo "rig: this distro has no ssh-agent.socket user unit; skipping" >&2
+  exit 0
+fi
+prev=$(systemctl --user is-enabled ssh-agent.socket 2>/dev/null || true)
+if [[ $prev != enabled ]]; then
+  systemctl --user enable --now ssh-agent.socket
+  record user-unit ssh-agent.socket "${prev:-disabled}"
+  echo "rig: enabled the ssh-agent socket (new shells pick it up)"
+fi
+{{- end }}

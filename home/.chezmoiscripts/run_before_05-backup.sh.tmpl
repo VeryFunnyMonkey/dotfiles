@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Runs before every apply. Any file chezmoi is about to take over that existed
+# before rig (and anything superseded, like ~/.zshrc or ~/.gitconfig) is copied
+# into the ledger first, then moved out of the way, so `rig uninstall` can put
+# it back exactly. Already-processed targets are skipped (ledger: seen).
+set -euo pipefail
+SRC={{ .chezmoi.sourceDir | quote }}
+DEST={{ .chezmoi.destDir | quote }}
+STATE="${XDG_STATE_HOME:-$DEST/.local/state}/rig"
+mkdir -p "$STATE"; touch "$STATE/seen" "$STATE/backup.manifest"
+BK="$STATE/backup/$(date +%Y%m%d-%H%M%S)"
+
+seen() { grep -qxF "$1" "$STATE/seen"; }
+mark() { printf '%s\n' "$1" >>"$STATE/seen"; }
+save() { # kind relpath
+  mkdir -p "$BK/$(dirname "$2")"
+  cp -aP "$DEST/$2" "$BK/$2"
+  printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$BK" "" >>"$STATE/backup.manifest"
+  echo "rig: backed up ~/$2"
+}
+
+# A parent directory that is a symlink (e.g. an old Stow link) would make
+# chezmoi write *through* it, so record it and replace it with a real folder.
+fix_parents() {
+  local rel=$1 path="" part
+  local IFS=/
+  for part in $(dirname "$rel"); do
+    [[ $part == . ]] && continue
+    path=${path:+$path/}$part
+    if [[ -L $DEST/$path ]] && ! seen "dir:$path"; then
+      save dirlink "$path"
+      rm "$DEST/$path"; mkdir -p "$DEST/$path"
+      mark "dir:$path"
+    fi
+  done
+}
+
+# What chezmoi manages on this machine (honours .chezmoiignore, so switched-off
+# modules are left alone). A throwaway state file avoids the running apply's lock.
+tmpstate=$(mktemp)
+managed=$({{ .chezmoi.executable | quote }} managed --include=files,symlinks --path-style=relative \
+  --source "$SRC" --config {{ .chezmoi.configFile | quote }} --destination "$DEST" \
+  --persistent-state "$tmpstate") || {
+  rm -f "$tmpstate"
+  echo "rig: couldn't list managed files; stopping before anything is overwritten" >&2
+  exit 1
+}
+rm -f "$tmpstate"
+
+while IFS= read -r t; do
+  [[ -z $t ]] && continue
+  fix_parents "$t"
+  seen "$t" && continue
+  if [[ -L $DEST/$t && $(readlink "$DEST/$t") == "$SRC"/* ]]; then mark "$t"; continue; fi
+  if [[ -e $DEST/$t || -L $DEST/$t ]]; then
+    save file "$t"
+    rm -rf "${DEST:?}/$t"
+  fi
+  mark "$t"
+done <<<"$managed"
+
+# Files that would shadow this setup if left in place (zsh reads $ZDOTDIR,
+# git reads ~/.config/git): backed up like the rest, so uninstall restores them.
+for t in .zshrc .zprofile .zlogin .zlogout .gitconfig .tmux.conf; do
+  seen "$t" && continue
+  if [[ -e $DEST/$t || -L $DEST/$t ]]; then
+    save file "$t"
+    rm -rf "${DEST:?}/$t"
+  fi
+  mark "$t"
+done

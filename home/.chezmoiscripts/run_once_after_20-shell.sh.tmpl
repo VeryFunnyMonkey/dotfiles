@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Make zsh the login shell. The previous shell is recorded for `rig uninstall`.
+set -euo pipefail
+USER=${USER:-$(id -un)}
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
+mkdir -p "$STATE"; touch "$STATE/system.log"
+record() { printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$(date +%Y-%m-%dT%H:%M:%S)" >>"$STATE/system.log"; }
+sudo_() { if [[ $EUID -eq 0 ]]; then "$@"; else sudo "$@"; fi; }
+
+# Prefer a zsh /etc/shells already lists (e.g. /usr/bin/zsh), else whatever's on PATH.
+ZSH=""
+while IFS= read -r s; do
+  [[ $s == */zsh && -x $s ]] && { ZSH=$s; break; }
+done < <(grep -v '^#' /etc/shells 2>/dev/null)
+[[ -n $ZSH ]] || ZSH=$(command -v zsh || true)
+[[ -n $ZSH ]] || { echo "rig: zsh not found; skipping login shell" >&2; exit 0; }
+{{- if eq .chezmoi.os "darwin" }}
+current=$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')
+{{- else }}
+current=$(getent passwd "$USER" | cut -d: -f7)
+{{- end }}
+[[ $current == "$ZSH" ]] && exit 0
+
+if ! grep -qxF "$ZSH" /etc/shells; then
+  echo "$ZSH" | sudo_ tee -a /etc/shells >/dev/null
+  record etc-shells "$ZSH" added
+fi
+echo "rig: changing login shell to $ZSH"
+{{- if eq .chezmoi.os "darwin" }}
+chsh -s "$ZSH"
+{{- else }}
+sudo_ chsh -s "$ZSH" "$USER"
+{{- end }}
+record shell "$USER" "$current"

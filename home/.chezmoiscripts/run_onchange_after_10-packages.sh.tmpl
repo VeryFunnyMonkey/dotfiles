@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Installs whatever is declared but missing. Re-runs whenever the declaration
+# or the machine profile changes:
+#   packages {{ .packages | toJson | sha256sum }}
+#   profile  {{ list .session .display .wsl .modules | toJson | sha256sum }}
+set -euo pipefail
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} sync

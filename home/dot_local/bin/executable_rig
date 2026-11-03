@@ -1,0 +1,593 @@
+#!/usr/bin/env bash
+# rig: the machine side of these dotfiles (packages, updates, health, reset,
+# uninstall). Workspaces are `dev`. Run `rig help`.
+#
+# Everything rig changes is recorded in the ledger (~/.local/state/rig), so it
+# can be undone: backup/ + backup.manifest (files replaced on first apply),
+# packages.log (what was installed, and whether it was already there),
+# system.log (login shell, units, /etc/shells, ...), seen (targets processed).
+set -euo pipefail
+USER=${USER:-$(id -un)}
+
+# Homebrew may not be on PATH yet (fresh shell right after it was installed).
+if ! command -v brew >/dev/null 2>&1; then
+  for _b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+    [[ -x $_b ]] && { eval "$("$_b" shellenv)"; break; }
+  done
+fi
+PATH="$HOME/.local/bin:$PATH"
+
+RIG_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/rig"
+RIG_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
+MACHINE_ENV="$RIG_CONFIG/machine.env"
+PACKAGES_TSV="$RIG_CONFIG/packages.tsv"
+
+# ---------------------------------------------------------------- output ------
+if [[ -t 1 ]]; then
+  B=$'\e[1m' DIM=$'\e[2m' R=$'\e[31m' G=$'\e[32m' Y=$'\e[33m' BL=$'\e[34m' N=$'\e[0m'
+else
+  B='' DIM='' R='' G='' Y='' BL='' N=''
+fi
+say()  { printf '%s\n' "$*"; }
+info() { printf '%s==>%s %s\n' "$BL" "$N" "$*"; }
+ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
+warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*" >&2; }
+bad()  { printf '  %s✗%s %s\n' "$R" "$N" "$*"; }
+die()  { printf '%srig:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+confirm() {
+  local reply
+  [[ ${RIG_YES:-0} == 1 ]] && return 0
+  read -r -p "$1 [y/N] " reply </dev/tty || return 1
+  [[ $reply == [yY]* ]]
+}
+
+load_machine() {
+  [[ -r $MACHINE_ENV ]] || die "no machine profile yet ($MACHINE_ENV); run: chezmoi init --apply"
+  # shellcheck disable=SC1090
+  source "$MACHINE_ENV"
+}
+
+repo_root() { git -C "$RIG_SOURCE_DIR" rev-parse --show-toplevel 2>/dev/null || dirname "$RIG_SOURCE_DIR"; }
+packages_yaml() { printf '%s/.chezmoidata/packages.yaml' "$RIG_SOURCE_DIR"; }
+now() { date +%Y-%m-%dT%H:%M:%S; }
+
+# ---------------------------------------------------------------- ledger ------
+ledger_init() { mkdir -p "$RIG_STATE"; touch "$RIG_STATE/packages.log" "$RIG_STATE/system.log"; }
+
+# packages.log: manager \t name \t logical \t installed|preexisting \t date
+ledger_pkg_known() { awk -F'\t' -v m="$1" -v n="$2" '$1==m && $2==n {f=1} END {exit !f}' "$RIG_STATE/packages.log"; }
+ledger_pkg_record() { ledger_pkg_known "$1" "$2" || printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$(now)" >>"$RIG_STATE/packages.log"; }
+ledger_pkg_status() { awk -F'\t' -v m="$1" -v n="$2" '$1==m && $2==n {print $4; exit}' "$RIG_STATE/packages.log"; }
+ledger_pkg_forget() {
+  local tmp; tmp=$(mktemp)
+  awk -F'\t' -v m="$1" -v n="$2" '!($1==m && $2==n)' "$RIG_STATE/packages.log" >"$tmp" && mv "$tmp" "$RIG_STATE/packages.log"
+}
+
+# ------------------------------------------------------------- packages -------
+sudo_() { if [[ $EUID -eq 0 ]]; then "$@"; else sudo "$@"; fi; }
+
+arch_helper() { if have paru; then echo paru; elif have yay; then echo yay; else echo pacman; fi; }
+
+pkg_present() { # manager name
+  local m=$1 n=$2
+  case $m in
+    pacman) pacman -Q "$n" >/dev/null 2>&1 || pacman -Qg "$n" >/dev/null 2>&1 ;;
+    apt) dpkg-query -W -f='${Status}' "$n" 2>/dev/null | grep -q 'install ok installed' ;;
+    dnf) rpm -q "$n" >/dev/null 2>&1 ;;
+    brew)
+      if [[ $n == --cask\ * ]]; then brew list --cask "${n#--cask }" >/dev/null 2>&1
+      else brew list --formula "$n" >/dev/null 2>&1; fi ;;
+    download) download_present "$n" ;;
+    *) return 1 ;;
+  esac
+}
+
+pkg_install_cmd() { # manager names... (names may contain spaces: several packages)
+  local m=$1; shift
+  # shellcheck disable=SC2206
+  local names=($*)
+  case $m in
+    pacman)
+      local h; h=$(arch_helper)
+      if [[ $h == pacman ]]; then sudo_ pacman -S --needed --noconfirm "${names[@]}"
+      else "$h" -S --needed --noconfirm "${names[@]}"; fi ;;
+    apt) sudo_ env DEBIAN_FRONTEND=noninteractive apt-get install -y "${names[@]}" ;;
+    dnf) sudo_ dnf install -y "${names[@]}" ;;
+    brew) brew install "${names[@]}" ;;
+    download) download_install "${names[@]}" ;;
+  esac
+}
+
+pkg_remove_cmd() {
+  local m=$1; shift
+  # shellcheck disable=SC2206
+  local names=($*)
+  case $m in
+    pacman) sudo_ pacman -Rns --noconfirm "${names[@]}" ;;
+    apt) sudo_ env DEBIAN_FRONTEND=noninteractive apt-get remove -y "${names[@]}" ;;
+    dnf) sudo_ dnf remove -y "${names[@]}" ;;
+    brew) brew uninstall "${names[@]}" ;;
+    download) download_remove "${names[@]}" ;;
+  esac
+}
+
+# Things rig installs itself because nothing packages them suitably.
+download_present() {
+  case $1 in
+    win32yank) [[ -x $HOME/.local/bin/win32yank.exe ]] ;;
+    nerd-font) compgen -G "${XDG_DATA_HOME:-$HOME/.local/share}/fonts/JetBrainsMonoNerdFont*" >/dev/null ;;
+    *) return 1 ;;
+  esac
+}
+download_install() {
+  local tmp; tmp=$(mktemp -d)
+  case $1 in
+    win32yank)
+      curl -fsSL -o "$tmp/w.zip" https://github.com/equalsraf/win32yank/releases/latest/download/win32yank-x64.zip
+      unzip -o -q "$tmp/w.zip" win32yank.exe -d "$HOME/.local/bin" && chmod +x "$HOME/.local/bin/win32yank.exe" ;;
+    nerd-font)
+      local dir="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
+      mkdir -p "$dir"
+      curl -fsSL -o "$tmp/f.tar.xz" https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
+      tar -xJf "$tmp/f.tar.xz" -C "$dir" --wildcards 'JetBrainsMonoNerdFont*'
+      have fc-cache && fc-cache -f "$dir" >/dev/null ;;
+  esac
+  rm -rf "$tmp"
+}
+download_remove() {
+  case $1 in
+    win32yank) rm -f "$HOME/.local/bin/win32yank.exe" ;;
+    nerd-font) rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/fonts/"JetBrainsMonoNerdFont* ;;
+  esac
+}
+
+# Install everything declared for this machine that's missing.
+cmd_sync() {
+  load_machine; ledger_init
+  [[ -r $PACKAGES_TSV ]] || die "no package list ($PACKAGES_TSV); run chezmoi apply"
+  baseline_record
+  local -A todo=()
+  local m n logical group
+  while IFS=$'\t' read -r m n logical group; do
+    [[ -z $m || $m == \#* ]] && continue
+    if pkg_present "$m" "$n"; then
+      ledger_pkg_record "$m" "$n" "$logical" preexisting
+    else
+      todo[$m]+="$n"$'\n'
+      ledger_pkg_record "$m" "$n" "$logical" installed
+    fi
+  done <"$PACKAGES_TSV"
+  if ((${#todo[@]} == 0)); then ok "all declared packages are installed"; return 0; fi
+  local mgr names
+  for mgr in pacman apt dnf brew download; do
+    [[ -n ${todo[$mgr]:-} ]] || continue
+    names=$(printf '%s' "${todo[$mgr]}" | tr '\n' ' ')
+    info "installing with $mgr: $names"
+    [[ $mgr == apt ]] && sudo_ apt-get update -qq
+    if [[ $mgr == download || $mgr == brew && $names == *--cask* ]]; then
+      while IFS= read -r n; do [[ -n $n ]] && pkg_install_cmd "$mgr" "$n"; done <<<"${todo[$mgr]}"
+    else
+      # shellcheck disable=SC2086
+      pkg_install_cmd "$mgr" $names
+    fi
+  done
+  ok "packages in sync"
+}
+
+# The explicitly-installed packages before rig touched this machine, so
+# `rig drift` only reports what changed since.
+baseline_record() {
+  [[ -f $RIG_STATE/baseline ]] && return 0
+  explicit_packages >"$RIG_STATE/baseline" 2>/dev/null || true
+}
+explicit_packages() { # manager \t name
+  case ${RIG_NATIVE:-} in
+    pacman) pacman -Qqe | sed 's/^/pacman\t/' ;;
+    apt) apt-mark showmanual | sed 's/^/apt\t/' ;;
+    dnf) dnf repoquery --userinstalled --qf '%{name}\n' 2>/dev/null | sed 's/^/dnf\t/' ;;
+  esac
+  if have brew; then
+    brew leaves 2>/dev/null | sed 's/^/brew\t/'
+    brew list --cask 2>/dev/null | sed 's/^/brew\t--cask /'
+  fi
+}
+
+declared_names() { awk -F'\t' 'NF<2 {next} {n=split($2,a," "); if ($2 ~ /^--cask /) print $1"\t"$2; else for (i=1;i<=n;i++) print $1"\t"a[i]}' "$PACKAGES_TSV"; }
+
+cmd_drift() {
+  load_machine; ledger_init
+  local all=0; [[ ${1:-} == --all ]] && all=1
+  local tmp; tmp=$(mktemp -d)
+  explicit_packages | sort -u >"$tmp/now"
+  declared_names | sort -u >"$tmp/declared"
+  if ((all)) || [[ ! -f $RIG_STATE/baseline ]]; then : >"$tmp/base"; else sort -u "$RIG_STATE/baseline" >"$tmp/base"; fi
+  comm -23 "$tmp/now" "$tmp/declared" | comm -23 - "$tmp/base" >"$tmp/extra"
+  # declared but missing
+  : >"$tmp/missing"
+  local m n logical group
+  while IFS=$'\t' read -r m n logical group; do
+    [[ -z $m || $m == \#* ]] && continue
+    pkg_present "$m" "$n" || printf '%s\t%s (%s)\n' "$m" "$n" "$logical" >>"$tmp/missing"
+  done <"$PACKAGES_TSV"
+  if [[ -s $tmp/extra ]]; then
+    info "installed but not declared${all:+}$( ((all)) || printf ' (since rig was set up; --all for everything)')"
+    sed 's/^/  /' "$tmp/extra"
+    say "  ${DIM}keep one: rig install <name>  ·  remove one: rig remove <name>${N}"
+  else ok "nothing installed outside the declaration"; fi
+  if [[ -s $tmp/missing ]]; then
+    info "declared but missing (rig sync installs them)"; sed 's/^/  /' "$tmp/missing"
+  fi
+  rm -rf "$tmp"
+}
+
+# Add/remove a logical name in packages.yaml (under packages.groups.<group>).
+yaml_add() { # pkg group
+  local f; f=$(packages_yaml)
+  grep -qE "^      - $1\$" "$f" && return 0
+  awk -v pkg="$1" -v grp="$2" '
+    !done && $0 ~ "^    " grp ":" {
+      line = $0
+      sub(/: *\[\]/, ":", line)          # "darwin: [] # note" -> "darwin: # note"
+      print line
+      print "      - " pkg
+      done = 1
+      next
+    }
+    { print }' "$f" >"$f.new"
+  mv "$f.new" "$f"
+  grep -qE "^      - $1\$" "$f" || die "couldn't add $1 to group $2 in $f (does the group exist?)"
+}
+yaml_remove() {
+  local f; f=$(packages_yaml)
+  grep -qE "^      - $1\$" "$f" || return 1
+  sed -i.bak -E "/^      - $1\$/d" "$f" && rm -f "$f.bak"
+}
+
+cmd_install() {
+  load_machine; ledger_init
+  local group=base pkgs=()
+  while (($#)); do
+    case $1 in
+      --group) group=$2; shift 2 ;;
+      -*) die "unknown option $1" ;;
+      *) pkgs+=("$1"); shift ;;
+    esac
+  done
+  ((${#pkgs[@]})) || die "usage: rig install <pkg>... [--group <group>]"
+  local p
+  for p in "${pkgs[@]}"; do yaml_add "$p" "$group"; ok "declared $p (group $group)"; done
+  chezmoi apply --exclude=scripts "$RIG_CONFIG/packages.tsv" >/dev/null
+  cmd_sync
+  say "  ${DIM}packages.yaml changed in the repo; commit it when you're happy${N}"
+}
+
+cmd_remove() {
+  load_machine; ledger_init
+  (($#)) || die "usage: rig remove <pkg>..."
+  local p m n logical group status
+  for p in "$@"; do
+    local line; line=$(awk -F'\t' -v l="$p" '$3==l' "$PACKAGES_TSV" | head -1)
+    if yaml_remove "$p"; then ok "removed $p from packages.yaml"; else warn "$p isn't declared"; fi
+    if [[ -n $line ]]; then
+      IFS=$'\t' read -r m n logical group <<<"$line"
+      status=$(ledger_pkg_status "$m" "$n")
+      if [[ $status == preexisting ]]; then
+        warn "$n was installed before rig; leaving it installed"
+      elif pkg_present "$m" "$n" && confirm "Uninstall $n ($m)?"; then
+        pkg_remove_cmd "$m" "$n" && ledger_pkg_forget "$m" "$n" && ok "uninstalled $n"
+      fi
+    fi
+  done
+  chezmoi apply --exclude=scripts "$RIG_CONFIG/packages.tsv" >/dev/null
+}
+
+cmd_search() {
+  load_machine
+  (($#)) || die "usage: rig search <query>"
+  case $RIG_NATIVE in
+    pacman) if [[ $(arch_helper) != pacman ]]; then "$(arch_helper)" -Ss "$@"; else pacman -Ss "$@"; fi ;;
+    apt) apt-cache search "$@" ;;
+    dnf) dnf search "$@" ;;
+    brew) brew search "$@" ;;
+  esac
+  if [[ $RIG_NATIVE != brew ]] && have brew; then info "brew"; brew search "$@" || true; fi
+}
+
+# ---------------------------------------------------------------- update ------
+cmd_update() {
+  load_machine
+  info "dotfiles (chezmoi update)"
+  chezmoi update --refresh-externals=always || warn "chezmoi update failed"
+  info "system packages"
+  case $RIG_NATIVE in
+    pacman) if [[ $(arch_helper) != pacman ]]; then "$(arch_helper)" -Syu --noconfirm; else sudo_ pacman -Syu --noconfirm; fi ;;
+    apt) sudo_ apt-get update && sudo_ env DEBIAN_FRONTEND=noninteractive apt-get upgrade -y ;;
+    dnf) sudo_ dnf upgrade --refresh -y ;;
+  esac
+  if have brew; then info "brew"; brew update && brew upgrade; fi
+  if have flatpak; then info "flatpak"; flatpak update -y; fi
+  cmd_sync
+  info "neovim plugins and Mason tools"
+  nvim --headless "+lua require('config.bootstrap').update()" +qa 2>&1 | tail -n 20 || warn "nvim update had errors"
+  if [[ -n $(git -C "$(repo_root)" status --porcelain -- home/dot_config/nvim/nvim-pack-lock.json 2>/dev/null) ]]; then
+    say "  ${DIM}nvim-pack-lock.json changed (plugin updates); commit it to pin them on every machine${N}"
+  fi
+  ok "updated"
+}
+
+# ---------------------------------------------------------------- doctor ------
+cmd_doctor() {
+  load_machine
+  local fails=0
+  info "machine: $RIG_PLATFORM · preset $RIG_PRESET · session $RIG_SESSION$( [[ $RIG_WSL == true ]] && printf ' · WSL')"
+  say "  modules: ${RIG_MODULES:-none}"
+
+  info "dotfiles"
+  if have chezmoi; then
+    local st; st=$(chezmoi status --exclude=scripts 2>/dev/null || true)
+    if [[ -z $st ]]; then ok "chezmoi: everything applied"; else bad "chezmoi: pending changes (rig diff / chezmoi apply)"; ((fails++)) || true; fi
+  else bad "chezmoi not installed"; ((fails++)) || true; fi
+
+  info "packages"
+  local missing=0 m n logical group
+  while IFS=$'\t' read -r m n logical group; do
+    [[ -z $m || $m == \#* ]] && continue
+    pkg_present "$m" "$n" || { bad "missing: $logical ($m: $n)"; missing=1; }
+  done <"$PACKAGES_TSV"
+  if ((missing)); then ((fails++)) || true; else ok "all declared packages installed"; fi
+
+  info "shell"
+  local login; login=$(login_shell)
+  if [[ $login == *zsh ]]; then ok "login shell: $login"; else bad "login shell is $login (not zsh)"; ((fails++)) || true; fi
+  if [[ -e $HOME/.zshenv ]]; then ok "$HOME/.zshenv in place"; else bad "$HOME/.zshenv missing"; ((fails++)) || true; fi
+
+  info "ssh agent"
+  if [[ -n ${SSH_AUTH_SOCK:-} ]] && { ssh-add -l >/dev/null 2>&1; (($? != 2)); }; then
+    ok "agent reachable ($SSH_AUTH_SOCK)"
+  else
+    bad "no ssh agent reachable (open a new shell; on Linux: systemctl --user status ssh-agent.socket)"; ((fails++)) || true
+  fi
+
+  info "neovim"
+  if have nvim; then
+    local v; v=$(nvim --version | head -1)
+    if nvim --headless -c 'lua if vim.fn.has("nvim-0.12") == 0 then vim.cmd("cq") end' -c qa >/dev/null 2>&1; then ok "$v"
+    else bad "$v (0.12+ needed)"; ((fails++)) || true; fi
+    local errs; errs=$(nvim --headless "+checkhealth vim.lsp vim.treesitter mason" "+w! /dev/stdout" +qa 2>/dev/null | grep -c '❌ ERROR' || true)
+    if [[ ${errs:-0} == 0 ]]; then ok "checkhealth: no errors"; else bad "checkhealth: $errs errors (run :checkhealth in nvim)"; ((fails++)) || true; fi
+  else bad "nvim not installed"; ((fails++)) || true; fi
+
+  if ((fails)); then say; say "${Y}$fails problem(s)${N}"; return 1; fi
+  say; say "${G}all good${N}"
+}
+
+login_shell() {
+  if [[ $(uname) == Darwin ]]; then dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}'
+  else getent passwd "$USER" | cut -d: -f7; fi
+}
+
+# ------------------------------------------------------------- edit etc -------
+cmd_edit() {
+  load_machine
+  if (($#)); then chezmoi edit --apply "$@"
+  else (cd "$(repo_root)" && "${EDITOR:-nvim}" .); chezmoi apply; fi
+}
+cmd_profile() {
+  load_machine
+  info "re-answering the machine questions (chezmoi init --prompt)"
+  chezmoi init --prompt --source "$(repo_root)" && chezmoi apply
+}
+
+# ---------------------------------------------------------------- reset -------
+cmd_reset() {
+  load_machine
+  local part=${1:-}
+  local data="${XDG_DATA_HOME:-$HOME/.local/share}" cache="${XDG_CACHE_HOME:-$HOME/.cache}"
+  case $part in
+    nvim)
+      confirm "Reset nvim plugins, parsers and Mason tools (your undo history and settings stay)?" || return 0
+      rm -rf "$data/nvim/site/pack/core" "$data/nvim/site/parser" "$data/nvim/site/queries" "$data/nvim/mason"
+      nvim_bootstrap ;;
+    mason)
+      confirm "Reset Mason tools?" || return 0
+      rm -rf "$data/nvim/mason"; nvim_bootstrap ;;
+    zsh)
+      confirm "Reset zsh plugins and the completion cache?" || return 0
+      rm -rf "$data/zsh/plugins" "$cache/zsh/zcompdump"*
+      chezmoi apply --refresh-externals=always ;;
+    chezmoi)
+      confirm "Clear chezmoi's script state so every setup script runs again on the next apply?" || return 0
+      chezmoi state delete-bucket --bucket=scriptState
+      chezmoi state delete-bucket --bucket=entryState
+      chezmoi apply ;;
+    all) cmd_reset zsh; cmd_reset nvim; cmd_reset chezmoi ;;
+    *) die "usage: rig reset nvim|mason|zsh|chezmoi|all" ;;
+  esac
+  ok "reset $part"
+}
+nvim_bootstrap() { nvim --headless "+lua require('config.bootstrap').run()" +qa; }
+
+# ------------------------------------------------------------- uninstall ------
+cmd_uninstall() {
+  local packages=0 runtimes=0 identities=0 agents=0 dry=1 restore=''
+  while (($#)); do
+    case $1 in
+      --packages) packages=1 ;;
+      --runtimes) runtimes=1 ;;
+      --identities) identities=1 ;;
+      --agents) agents=1 ;;
+      --everything) packages=1 runtimes=1 identities=1 agents=1 ;;
+      --yes) RIG_YES=1 ;;
+      --run) dry=0 ;;
+      --dry-run) dry=1 ;;
+      --restore) restore=$2; shift ;;
+      *) die "unknown option $1" ;;
+    esac
+    shift
+  done
+  [[ -n $restore ]] && { uninstall_restore "$restore"; return; }
+  [[ ${RIG_YES:-0} == 1 ]] && dry=0
+  load_machine; ledger_init
+
+  local data="${XDG_DATA_HOME:-$HOME/.local/share}"
+  local managed; managed=$(chezmoi managed --include=files,symlinks --path-style=absolute 2>/dev/null || true)
+  local dirs; dirs=$(chezmoi managed --include=dirs --path-style=absolute 2>/dev/null | sort -r || true)
+
+  info "rig uninstall will:"
+  say "  1. remove $(wc -l <<<"$managed" | tr -d ' ') managed files and put back $(backup_count) original(s) from the first apply"
+  say "  2. revert $(wc -l <"$RIG_STATE/system.log" | tr -d ' ') system change(s):"
+  sed 's/^/       /' "$RIG_STATE/system.log"
+  say "  3. delete rig's data: zsh plugins, nvim plugins/parsers/Mason, chezmoi config and state"
+  if ((packages)); then
+    say "  4. uninstall packages rig installed (not ones that were already there):"
+    awk -F'\t' '$4=="installed" {print "       " $1 ": " $2}' "$RIG_STATE/packages.log"
+  else say "  4. keep all packages (--packages to remove the ones rig added)"; fi
+  ((runtimes)) && say "     + runtimes rig installed (Homebrew on Linux, if rig installed it)"
+  ((identities)) && say "     + git identities (SSH keys are archived, never deleted)"
+  ((agents)) && say "     + coding agents rig installed"
+  say "  Kept always: the repo ($(repo_root)), your SSH keys, Tailscale login."
+  if ((dry)); then say; say "${DIM}dry run; to do it: rig uninstall --run [flags]${N}"; return 0; fi
+  confirm "Go ahead?" || return 0
+
+  local archive; archive="$HOME/rig-uninstall-$(date +%Y%m%d-%H%M%S).tar.gz"
+  info "archiving to $archive"
+  {
+    printf '%s\n' "$managed"
+    printf '%s\n' "$RIG_STATE" "$RIG_CONFIG" "${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi"
+  } | sed "s#^$HOME/##" | while IFS= read -r p; do [[ -e $HOME/$p || -L $HOME/$p ]] && printf '%s\n' "$p"; done \
+    | tar -czf "$archive" -C "$HOME" -T - 2>/dev/null || warn "archive incomplete"
+
+  info "removing managed files"
+  while IFS= read -r f; do [[ -n $f ]] && { [[ -e $f || -L $f ]] && rm -f "$f"; }; done <<<"$managed"
+  while IFS= read -r d; do [[ -n $d && -d $d ]] && rmdir "$d" 2>/dev/null || true; done <<<"$dirs"
+
+  info "restoring original files"
+  backup_restore_all
+
+  info "reverting system changes"
+  system_revert_all
+
+  if ((packages)); then
+    info "uninstalling packages rig added"
+    tac "$RIG_STATE/packages.log" | awk -F'\t' '$4=="installed"' | while IFS=$'\t' read -r m n _ _ _; do
+      pkg_present "$m" "$n" && { pkg_remove_cmd "$m" "$n" || warn "couldn't remove $n"; }
+    done
+  fi
+  if ((runtimes)) && grep -q '^brew-installed' "$RIG_STATE/system.log" && [[ $(uname) == Linux ]]; then
+    info "removing Homebrew on Linux (rig installed it)"
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)" || warn "brew uninstall failed"
+    rm -rf "$HOME/.homebrew" "${XDG_CACHE_HOME:-$HOME/.cache}/Homebrew"
+  fi
+
+  info "deleting rig's data (keeping your shell history and nvim history/undo)"
+  local cache="${XDG_CACHE_HOME:-$HOME/.cache}" state="${XDG_STATE_HOME:-$HOME/.local/state}"
+  rm -rf "$data/zsh/plugins" "$data/nvim/site/pack/core" "$data/nvim/site/parser" \
+    "$data/nvim/site/parser-info" "$data/nvim/site/queries" "$data/nvim/mason" \
+    "$cache/zsh/zcompdump"* "$cache/nvim/mason-registry-update" "$cache/tree-sitter" \
+    "$state/nvim/lsp.log" "$state/nvim/mason.log" "$state/nvim/nvim.log"
+  chezmoi_forget
+  rm -rf "$RIG_CONFIG" "$RIG_STATE"
+  prune_empty "$data/fonts" "$data/zsh" "$data/nvim/site/pack" "$data/nvim/site" "$data/nvim" "$cache/zsh" \
+    "$cache/nvim" "$state/zsh" "$state/nvim" "$data" "$cache" "$state" \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/git" "${XDG_CONFIG_HOME:-$HOME/.config}" "$HOME/.local/bin" "$HOME/.local"
+  ok "uninstalled. Archive: $archive (rig uninstall --restore needs rig; or: tar -xzf it -C ~)"
+  say "  ${DIM}open a new terminal to get your previous shell setup${N}"
+}
+
+prune_empty() { local d; for d in "$@"; do [[ -d $d ]] && rmdir "$d" 2>/dev/null || true; done; }
+
+backup_count() { [[ -f $RIG_STATE/backup.manifest ]] && wc -l <"$RIG_STATE/backup.manifest" | tr -d ' ' || echo 0; }
+
+# backup.manifest: kind \t relpath \t backupdir \t extra
+backup_restore_all() {
+  [[ -f $RIG_STATE/backup.manifest ]] || return 0
+  local kind rel dir
+  while IFS=$'\t' read -r kind rel dir _; do
+    if [[ $kind == created ]]; then rm -f "$HOME/$rel" && ok "removed ~/$rel (rig created it)"; continue; fi
+    local src="$dir/$rel" dst="$HOME/$rel"
+    [[ -e $src || -L $src ]] || continue
+    case $kind in
+      dirlink) [[ -d $dst && ! -L $dst ]] && { rmdir "$dst" 2>/dev/null || { warn "$dst not empty; leaving it"; continue; }; }
+               cp -P "$src" "$dst" ;;
+      *) mkdir -p "$(dirname "$dst")"; rm -rf "$dst"; cp -aP "$src" "$dst" ;;
+    esac
+    ok "restored ~/$rel"
+  done < <(tac "$RIG_STATE/backup.manifest")
+}
+
+# system.log: kind \t key \t previous \t date
+system_revert_all() {
+  local kind key prev _d
+  while IFS=$'\t' read -r kind key prev _d; do
+    case $kind in
+      shell) if [[ $(uname) == Darwin ]]; then chsh -s "$prev" || warn "chsh failed"; else sudo_ chsh -s "$prev" "$USER" || warn "chsh failed"; fi
+             ok "login shell back to $prev" ;;
+      etc-shells) sudo_ sed -i.bak "\#^$key\$#d" /etc/shells && ok "removed $key from /etc/shells" ;;
+      user-unit) [[ $prev != enabled ]] && { systemctl --user disable --now "$key" 2>/dev/null || true; ok "disabled $key"; } ;;
+      brew-installed) : ;; # handled by --runtimes
+      *) warn "unknown system change '$kind $key'; skipped" ;;
+    esac
+  done < <(tac "$RIG_STATE/system.log")
+}
+
+chezmoi_forget() {
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi" def="${XDG_DATA_HOME:-$HOME/.local/share}/chezmoi"
+  rm -rf "$cfg" "${XDG_CACHE_HOME:-$HOME/.cache}/chezmoi"
+  # Only delete the source if it's chezmoi's own clone with nothing unpushed.
+  if [[ -d $def/.git ]]; then
+    if [[ -z $(git -C "$def" status --porcelain) ]] && [[ -z $(git -C "$def" log '@{u}..' --oneline 2>/dev/null || echo x) ]]; then
+      rm -rf "$def"
+    else warn "kept $def: it has local changes or unpushed commits"; fi
+  fi
+}
+
+uninstall_restore() {
+  [[ -f $1 ]] || die "no such archive: $1"
+  confirm "Restore everything in $1 into ~ (overwrites those paths)?" || return 0
+  tar -xzf "$1" -C "$HOME" && ok "restored; run chezmoi apply (or chezmoi init) to resume"
+}
+
+# ------------------------------------------------------------------ help ------
+cmd_help() {
+  cat <<EOF
+${B}rig${N}: this machine's setup
+
+  ${B}rig sync${N}                   install everything declared that's missing
+  ${B}rig install${N} <pkg> [--group g]   install and declare it (packages.yaml)
+  ${B}rig remove${N} <pkg>           undeclare, and uninstall if rig installed it
+  ${B}rig search${N} <query>         search the package managers
+  ${B}rig drift${N} [--all]          installed-but-undeclared, declared-but-missing
+  ${B}rig update${N}                 update everything: dotfiles, packages, plugins
+  ${B}rig doctor${N}                 check this machine
+  ${B}rig edit${N} [file]            edit the dotfiles (then apply)
+  ${B}rig diff${N} / ${B}rig apply${N}        chezmoi diff / apply
+  ${B}rig profile${N}                re-answer the machine questions
+  ${B}rig reset${N} nvim|mason|zsh|chezmoi|all   rebuild a part that misbehaves
+  ${B}rig uninstall${N} [--packages --runtimes --identities --agents | --everything] [--run]
+                             put the machine back as it was (dry run unless --run)
+  ${B}rig uninstall --restore${N} <archive>   undo an uninstall
+EOF
+}
+
+main() {
+  local cmd=${1:-help}; (($#)) && shift
+  case $cmd in
+    sync) cmd_sync "$@" ;;
+    install|add) cmd_install "$@" ;;
+    remove|rm) cmd_remove "$@" ;;
+    search) cmd_search "$@" ;;
+    drift) cmd_drift "$@" ;;
+    update|up) cmd_update "$@" ;;
+    doctor) cmd_doctor "$@" ;;
+    edit) cmd_edit "$@" ;;
+    diff) chezmoi diff "$@" ;;
+    apply) chezmoi apply "$@" ;;
+    profile) cmd_profile "$@" ;;
+    reset) cmd_reset "$@" ;;
+    uninstall) cmd_uninstall "$@" ;;
+    help|-h|--help) cmd_help ;;
+    *) die "unknown command '$cmd' (rig help)" ;;
+  esac
+}
+main "$@"
