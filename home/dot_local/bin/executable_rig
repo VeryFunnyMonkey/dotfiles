@@ -310,6 +310,8 @@ cmd_update() {
   if have brew; then info "brew"; brew update && brew upgrade; fi
   if have flatpak; then info "flatpak"; flatpak update -y; fi
   cmd_sync
+  if [[ -n $RIG_AGENTS ]]; then info "agents"; cmd_agents update; fi
+  if [[ " $RIG_RUNTIMES " == *" rust "* ]] && have rustup; then info "rust"; RUSTUP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/rustup" rustup update >/dev/null && ok "rust toolchain updated"; fi
   info "neovim plugins and Mason tools"
   nvim --headless "+lua require('config.bootstrap').update()" +qa 2>&1 | tail -n 20 || warn "nvim update had errors"
   if [[ -n $(git -C "$(repo_root)" status --porcelain -- home/dot_config/nvim/nvim-pack-lock.json 2>/dev/null) ]]; then
@@ -360,6 +362,19 @@ cmd_doctor() {
     bad "no git accounts yet (rig git add)"; ((fails++)) || true
   fi
   if [[ $RIG_GITHUB == true ]]; then have gh && ok "gh installed (this machine uses GitHub)" || { bad "gh missing"; ((fails++)) || true; }; fi
+
+  info "modules"
+  ok "on: ${RIG_MODULES:-none} · runtimes: ${RIG_RUNTIMES:-none}"
+  if [[ " $RIG_MODULES " == *" homelab "* ]] && have tailscale; then
+    if tailscale status >/dev/null 2>&1; then ok "tailscale connected"; else bad "tailscale logged out (sudo tailscale up)"; ((fails++)) || true; fi
+  fi
+  info "agents"
+  if [[ -n $RIG_AGENTS ]]; then
+    local a; for a in $RIG_AGENTS; do
+      if agent_present "$a"; then ok "$(agent_label "$a")$( [[ $a == "$RIG_AGENT_DEFAULT" ]] && printf ' (dev default)')"
+      else bad "$(agent_label "$a") missing (rig agents sync)"; ((fails++)) || true; fi
+    done
+  else say "  none chosen (rig agents add <name>)"; fi
 
   info "neovim"
   if have nvim; then
@@ -491,6 +506,16 @@ cmd_uninstall() {
       pkg_present "$m" "$n" && { pkg_remove_cmd "$m" "$n" || warn "couldn't remove $n"; }
     done
   fi
+  if ((agents)) && declare -F agents_uninstall_all >/dev/null; then
+    info "uninstalling agents rig installed"
+    agents_uninstall_all
+  fi
+  if ((runtimes)); then
+    local rd
+    while IFS= read -r rd; do
+      [[ -e $rd ]] && rm -rf "$rd" && ok "deleted runtime data $rd"
+    done < <(awk -F'\t' '$1=="runtime-dir" && $3=="created" {print $2}' "$RIG_STATE/system.log")
+  fi
   if ((runtimes)) && grep -q '^brew-installed' "$RIG_STATE/system.log" && [[ $(uname) == Linux ]]; then
     info "removing Homebrew on Linux (rig installed it)"
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)" || warn "brew uninstall failed"
@@ -544,6 +569,8 @@ system_revert_all() {
       user-unit) [[ $prev != enabled ]] && { systemctl --user disable --now "$key" 2>/dev/null || true; ok "disabled $key"; } ;;
       brew-installed) : ;; # handled by --runtimes
       ssh-key-created) : ;; # handled by --identities (keys are archived, never deleted)
+      runtime-dir|agent) : ;; # handled by --runtimes / --agents
+      system-unit) if [[ $prev != enabled ]]; then sudo_ systemctl disable --now "$key" 2>/dev/null || true; ok "disabled $key"; fi ;;
       ssh-include)
         if [[ $prev == created ]]; then
           rm -f "$key" && ok "removed $key (rig created it)"
@@ -587,6 +614,8 @@ ${B}rig${N}: this machine's setup
   ${B}rig update${N}                 update everything: dotfiles, packages, plugins
   ${B}rig doctor${N}                 check this machine
   ${B}rig git${N} add|list|which|remove|clone|doctor   git accounts (GitHub, GitLab, ...)
+  ${B}rig module${N} list|info|enable|disable [--purge] <name>   language support, homelab, ...
+  ${B}rig agents${N} list|add|remove|default <name>   coding agents (installed by rig)
   ${B}rig edit${N} [file]            edit the dotfiles (then apply)
   ${B}rig diff${N} / ${B}rig apply${N}        chezmoi diff / apply
   ${B}rig profile${N}                re-answer the machine questions
@@ -597,8 +626,11 @@ ${B}rig${N}: this machine's setup
 EOF
 }
 
-# shellcheck source=/dev/null
-if [[ -r $RIG_LIB/git.sh ]]; then source "$RIG_LIB/git.sh"; fi
+for _lib in git modules agents; do
+  # shellcheck source=/dev/null
+  if [[ -r $RIG_LIB/$_lib.sh ]]; then source "$RIG_LIB/$_lib.sh"; fi
+done
+unset _lib
 
 main() {
   local cmd=${1:-help}; (($#)) && shift
@@ -616,6 +648,10 @@ main() {
     profile) cmd_profile "$@" ;;
     reset) cmd_reset "$@" ;;
     git) cmd_git "$@" ;;
+    module|modules) cmd_module "$@" ;;
+    runtimes) cmd_runtimes "$@" ;;
+    homelab) cmd_homelab "$@" ;;
+    agents|agent) cmd_agents "$@" ;;
     uninstall) cmd_uninstall "$@" ;;
     help|-h|--help) cmd_help ;;
     *) die "unknown command '$cmd' (rig help)" ;;

@@ -67,6 +67,26 @@
 {{-   $github = .github -}}
 {{- end -}}
 
+{{- /* Coding agents: none, one or several. `rig agents add|remove|default` later.
+       (Names must match .chezmoidata/agents.yaml.) */ -}}
+{{- $agentChoices := list "claude" "copilot" "codex" "gemini" "opencode" -}}
+{{- $picked := promptMultichoiceOnce . "agents" "Coding agents to install (pick none, one or several)" $agentChoices (list) -}}
+{{- $agents := list -}}
+{{- range $a := $picked -}}
+{{-   range $x := splitList "," $a -}}
+{{-     $x = trim $x -}}
+{{-     if and (has $x $agentChoices) (not (has $x $agents)) -}}{{- $agents = append $agents $x -}}{{- end -}}
+{{-   end -}}
+{{- end -}}
+{{- $agentDefault := "" -}}
+{{- if eq (len $agents) 1 -}}
+{{-   $agentDefault = index $agents 0 -}}
+{{- else if gt (len $agents) 1 -}}
+{{-   $stored := dig "agent_default" "" . -}}
+{{-   if has $stored $agents -}}{{- $agentDefault = $stored -}}
+{{-   else -}}{{- $agentDefault = promptChoice "Which agent should dev start" $agents (index $agents 0) -}}{{- end -}}
+{{- end -}}
+
 {{- /* WSL has no Linux desktop: terminal-only, with Windows behind it */ -}}
 {{- if $wsl -}}
 {{-   $session = "headless" -}}
@@ -101,6 +121,8 @@ mode = "symlink"
     session = {{ $session | quote }}
     wsl = {{ $wsl }}
     display = {{ $display | quote }}
+    agents = {{ $agents | toToml }}
+    agent_default = {{ $agentDefault | quote }}
 
 [data.modules]
 {{- range $k := keys $modules | sortAlpha }}
