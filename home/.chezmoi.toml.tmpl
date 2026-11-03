@@ -20,10 +20,12 @@
 {{- /* defaults, overridden per preset below */ -}}
 {{- $work := false -}}
 {{- $session := "gui" -}}
+{{- $github := "ask" -}}
 {{- $modules := dict "wm" false "homelab" false "lang-python" false "lang-web" false "lang-ops" false "lang-go" false "lang-rust" false -}}
 
 {{- if eq $preset "personal-desktop" -}}
 {{-   $session = "gui" -}}
+{{-   $github = true -}}
 {{-   $_ := set $modules "homelab" true -}}
 {{-   $_ := set $modules "lang-python" true -}}
 {{-   $_ := set $modules "lang-web" true -}}
@@ -36,12 +38,14 @@
 {{-   $_ := set $modules "lang-ops" true -}}
 {{- else if eq $preset "tui" -}}
 {{-   $session = "tui" -}}
+{{-   $github = true -}}
 {{-   $_ := set $modules "homelab" true -}}
 {{-   $_ := set $modules "lang-python" true -}}
 {{-   $_ := set $modules "lang-web" true -}}
 {{-   $_ := set $modules "lang-ops" true -}}
 {{- else if eq $preset "headless" -}}
 {{-   $session = "headless" -}}
+{{-   $github = false -}}
 {{-   $_ := set $modules "homelab" true -}}
 {{- else -}}
 {{-   $work = promptBoolOnce . "work" "Work machine" false -}}
@@ -53,6 +57,14 @@
 {{-   range $name := list "homelab" "lang-python" "lang-web" "lang-ops" "lang-go" "lang-rust" "wm" -}}
 {{-     $_ := set $modules $name (promptBoolOnce $stored $name (printf "Enable module %s" $name) false) -}}
 {{-   end -}}
+{{- end -}}
+
+{{- /* GitHub: decides whether gh is installed. `rig git add` flips it when you
+       add (or remove the last) GitHub account. */ -}}
+{{- if eq (toString $github) "ask" -}}
+{{-   $github = promptBoolOnce . "github" "Do you use GitHub on this machine" false -}}
+{{- else if hasKey . "github" -}}
+{{-   $github = .github -}}
 {{- end -}}
 
 {{- /* WSL has no Linux desktop: terminal-only, with Windows behind it */ -}}
@@ -85,6 +97,7 @@ mode = "symlink"
 [data]
     preset = {{ $preset | quote }}
     work = {{ $work }}
+    github = {{ $github }}
     session = {{ $session | quote }}
     wsl = {{ $wsl }}
     display = {{ $display | quote }}

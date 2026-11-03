@@ -14,6 +14,7 @@
 {{- if or (eq .session "gui") (eq .session "tui") -}}{{- $groups = append $groups "gui" -}}{{- end -}}
 {{- if or (eq .session "tui") (eq .session "headless") -}}{{- $groups = append $groups "yazi" -}}{{- end -}}
 {{- if .wsl -}}{{- $groups = append $groups "wsl" -}}{{- end -}}
+{{- if .github -}}{{- $groups = append $groups "github" -}}{{- end -}}
 {{- if eq $platform "darwin" -}}{{- $groups = append $groups "darwin" -}}{{- end -}}
 
 {{- range $group := $groups -}}

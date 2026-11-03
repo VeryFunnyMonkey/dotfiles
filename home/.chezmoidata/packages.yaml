@@ -20,7 +20,6 @@ packages:
       - curl
       - unzip
       - build-tools
-      - gh
       - lazygit
       - delta
       - fzf
@@ -30,6 +29,8 @@ packages:
       - eza
       - bat
       - tree-sitter-cli
+    github: # machines that use GitHub (asked at setup; rig git add flips it)
+      - gh
     gui: # session gui|tui
       - nerd-font
       - clipboard
