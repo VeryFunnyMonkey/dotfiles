@@ -1,7 +1,7 @@
 # lazygit: delta for diffs, nvim for editing, gruvbox colours.
 git:
-  pagers:
-    - pager: delta --dark --paging=never
+  diffRenderers: # lazygit 0.66+ (was git.pagers)
+    - command: delta --dark --paging=never
 os:
   editPreset: nvim
 gui:

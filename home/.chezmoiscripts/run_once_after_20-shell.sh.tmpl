@@ -19,7 +19,8 @@ current=$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')
 {{- else }}
 current=$(getent passwd "$USER" | cut -d: -f7)
 {{- end }}
-[[ $current == "$ZSH" ]] && exit 0
+# Already a working zsh (on Arch /bin/zsh and /usr/bin/zsh are the same file)? Done.
+[[ ${current##*/} == zsh && -x $current ]] && exit 0
 
 if ! grep -qxF "$ZSH" /etc/shells; then
   echo "$ZSH" | sudo_ tee -a /etc/shells >/dev/null

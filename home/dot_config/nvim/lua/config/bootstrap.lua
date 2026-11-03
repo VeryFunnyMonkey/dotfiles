@@ -67,6 +67,10 @@ end
 
 function M.run()
   remove_unused_plugins()
+  -- Plugins already on disk keep whatever revision they had; move them to the
+  -- committed lockfile so every machine runs the same versions.
+  log("plugins: syncing to nvim-pack-lock.json")
+  vim.pack.update(nil, { target = "lockfile", force = true })
   local mods = require("config.modules")
   log("treesitter: installing parsers")
   require("nvim-treesitter").install(mods.parsers):wait(600000)
