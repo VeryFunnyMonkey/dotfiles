@@ -5,6 +5,10 @@ conform.setup({
   default_format_opts = { lsp_format = "fallback" },
   format_on_save = function(buf)
     if vim.b[buf].disable_autoformat or vim.g.disable_autoformat then return end
+    -- YAML and Markdown: format on demand (<leader>cf) only, so existing repos
+    -- (Ansible, Compose, docs) don't get reformatted just by saving
+    local ft = vim.bo[buf].filetype
+    if ft:match("^yaml") or ft == "markdown" then return end
     return { timeout_ms = 1000 }
   end,
 })

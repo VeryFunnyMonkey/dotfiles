@@ -1,18 +1,33 @@
--- Rendered by chezmoi from the enabled modules. Don't edit here: language
--- support comes from .chezmoidata/modules/*.yaml (core languages are below).
--- Enabled modules: {{ range $k, $v := .modules }}{{ if $v }}{{ $k }} {{ end }}{{ end }}
+-- Rendered by chezmoi from the enabled modules (.chezmoidata/modules/*.yaml).
+-- Don't edit here; enable/disable modules with `rig module`.
+{{- $en := includeTemplate "enabled" . | fromJson }}
+-- Enabled modules: {{ join ", " $en.modules | default "none" }}
+{{- $servers := list "lua_ls" }}
+{{- $system := list }}
+{{- $mason := list "lua-language-server" "stylua" }}
+{{- $parsers := list "bash" "c" "diff" "gitcommit" "json" "lua" "luadoc" "markdown" "markdown_inline" "query" "toml" "vim" "vimdoc" "yaml" }}
+{{- $fmt := dict "lua" (list "stylua") }}
+{{- range $m := $en.modules }}
+{{-   $nv := dig "nvim" dict (index $.moduledefs $m) }}
+{{-   range $x := dig "servers" list $nv }}{{ if not (has $x $servers) }}{{ $servers = append $servers $x }}{{ end }}{{ end }}
+{{-   range $x := dig "system_servers" list $nv }}{{ if not (has $x $system) }}{{ $system = append $system $x }}{{ end }}{{ end }}
+{{-   range $x := dig "mason" list $nv }}{{ if not (has $x $mason) }}{{ $mason = append $mason $x }}{{ end }}{{ end }}
+{{-   range $x := dig "parsers" list $nv }}{{ if not (has $x $parsers) }}{{ $parsers = append $parsers $x }}{{ end }}{{ end }}
+{{-   range $ft, $f := dig "formatters" dict $nv }}{{ $_ := set $fmt $ft $f }}{{ end }}
+{{- end }}
 return {
-  -- LSP servers (lspconfig names), started by mason-lspconfig
-  servers = { "lua_ls" },
-  -- Mason packages to keep installed (servers + formatters)
-  mason = { "lua-language-server", "stylua" },
+  -- LSP servers installed by Mason and started by mason-lspconfig
+  servers = { {{- range $i, $x := $servers }}{{ if $i }}, {{ end }}{{ $x | quote }}{{ end -}} },
+  -- LSP servers that come from elsewhere (e.g. rustup) and are started directly
+  system_servers = { {{- range $i, $x := $system }}{{ if $i }}, {{ end }}{{ $x | quote }}{{ end -}} },
+  -- Mason packages to keep installed (servers + formatters + linters)
+  mason = { {{- range $i, $x := $mason }}{{ if $i }}, {{ end }}{{ $x | quote }}{{ end -}} },
   -- conform.nvim formatters per filetype
   formatters = {
-    lua = { "stylua" },
+{{- range $ft := keys $fmt | sortAlpha }}
+    [{{ $ft | quote }}] = { {{- range $i, $x := index $fmt $ft }}{{ if $i }}, {{ end }}{{ $x | quote }}{{ end -}} },
+{{- end }}
   },
   -- treesitter parsers
-  parsers = {
-    "bash", "c", "diff", "gitcommit", "json", "lua", "luadoc", "markdown",
-    "markdown_inline", "query", "toml", "vim", "vimdoc", "yaml",
-  },
+  parsers = { {{- range $i, $x := $parsers }}{{ if $i }}, {{ end }}{{ $x | quote }}{{ end -}} },
 }

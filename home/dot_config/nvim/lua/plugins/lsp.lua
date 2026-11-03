@@ -26,6 +26,27 @@ end
 
 vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities() })
 
+-- Started directly: servers that don't come from Mason (rust-analyzer from rustup)
+for _, name in ipairs(mods.system_servers or {}) do
+  vim.lsp.enable(name)
+end
+
+vim.lsp.config("yamlls", {
+  settings = {
+    yaml = {
+      -- schemas from schemastore.org: docker-compose, GitHub Actions, Ansible, ...
+      schemaStore = { enable = true, url = "https://www.schemastore.org/api/json/catalog.json" },
+      keyOrdering = false,
+    },
+  },
+})
+vim.lsp.config("gopls", { settings = { gopls = { staticcheck = true, gofumpt = true } } })
+vim.lsp.config("rust_analyzer", {
+  -- through rustup, so it always matches the toolchain (works with any rustup install)
+  cmd = vim.fn.executable("rustup") == 1 and { "rustup", "run", "stable", "rust-analyzer" } or nil,
+  settings = { ["rust-analyzer"] = { check = { command = "clippy" } } },
+})
+
 vim.lsp.config("lua_ls", {
   settings = {
     Lua = {
