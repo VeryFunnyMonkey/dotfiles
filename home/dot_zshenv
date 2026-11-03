@@ -20,3 +20,4 @@ if [[ -z $SSH_AUTH_SOCK && -n $XDG_RUNTIME_DIR && -S $XDG_RUNTIME_DIR/ssh-agent.
 fi
 
 [[ -r $ZDOTDIR/path.zsh ]] && source "$ZDOTDIR/path.zsh"
+[[ -r $ZDOTDIR/runtimes.zsh ]] && source "$ZDOTDIR/runtimes.zsh"

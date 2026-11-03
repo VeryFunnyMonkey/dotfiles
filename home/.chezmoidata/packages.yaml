@@ -44,8 +44,8 @@ packages:
   # On Debian/Ubuntu and Fedora these come from the distro, everything else from brew.
   native: [zsh, git, openssh, curl, unzip, build-tools, clipboard, wslu]
 
-  # Installed by rig itself (not packaged anywhere suitable).
-  download: [win32yank]
+  # Installed by rig itself on Debian/Ubuntu and Fedora (not packaged suitably there).
+  download: [win32yank, tailscale]
 
   # Per-manager names, where they differ from the logical name. "-" = not needed there.
   names:
@@ -71,3 +71,4 @@ packages:
       build-tools: "-"
       clipboard: "-"
       nerd-font: "--cask font-jetbrains-mono-nerd-font"
+      tailscale: "--cask tailscale"

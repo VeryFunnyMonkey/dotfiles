@@ -1,0 +1,12 @@
+# Rendered: environment for the runtimes this machine's modules need
+# ({{ (includeTemplate "enabled" . | fromJson).runtimes | join ", " | default "none" }}). Sourced from ~/.zshenv.
+{{- $rt := (includeTemplate "enabled" . | fromJson).runtimes }}
+{{- if has "go" $rt }}
+export GOPATH="${XDG_DATA_HOME:-$HOME/.local/share}/go"
+path=("$GOPATH/bin" $path)
+{{- end }}
+{{- if has "rust" $rt }}
+export RUSTUP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/rustup"
+export CARGO_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/cargo"
+path=("$CARGO_HOME/bin" $path)
+{{- end }}

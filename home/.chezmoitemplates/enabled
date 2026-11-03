@@ -1,0 +1,24 @@
+{{- /*
+  JSON: {"modules": [...enabled module names], "runtimes": [...needed runtimes],
+         "agents": [...chosen agents]}. Runtimes come from the enabled modules'
+  and chosen agents' `needs:`.
+*/ -}}
+{{- $mods := list -}}
+{{- range $name, $on := (dig "modules" dict .) -}}
+{{-   if and $on (hasKey $.moduledefs $name) -}}{{- $mods = append $mods $name -}}{{- end -}}
+{{- end -}}
+{{- $rt := dict -}}
+{{- range $m := $mods -}}
+{{-   range $r := (dig "needs" list (index $.moduledefs $m)) -}}{{- $_ := set $rt $r true -}}{{- end -}}
+{{- end -}}
+{{- $agents := list -}}
+{{- range $a := (dig "agents" list .) -}}
+{{-   range $x := splitList "," $a -}}
+{{-     $x = trim $x -}}
+{{-     if and $x (hasKey $.agentdefs $x) (not (has $x $agents)) -}}{{- $agents = append $agents $x -}}{{- end -}}
+{{-   end -}}
+{{- end -}}
+{{- range $a := $agents -}}
+{{-   range $r := (dig "needs" list (index $.agentdefs $a)) -}}{{- $_ := set $rt $r true -}}{{- end -}}
+{{- end -}}
+{{- dict "modules" ($mods | sortAlpha) "runtimes" (keys $rt | sortAlpha) "agents" $agents | toJson -}}

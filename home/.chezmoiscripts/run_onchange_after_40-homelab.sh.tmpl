@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# homelab module: Tailscale running and logged in. Re-runs when the module is
+# switched on or off:  {{ dig "modules" "homelab" false . }}
+set -euo pipefail
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} homelab sync

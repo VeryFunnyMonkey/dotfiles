@@ -1,0 +1,12 @@
+# Shared toolchains that modules declare with `needs:`. A runtime is installed
+# only while some enabled module (or agent) needs it.
+runtimes:
+  node:
+    description: "fnm + Node LTS"
+    packages: [fnm]
+  go:
+    description: "Go toolchain; GOPATH under ~/.local/share/go"
+    packages: [go]
+  rust:
+    description: "rustup (stable toolchain + rustfmt, clippy, rust-analyzer); under ~/.local/share"
+    packages: [rustup]

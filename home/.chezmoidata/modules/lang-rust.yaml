@@ -1,0 +1,12 @@
+moduledefs:
+  lang-rust:
+    description: "Rust: rust-analyzer (clippy checks) and rustfmt, from rustup"
+    packages: []
+    needs: [rust]
+    nvim:
+      # rust-analyzer comes from rustup so it matches the compiler, not Mason
+      system_servers: [rust_analyzer]
+      mason: []
+      formatters:
+        rust: [rustfmt]
+      parsers: [rust, toml]

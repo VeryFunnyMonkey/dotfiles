@@ -1,0 +1,19 @@
+moduledefs:
+  lang-web:
+    description: "TypeScript/JavaScript, JSON, CSS, HTML, Markdown: ts_ls, prettierd"
+    packages: []
+    needs: [node]
+    nvim:
+      servers: [ts_ls]
+      mason: [typescript-language-server, prettierd]
+      formatters:
+        javascript: [prettierd]
+        javascriptreact: [prettierd]
+        typescript: [prettierd]
+        typescriptreact: [prettierd]
+        json: [prettierd]
+        jsonc: [prettierd]
+        css: [prettierd]
+        html: [prettierd]
+        markdown: [prettierd]
+      parsers: [javascript, typescript, tsx, jsdoc, css, html]

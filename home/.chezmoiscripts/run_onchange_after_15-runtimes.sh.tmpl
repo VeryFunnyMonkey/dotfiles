@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Set up the runtimes the enabled modules/agents need (their packages were
+# installed by the packages step). Re-runs when that set changes:
+#   {{ (includeTemplate "enabled" . | fromJson).runtimes | toJson }}
+set -euo pipefail
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} runtimes sync

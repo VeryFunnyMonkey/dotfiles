@@ -17,8 +17,23 @@
 {{- if .github -}}{{- $groups = append $groups "github" -}}{{- end -}}
 {{- if eq $platform "darwin" -}}{{- $groups = append $groups "darwin" -}}{{- end -}}
 
+{{- /* (package, group) pairs: the groups above, then modules and runtimes */ -}}
+{{- $en := includeTemplate "enabled" . | fromJson -}}
+{{- $pairs := list -}}
 {{- range $group := $groups -}}
-{{-   range $pkg := index $p.groups $group -}}
+{{-   range $pkg := index $p.groups $group -}}{{- $pairs = append $pairs (list $pkg $group) -}}{{- end -}}
+{{- end -}}
+{{- range $m := $en.modules -}}
+{{-   range $pkg := (dig "packages" list (index $.moduledefs $m)) -}}{{- $pairs = append $pairs (list $pkg (printf "module:%s" $m)) -}}{{- end -}}
+{{- end -}}
+{{- range $r := $en.runtimes -}}
+{{-   range $pkg := (dig "packages" list (index $.runtimes $r)) -}}{{- $pairs = append $pairs (list $pkg (printf "runtime:%s" $r)) -}}{{- end -}}
+{{- end -}}
+
+{{- range $pair := $pairs -}}
+{{-   $pkg := index $pair 0 -}}
+{{-   $group := index $pair 1 -}}
+{{-   if true -}}
 {{-     $mgr := "brew" -}}
 {{-     if eq $platform "arch" -}}
 {{-       $mgr = "pacman" -}}

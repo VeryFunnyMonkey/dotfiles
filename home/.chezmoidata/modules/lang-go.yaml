@@ -1,0 +1,11 @@
+moduledefs:
+  lang-go:
+    description: "Go: gopls (with staticcheck), goimports + gofumpt on save"
+    packages: []
+    needs: [go]
+    nvim:
+      servers: [gopls]
+      mason: [gopls, goimports, gofumpt]
+      formatters:
+        go: [goimports, gofumpt]
+      parsers: [go, gomod, gosum, gowork]

@@ -1,0 +1,28 @@
+moduledefs:
+  lang-ops:
+    description: "Ansible, YAML (Compose/Actions schemas), OpenTofu, Docker, shell"
+    packages: [opentofu]
+    needs: [node]
+    nvim:
+      servers: [ansiblels, yamlls, tofu_ls, dockerls, docker_compose_language_service, bashls]
+      mason:
+        - ansible-language-server
+        - ansible-lint
+        - yaml-language-server
+        - tofu-ls
+        - dockerfile-language-server
+        - docker-compose-language-service
+        - bash-language-server
+        - shellcheck
+        - shfmt
+        - prettierd
+      formatters:
+        sh: [shfmt]
+        bash: [shfmt]
+        terraform: [tofu_fmt]
+        opentofu: [tofu_fmt]
+        terraform-vars: [tofu_fmt]
+        yaml: [prettierd]
+        yaml.ansible: [prettierd]
+        yaml.docker-compose: [prettierd]
+      parsers: [hcl, terraform, dockerfile, yaml, bash]
