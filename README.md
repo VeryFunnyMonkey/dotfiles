@@ -4,7 +4,7 @@ My setup for client machines (Arch, macOS, Debian/Ubuntu including WSL, Fedora):
 
 Managed with [chezmoi](https://chezmoi.io) in **symlink mode**: most files in `~` are symlinks into this repo, so edits take effect immediately. The source lives in `home/` (`.chezmoiroot`).
 
-> **Status:** Phase 1 (core). Git accounts, `dev` workspaces, modules, Ghostty, the tutor and CI come in later phases.
+> **Status:** Phases 1–2 (core, git accounts, `dev` workspaces). Modules, agents, Ghostty, the tutor and CI come in later phases.
 
 ## Set up a new machine
 
@@ -22,7 +22,7 @@ The first question is a **preset**:
 | `headless` | no display: a VM or a box you SSH into |
 | `custom` | asks each question |
 
-Then it installs packages, sets zsh as your login shell, enables the SSH agent and sets up Neovim (plugins, parsers, language tools). Anything it's about to replace (an old `~/.zshrc`, `~/.gitconfig` etc.) is backed up first.
+Then it installs packages, sets zsh as your login shell, enables the SSH agent, sets up Neovim (plugins, parsers, language tools) and offers to set up your git accounts. It also asks whether you use GitHub on this machine (personal presets say yes), which decides whether `gh` is installed. Anything it's about to replace (an old `~/.zshrc`, `~/.gitconfig` etc.) is backed up first.
 
 Already have the repo checked out? `chezmoi init --source ~/Projects/dotfiles --apply`.
 
@@ -37,6 +37,7 @@ Already have the repo checked out? `chezmoi init --source ~/Projects/dotfiles --
 | `rig search <query>` | search the package managers |
 | `rig drift [--all]` | installed-but-undeclared, and declared-but-missing |
 | `rig sync` | install whatever is declared but missing |
+| `rig git add\|list\|which\|remove\|clone\|doctor` | git accounts (below) |
 | `rig edit [file]` | edit the dotfiles, then apply |
 | `rig diff` / `rig apply` | `chezmoi diff` / `chezmoi apply` |
 | `rig profile` | re-answer the machine questions |
@@ -56,6 +57,50 @@ rig uninstall --restore ~/rig-uninstall-<date>.tar.gz   # undo an uninstall
 
 Packages that were installed before rig are never removed. SSH keys are never deleted.
 
+## Git accounts
+
+Each account (personal, a client, ...) has its own name, email and SSH key, also used to **sign commits**. Nothing personal is in the repo: accounts live in `~/.config/git/identities/` and `~/.ssh/`.
+
+```sh
+rig git add            # walkthrough: name, email, where it's hosted, folder, key
+rig git list           # accounts and their folders
+rig git which          # which account this repo uses
+rig git clone clienta git@github.com:org/repo   # clone through that account, into its folder
+rig git doctor         # test each account's connection
+rig git remove clienta
+```
+
+- **Hosts:** GitHub is automatic: `gh` logs you in through the browser and uploads the key for login and signing. GitLab, Azure DevOps, Bitbucket and other servers: the key is copied to your clipboard and the settings page opens. "No hosting" gives a local identity only.
+- **Which account a repo uses:** repos inside an account's folder (`~/Projects` for personal, `~/Work/<name>` for others), or cloned through its alias (`git@github.com-<name>:...`). On personal machines the default account covers everything else; on work machines there is no default, so git refuses to commit until a repo matches an account. Wrong-client commits can't happen.
+- **GitHub on this machine:** adding a GitHub account installs `gh` if needed; removing the last one offers to remove it.
+
+## dev: workspaces
+
+`dev` builds tmux sessions for projects. Run it in a repo: your agent on the left, nvim on the right. Run it anywhere else (or press `Alt-p`, or `prefix f` in tmux) for a picker of running sessions, workspaces and frequent folders.
+
+```sh
+dev agent set claude    # once per machine: what the agent pane runs (dev agent unset: plain shell)
+dev                     # open this project's workspace
+dev init web            # create a workspace (.dev) from a template: default, web, py
+dev edit                # change it
+dev --agent codex       # a different agent this time; --no-agent for a plain shell
+dev wt feature-x        # a worktree + window for parallel work; dev wt ls, dev wt rm feature-x
+```
+
+A workspace file (`.dev`, or kept on the machine with `dev init --local`, the default on work machines so client repos never get one):
+
+```ini
+[code] main-vertical
+agent
+nvim
+
+[run] even-horizontal
+npm run dev
+shell
+```
+
+Each `[name]` is a window, with an optional tmux layout after it. Each line is a pane's command: `agent` is your agent, `shell` a plain shell, anything else is typed into the pane (you're back at a prompt when it stops).
+
 ## Packages
 
 `home/.chezmoidata/packages.yaml` declares everything. Where packages come from:
@@ -69,7 +114,7 @@ Packages that were installed before rig are never removed. SSH keys are never de
 ## What's in it
 
 - **zsh** (`~/.config/zsh`, via `ZDOTDIR`): emacs keys, shared history in `~/.local/state/zsh`, fzf (Ctrl-R / Ctrl-T / Alt-C), zoxide (`z`), autosuggestions, syntax highlighting, a git-aware prompt. Machine-local additions: `~/.config/zsh/local.zsh`.
-- **tmux** (`C-Space` prefix): `\` / `-` split, `C-h/j/k/l` moves across tmux panes *and* nvim splits, `prefix g` lazygit, `prefix r` reload, `v`/`y` copy (OSC52, works over SSH).
+- **tmux** (`C-Space` prefix): `\` / `-` split, `C-h/j/k/l` moves across tmux panes *and* nvim splits, `prefix f` workspace picker, `prefix g` lazygit, `prefix r` reload, `v`/`y` copy (OSC52, works over SSH).
 - **Neovim** 0.12 with `vim.pack`: gruvbox, mini.nvim, fzf-lua, treesitter, blink.cmp, Mason + LSP, conform (format on save), grug-far. Press `<leader>` (Space) and wait for a menu; `<leader>fk` searches every key by description.
 - **git**: delta for diffs, sensible defaults. No identity in the repo: it's machine-local (`~/.config/git/identities.gitconfig`).
 - **Theme:** gruvbox dark everywhere; colours in `home/.chezmoidata/theme.yaml`.

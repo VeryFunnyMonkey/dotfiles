@@ -7,7 +7,8 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 - `home/.chezmoi.toml.tmpl`: the machine profile (preset, work, session, WSL, modules).
 - `home/.chezmoidata/`: `packages.yaml` (the declared packages), `theme.yaml` (gruvbox).
 - `home/.chezmoiscripts/`: setup steps (bootstrap, backup ledger, packages, shell, ssh agent, nvim).
-- `home/dot_local/bin/executable_rig`: the `rig` command.
+- `home/dot_local/bin/executable_rig`: the `rig` command; `home/dot_local/share/rig/git.sh`: `rig git` (git accounts).
+- `home/dot_local/bin/executable_dev`: `dev` (tmux workspaces); templates in `home/dot_config/dev/templates/`.
 - `home/dot_config/`: zsh, tmux, nvim, git, lazygit, rig's rendered data.
 
 ## Rules
@@ -15,6 +16,7 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 - **Everything rig changes must be undoable.** New system changes get a ledger entry in `~/.local/state/rig/system.log` (kind, key, previous value) and a matching revert in `system_revert_all` in `rig`. New files chezmoi takes over are backed up by `run_before_05-backup.sh`.
 - Templates only in small fragments (theme, machine data); main configs stay plain so symlink mode keeps them live.
 - No emails, hostnames, IPs or anything private in the repo; identities and server lists are machine-local.
+- Scripts run with `set -euo pipefail`: write `if [[ ... ]]; then ...; fi`, not `[[ ... ]] && ...`, at the end of functions and loops (a false condition there makes the function fail).
 - Check with `chezmoi diff` before `chezmoi apply`. Test risky changes in a container, not on the owner's machine.
 - Keymap changes update the README cheatsheet (and later the tutor and mini.clue descriptions) in the same commit.
 
