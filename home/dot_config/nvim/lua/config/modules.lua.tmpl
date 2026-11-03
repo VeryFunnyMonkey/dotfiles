@@ -1,0 +1,18 @@
+-- Rendered by chezmoi from the enabled modules. Don't edit here: language
+-- support comes from .chezmoidata/modules/*.yaml (core languages are below).
+-- Enabled modules: {{ range $k, $v := .modules }}{{ if $v }}{{ $k }} {{ end }}{{ end }}
+return {
+  -- LSP servers (lspconfig names), started by mason-lspconfig
+  servers = { "lua_ls" },
+  -- Mason packages to keep installed (servers + formatters)
+  mason = { "lua-language-server", "stylua" },
+  -- conform.nvim formatters per filetype
+  formatters = {
+    lua = { "stylua" },
+  },
+  -- treesitter parsers
+  parsers = {
+    "bash", "c", "diff", "gitcommit", "json", "lua", "luadoc", "markdown",
+    "markdown_inline", "query", "toml", "vim", "vimdoc", "yaml",
+  },
+}
