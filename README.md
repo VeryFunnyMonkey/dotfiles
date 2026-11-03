@@ -4,7 +4,7 @@ My setup for client machines (Arch, macOS, Debian/Ubuntu including WSL, Fedora):
 
 Managed with [chezmoi](https://chezmoi.io) in **symlink mode**: most files in `~` are symlinks into this repo, so edits take effect immediately. The source lives in `home/` (`.chezmoiroot`).
 
-> **Status:** Phases 1–2 (core, git accounts, `dev` workspaces). Modules, agents, Ghostty, the tutor and CI come in later phases.
+> **Status:** Phases 1–3 (core, git accounts, `dev` workspaces, modules, agents). Ghostty, OS settings, the tutor, the `wm` module and CI come next.
 
 ## Set up a new machine
 
@@ -38,6 +38,8 @@ Already have the repo checked out? `chezmoi init --source ~/Projects/dotfiles --
 | `rig drift [--all]` | installed-but-undeclared, and declared-but-missing |
 | `rig sync` | install whatever is declared but missing |
 | `rig git add\|list\|which\|remove\|clone\|doctor` | git accounts (below) |
+| `rig module list\|info\|enable\|disable [--purge]` | opt-in modules (below) |
+| `rig agents list\|add\|remove\|default` | coding agents (below) |
 | `rig edit [file]` | edit the dotfiles, then apply |
 | `rig diff` / `rig apply` | `chezmoi diff` / `chezmoi apply` |
 | `rig profile` | re-answer the machine questions |
@@ -73,6 +75,42 @@ rig git remove clienta
 - **Hosts:** GitHub is automatic: `gh` logs you in through the browser and uploads the key for login and signing. GitLab, Azure DevOps, Bitbucket and other servers: the key is copied to your clipboard and the settings page opens. "No hosting" gives a local identity only.
 - **Which account a repo uses:** repos inside an account's folder (`~/Projects` for personal, `~/Work/<name>` for others), or cloned through its alias (`git@github.com-<name>:...`). On personal machines the default account covers everything else; on work machines there is no default, so git refuses to commit until a repo matches an account. Wrong-client commits can't happen.
 - **GitHub on this machine:** adding a GitHub account installs `gh` if needed; removing the last one offers to remove it.
+
+## Modules
+
+Opt-in pieces a machine may or may not want. The preset picks them at setup; change them any time:
+
+| Module | What it brings | Default |
+|---|---|---|
+| `lang-python` | pyright, ruff (lint/format/imports), uv | personal, work, tui |
+| `lang-web` | ts_ls, prettierd (TS/JS/JSON/CSS/HTML/Markdown) | personal, work, tui |
+| `lang-ops` | Ansible, YAML with Compose/Actions schemas, OpenTofu, Docker, shell (shellcheck, shfmt) | personal, work, tui |
+| `lang-go` | gopls, goimports, gofumpt; Go toolchain | off |
+| `lang-rust` | rust-analyzer (clippy), rustfmt; rustup | off |
+| `homelab` | Tailscale (joins the tailnet) | personal, tui, headless |
+| `wm` | keyboard-driven desktop (coming) | off |
+
+```sh
+rig module list
+rig module enable lang-go
+rig module disable lang-rust --purge   # --purge also deletes toolchains rig installed
+rig module info lang-ops
+```
+
+Neovim picks up the language servers, formatters and parsers of whatever is enabled. Modules that need Node, Go or Rust pull in that **runtime** (fnm + Node LTS, Go, rustup); it's removed with `--purge` once nothing needs it. Guides: [docs/modules](docs/modules).
+
+## Coding agents
+
+Setup asks which to install (none, one or several): **Claude Code**, **GitHub Copilot CLI**, **OpenAI Codex CLI**, **Gemini CLI**, **OpenCode**. The first one (or the one you pick) is what `dev` starts.
+
+```sh
+rig agents list
+rig agents add codex
+rig agents remove gemini
+rig agents default claude
+```
+
+rig installs them through each vendor's official route and updates them with `rig update`. Logins, API keys and agent settings are yours: sign in on first run (e.g. Copilot with a work account).
 
 ## dev: workspaces
 
