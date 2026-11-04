@@ -203,6 +203,7 @@ picker_entries() { # kind \t name \t path \t tabs
   done
 }
 # Rows: name (as wide as the longest), status, the folder it's in (dim).
+# --all adds every other folder under your home, for searching.
 picker_items() {
   local entries kind name path tabs label width=8 scol=0
   entries=$(picker_entries)
@@ -228,6 +229,7 @@ picker_items() {
     printf '%-*s  %s%*s\033[2m%s\033[0m\t%s\t%s\t%s\n' "$width" "$label" "$state" "$pad" '' \
       "${where/#"$HOME"/\~}" "$kind" "$name" "$path"
   done <<<"$entries"
+  if [[ ${1:-} != --all ]]; then return 0; fi
   # then every other folder under your home, so fuzzy search finds any path
   local projects; projects=$(cut -f3 <<<"$entries")
   all_dirs | awk -v home="$HOME" -v seen="$projects" '
@@ -297,13 +299,19 @@ typed_dir() { # query -> absolute folder, or nothing
 
 cmd_ls() {
   have fzf || die "fzf isn't installed"
-  local out query key line kind name path dir
+  local out query key line kind name path dir mark
+  # marks whether the folders are loaded, so typing reloads only once
+  mark=$(mktemp "${TMPDIR:-/tmp}/dev-pick.XXXXXX"); rm -f "$mark"
+  trap 'rm -f "$mark"' RETURN
+  local self; self="bash $(printf %q "$0")"
+  local on_change="if [ -n \"\$FZF_QUERY\" ]; then [ -e $mark ] || { : > $mark; echo \"reload($self _items --all)\"; }; else rm -f $mark; echo \"reload($self _items)\"; fi"
   while :; do
     # enter with nothing matching still returns what was typed (a path, maybe)
     # ranked by match; equal matches keep list order (projects, then shallow folders)
     out=$(picker_items | pick --ansi --delimiter='\t' --with-nth=1 --tiebreak=index \
           --prompt='project> ' --print-query --bind 'enter:accept-or-print-query' \
-          --header=$'Projects, then every folder in ~ (or type a path)\nenter open · ^x close · ^e/^n workspace · ^/ preview' \
+          --header=$'Your projects. Type to search every folder in ~ (or a path)\nenter open · ^x close · ^e/^n workspace · ^/ preview' \
+          --bind "change:transform:$on_change" \
           --header-first \
           --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo' \
           --bind "start,resize:transform:$PREVIEW_FIT" --bind 'ctrl-/:toggle-preview' \
@@ -409,7 +417,7 @@ main() {
     wt) shift; cmd_wt "$@" ;;
     forget) shift; cmd_forget "$@" ;;
     _preview) shift; cmd_preview "$@" ;;
-    _items) picker_items ;;
+    _items) shift; picker_items "$@" ;;
     help|-h|--help) cmd_help ;;
     '')
       # In a project (a git repo, or a folder with a workspace): open it.
