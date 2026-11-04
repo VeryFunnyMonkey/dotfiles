@@ -31,7 +31,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 darwin() { [[ $(uname) == Darwin ]]; }
 
 # ------------------------------------------------------------- hosts ----------
-# hosts file: name TAB user@host[:port] TAB path (~ = home) TAB source (manual|homelab)
+# hosts file: name TAB user@host[:port] TAB path (~ = home) TAB source (manual|import)
 hosts_init() { mkdir -p "$SRV_CFG"; [[ -f $HOSTS ]] || printf '# srv hosts: name<TAB>user@host[:port]<TAB>path (~ = home)<TAB>source\n' >"$HOSTS"; }
 host_line() { awk -F'\t' -v n="$1" '$1==n && $1 !~ /^#/ {print; exit}' "$HOSTS" 2>/dev/null; }
 host_names() { awk -F'\t' '$1 !~ /^#/ && NF>=2 {print $1}' "$HOSTS" 2>/dev/null; }
@@ -194,10 +194,10 @@ cmd_ls() {
   while IFS=$'\t' read -r n t p s; do
     [[ -z $n || $n == \#* ]] && continue
     any=1
-    if grep -qxF "$n" <<<"$mounted"; then printf '  %s●%s %-18s %-32s %s%s\n' "$G" "$N" "$n" "$t" "${p:-~}" "$([[ $s == homelab ]] && echo "  ${DIM}homelab${N}")"
-    else printf '  ○ %-18s %-32s %s%s\n' "$n" "$t" "${p:-~}" "$([[ $s == homelab ]] && echo "  ${DIM}homelab${N}")"; fi
+    if grep -qxF "$n" <<<"$mounted"; then printf '  %s●%s %-18s %-32s %s%s\n' "$G" "$N" "$n" "$t" "${p:-~}" "$([[ $s == import || $s == homelab ]] && echo "  ${DIM}imported${N}")"
+    else printf '  ○ %-18s %-32s %s%s\n' "$n" "$t" "${p:-~}" "$([[ $s == import || $s == homelab ]] && echo "  ${DIM}imported${N}")"; fi
   done <"$HOSTS"
-  ((any)) || echo "  no hosts yet: srv add (or srv import-homelab)"
+  ((any)) || echo "  no hosts yet: srv add, or srv import <hosts file>"
 }
 # For the prompt and tmux: mounted host names, or nothing.
 cmd_status() {
@@ -262,11 +262,14 @@ cmd_dev() {
   exec dev "$(mount_point "$n")"
 }
 
-# ------------------------------------------------------------- homelab --------
-# Import hosts from the ansible inventory (inventory/hosts.yml plus
-# group_vars/all and host_vars for ansible_user / ansible_host). Only entries
-# with source=homelab are replaced; hosts you added yourself stay.
-inventory_hosts() { # repo
+# ------------------------------------------------------------- import ---------
+# Import hosts from a file: srv's simple list (name user@host[:port] [path] per
+# line; see extras/srv-hosts.example) or an Ansible inventory (hosts.yml, with
+# group_vars/host_vars next to it for ansible_user / ansible_host). Imported
+# hosts are marked source=import; re-importing replaces only those.
+IMPORT_SRC() { printf '%s/import-source' "$SRV_CFG"; }
+
+inventory_hosts() { # inventory.yml
   awk '
     /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
     {
@@ -275,30 +278,77 @@ inventory_hosts() { # repo
       if (in_hosts && ind <= hosts_ind) in_hosts = 0
       if (line == "hosts:") { in_hosts = 1; hosts_ind = ind; next }
       if (in_hosts && line ~ /^[A-Za-z0-9._-]+:$/ && ind == hosts_ind + 2) { sub(/:$/, "", line); print line }
-    }' "$1/inventory/hosts.yml" | sort -u
+    }' "$1" | sort -u
 }
 yaml_value() { # file key
   [[ -f $1 ]] || return 0
   awk -v k="$2" '$1==k":" {sub(/^[^:]*:[[:space:]]*/,""); gsub(/["'"'"']/,""); print; exit}' "$1"
 }
+host_vars_file() { # inventory-dir host
+  local f
+  for f in "$1/host_vars/$2.yml" "$1/host_vars/$2.yaml" "$1/host_vars/$2/main.yml" "$1/host_vars/$2/main.yaml"; do
+    if [[ -f $f ]]; then printf '%s' "$f"; return; fi
+  done
+}
+group_all_file() {
+  local f
+  for f in "$1/group_vars/all.yml" "$1/group_vars/all.yaml" "$1/group_vars/all/main.yml" "$1/group_vars/all/main.yaml"; do
+    if [[ -f $f ]]; then printf '%s' "$f"; return; fi
+  done
+}
+
+# file or folder -> the file to read (an inventory folder holds hosts.yml / inventory.yml)
+import_file() {
+  local p=${1/#\~/$HOME}
+  if [[ -d $p ]]; then
+    local f
+    for f in "$p/hosts.yml" "$p/hosts.yaml" "$p/inventory.yml" "$p/inventory/hosts.yml" "$p/inventory/hosts.yaml"; do
+      if [[ -f $f ]]; then printf '%s' "$f"; return; fi
+    done
+    return 1
+  fi
+  [[ -f $p ]] && printf '%s' "$p"
+}
+
 cmd_import() {
-  local repo=${1:-$HOME/Projects/ansible}
-  [[ -f $repo/inventory/hosts.yml ]] || die "no ansible inventory at $repo (srv import-homelab <path to the ansible repo>)"
+  local arg=${1:-}
+  if [[ -z $arg ]]; then
+    [[ -f $(IMPORT_SRC) ]] || die "usage: srv import <hosts file | Ansible inventory> (example: extras/srv-hosts.example in the dotfiles)"
+    arg=$(cat "$(IMPORT_SRC)")
+  fi
+  local file; file=$(import_file "$arg") || die "no hosts file at $arg"
+  [[ -n $file ]] || die "no hosts file at $arg"
   hosts_init
-  local def_user; def_user=$(yaml_value "$repo/inventory/group_vars/all/main.yml" ansible_user)
-  def_user=${def_user:-$(id -un)}
-  local h user addr n=0 tmp; tmp=$(mktemp)
-  awk -F'\t' '$4!="homelab"' "$HOSTS" >"$tmp"
-  while IFS= read -r h; do
-    [[ -n $h ]] || continue
-    if [[ -n $(awk -F'\t' -v n="$h" '$1==n' "$tmp") ]]; then warn "$h: you have your own entry for it; kept yours"; continue; fi
-    user=$(yaml_value "$repo/inventory/host_vars/$h/main.yml" ansible_user); user=${user:-$def_user}
-    addr=$(yaml_value "$repo/inventory/host_vars/$h/main.yml" ansible_host); addr=${addr:-$h}
-    printf '%s\t%s@%s\t~\thomelab\n' "$h" "$user" "$addr" >>"$tmp"
-    n=$((n + 1))
-  done < <(inventory_hosts "$repo")
+  local tmp n=0 name target path
+  tmp=$(mktemp)
+  awk -F'\t' '$4!="import" && $4!="homelab"' "$HOSTS" >"$tmp"
+  add_host() { # name target path
+    if [[ -n $(awk -F'\t' -v n="$1" '$1==n' "$tmp") ]]; then warn "$1: you already have your own entry; kept yours"; return; fi
+    printf '%s\t%s\t%s\timport\n' "$1" "$2" "${3:-~}" >>"$tmp"; n=$((n + 1))
+  }
+  if grep -qE '^[[:space:]]*hosts:[[:space:]]*$' "$file"; then
+    # Ansible inventory
+    local dir def_user user addr h hv
+    dir=$(dirname "$file")
+    def_user=$(yaml_value "$(group_all_file "$dir")" ansible_user); def_user=${def_user:-$(id -un)}
+    while IFS= read -r h; do
+      [[ -n $h ]] || continue
+      hv=$(host_vars_file "$dir" "$h")
+      user=$(yaml_value "$hv" ansible_user); user=${user:-$def_user}
+      addr=$(yaml_value "$hv" ansible_host); addr=${addr:-$h}
+      add_host "$h" "$user@$addr" "~"
+    done < <(inventory_hosts "$file")
+  else
+    # simple list: name user@host[:port] [path]
+    while read -r name target path _; do
+      [[ -z $name || $name == \#* ]] && continue
+      [[ $target == *@* ]] || { warn "skipped '$name': the login must be user@host"; continue; }
+      add_host "$name" "$target" "$path"
+    done <"$file"
+  fi
   mv "$tmp" "$HOSTS"
-  ok "imported $n servers from ${repo/#$HOME/~} (srv ls)"
+  printf '%s\n' "$file" >"$(IMPORT_SRC)"
+  ok "imported $n hosts from ${file/#$HOME/~} (srv ls; srv import again re-reads it)"
 }
 
 # ------------------------------------------------------------- doctor ---------
@@ -333,7 +383,7 @@ ${B}srv${N}: mount your servers at ~/Servers/<host>, over SSH
   ${B}srv ssh${N} <host> [-- cmd]    a shell (or a command) on the server
   ${B}srv add${N} [name user@host[:port] [path]]   add a host
   ${B}srv rm${N} <host> · ${B}srv edit${N} · ${B}srv ls${N}
-  ${B}srv import-homelab${N} [path]  hosts from the ansible inventory (default ~/Projects/ansible)
+  ${B}srv import${N} [file]          add hosts from a hosts file or an Ansible inventory (re-reads the last one)
   ${B}srv doctor${N}                 check rclone/FUSE and stale mounts
 EOF
 }
@@ -350,7 +400,7 @@ main() {
     ls|list) cmd_ls ;;
     dev) cmd_dev "$@" ;;
     ssh) cmd_ssh "$@" ;;
-    import-homelab|import) cmd_import "$@" ;;
+    import|import-homelab) cmd_import "$@" ;;
     doctor) cmd_doctor ;;
     _status) cmd_status "$@" ;;
     _preview) cmd_preview "$@" ;;

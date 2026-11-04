@@ -150,13 +150,13 @@ srv dev ops-server       # mount it and open a dev workspace there: your agent +
 srv ssh ops-server       # a shell there (srv ssh ops-server -- <command> for one command)
 srv umount ops-server    # or --all; --force for a stuck mount
 srv add                  # add a host: name, user@host[:port], folder
-srv import-homelab       # the servers from ~/Projects/ansible's inventory
+srv import hosts.txt     # add hosts from a file: a simple list or an Ansible inventory
 ```
 
 While anything is mounted, the prompt shows ` ⇅ ops-server` (or ` ⇅ 3`) and so does the tmux status bar.
 
 - **How:** rclone over SSH, using your normal ssh (keys, the agent, `~/.ssh/config`, known_hosts). macOS mounts with `rclone nfsmount` (its own NFS client: no macFUSE, nothing to change in System Settings or Recovery); Linux with `rclone mount` (FUSE, built into the kernel, no root). Mounts last until you unmount, log out or reboot.
-- **Homelab:** with Tailscale selected, setup offers to import every server from the ansible inventory (right users, pve by its LAN address). The list lives on the machine only (`~/.config/srv/hosts`), never in this repo; re-importing only touches the imported entries.
+- **Importing hosts:** with Tailscale selected, setup asks for a hosts file to copy into srv: a simple list (`name  user@host[:port]  [folder]` per line, see `extras/srv-hosts.example`) or an Ansible inventory (users and addresses come from its `group_vars`/`host_vars`). `srv import <file>` does it any time and remembers the file; it only replaces hosts it imported. The list lives on the machine only (`~/.config/srv/hosts`), never in this repo.
 - **With agents:** `srv dev <host>` runs your agent with the server's home as its folder, so it edits the server's files directly. It works as the login user, so root-owned files (`/etc`, system config) can't be changed through the mount; commands still run over ssh (`srv ssh <host> -- <cmd>`, which the agent can use too). `git` and big searches over a mount are slow: run those on the server.
 - **macOS:** not yet verified on a real Mac.
 

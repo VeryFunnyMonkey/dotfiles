@@ -1,0 +1,8 @@
+# Hosts for srv: one per line.
+#   name      user@host[:port]           folder to mount (optional; ~ = home)
+# Import with: srv import <this file>   (or pick a file when you select Tailscale in rig setup)
+# srv also reads Ansible inventories (hosts.yml); point it at the file or its folder.
+
+nas         admin@nas.example.lan
+web-1       deploy@web-1.example.lan:2222   /srv/www
+pi          pi@pi.example.lan

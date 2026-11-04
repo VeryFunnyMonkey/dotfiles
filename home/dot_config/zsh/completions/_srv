@@ -9,7 +9,7 @@ cmds=(
   'rm:remove a host'
   'edit:edit the hosts file'
   'ls:list hosts'
-  'import-homelab:hosts from the ansible inventory'
+  'import:add hosts from a hosts file or inventory'
   'doctor:check rclone, FUSE and stale mounts'
   'help:show help'
 )
@@ -18,5 +18,5 @@ if (( CURRENT == 2 )); then _describe 'srv command' cmds; return; fi
 case $words[2] in
   mount|m|dev|ssh|rm|remove) (( CURRENT == 3 )) && _values 'host' $hosts ;;
   umount|unmount|u) _values -w 'host' $hosts --all --force ;;
-  import-homelab|import) _files -/ ;;
+  import|import-homelab) _files ;;
 esac

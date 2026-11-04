@@ -24,7 +24,7 @@ if have nvim; then run "keys in docs" scripts/check-keys.sh; fi
 # nothing private in the repo: emails, private IPs, tailnet or LAN hostnames
 private=$(git diff --cached -U0 --diff-filter=AM -- . ':!.githooks/pre-commit' | grep '^+' | grep -v '^+++' |
   grep -nE '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}|(^|[^0-9])(10|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]{1,3}\.[0-9]{1,3}|\.ts\.net\b' |
-  grep -vE '@example\.invalid|noreply@|git@github\.com|user@host|@localhost' || true)
+  grep -vE '@([a-z0-9-]+\.)?example\.|noreply@|git@github\.com|user@host|@localhost' || true)
 if [[ -n $private ]]; then
   echo "pre-commit: this looks private (emails, private IPs, tailnet names); keep it machine-local:"
   echo "$private" | sed 's/^/  /' | head -10

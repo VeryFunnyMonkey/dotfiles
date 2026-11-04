@@ -2,5 +2,5 @@ catalog:
   tailscale:
     category: homelab
     name: Tailscale
-    description: "installs Tailscale and logs in; offers to copy your servers from the ansible inventory into srv"
+    description: "installs Tailscale and logs in; offers to copy your servers into srv from a hosts file"
     packages: [tailscale]

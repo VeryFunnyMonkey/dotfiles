@@ -101,15 +101,17 @@ runtimes_cleanup() { # old-runtimes
   for r in $1; do [[ " $RIG_RUNTIMES " == *" $r "* ]] || runtime_purge "$r"; done
 }
 
-# With the homelab item selected: offer to import the servers from the ansible
-# inventory into srv, once (srv import-homelab re-imports any time).
+# With Tailscale selected: offer to import hosts into srv from a hosts file
+# (srv's simple list or an Ansible inventory), once.
 homelab_offer_import() {
-  local repo="$HOME/Projects/ansible" hosts="${XDG_CONFIG_HOME:-$HOME/.config}/srv/hosts"
+  local hosts="${XDG_CONFIG_HOME:-$HOME/.config}/srv/hosts"
   have srv || return 0
-  [[ -f $repo/inventory/hosts.yml ]] || { say "  ${DIM}srv: no ansible inventory at ~/Projects/ansible; srv import-homelab <path> imports the servers later${N}"; return 0; }
-  if [[ -f $hosts ]] && grep -q $'\thomelab$' "$hosts"; then return 0; fi
-  { : </dev/tty; } 2>/dev/null || { say "  ${DIM}srv: run srv import-homelab to add your servers${N}"; return 0; }
-  if confirm "Import your servers from the ansible inventory into srv (mount them at ~/Servers/<host>)?"; then
-    srv import-homelab "$repo"
-  fi
+  if [[ -f $hosts ]] && grep -qE $'\t(import|homelab)$' "$hosts"; then return 0; fi
+  { : </dev/tty; } 2>/dev/null || { say "  ${DIM}srv: add your servers later with srv import <hosts file> (or srv add)${N}"; return 0; }
+  say "  srv can mount your servers at ~/Servers/<host>. Import them from a hosts file?"
+  say "  ${DIM}a simple list (see extras/srv-hosts.example) or an Ansible inventory; blank to skip${N}"
+  local f
+  if have gum; then f=$(gum input --placeholder "path to a hosts file or inventory (blank: skip)" </dev/tty || true)
+  else printf '  file: ' >/dev/tty; IFS= read -r f </dev/tty || f=''; fi
+  if [[ -n $f ]]; then srv import "$f" || warn "import failed; try again with: srv import <file>"; fi
 }
