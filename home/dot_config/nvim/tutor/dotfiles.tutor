@@ -130,8 +130,10 @@ Reviewing an agent's work: open lazygit (`<leader>gg`), go through the files,
 
 # Chapter 6: The terminal around Neovim
 
-The prefix in tmux is `<C-Space>`.
+Every Ghostty window opens in tmux, so tabs and splits are tmux's. The
+prefix is `<C-Space>`: press it, let go, then the key.
 
+    prefix c                 new tab (a tmux window); prefix n / p next / previous
     prefix \  /  prefix -    split side by side / top and bottom
     prefix z                 zoom a pane (again to unzoom)
     prefix f                 workspaces: pick a project (also Alt-p in the shell)

@@ -50,7 +50,7 @@ components:
   - {name: lazygit, role: git UI, why: "hunk staging for reviewing agents' work", alternatives: [neogit, fugitive, gitui], revisit_if: "config keys renamed (pagers -> diffRenderers happened in 0.66)"}
   - {name: jq, role: JSON tool, why: extra, alternatives: [], revisit_if: never}
   - {name: tealdeer, role: tldr pages, why: extra, alternatives: [tldr (node)], revisit_if: never}
-  - {name: ghostty, role: terminal, why: "fast, native on Linux and macOS, one config, modern keyboard protocol", alternatives: [Konsole (KDE only), iTerm2 (macOS only), kitty, WezTerm], revisit_if: "a 2.0 release, or the GTK/KDE integration changes; packaged for Debian/Fedora (then widen platforms)"}
+  - {name: ghostty, role: terminal, why: "fast, native on Linux and macOS, one config, modern keyboard protocol; each window opens in tmux (its own session), so tabs and splits are tmux's on every OS", alternatives: [Ghostty's own tabs (local only, differ per OS), Konsole (KDE only), iTerm2 (macOS only), kitty, WezTerm], revisit_if: "a 2.0 release, or the GTK/KDE integration changes; packaged for Debian/Fedora (then widen platforms)"}
   - {name: nerd-font, role: font with icons, why: "nvim, eza and the prompt use the icons", alternatives: [], revisit_if: never}
   - {name: clipboard, role: wl-clipboard / xclip / win32yank, why: system clipboard on Linux and WSL, alternatives: [], revisit_if: never}
   - {name: wm, role: keyboard-driven desktop (KDE shortcuts, AeroSpace + Maccy), why: "one keymap across KDE and macOS without fragile tiling scripts", alternatives: [Krohnkite (breaks on Plasma updates), yabai (needs SIP off), Raycast (closed)], revisit_if: "KDE renames kglobalshortcutsrc actions; AeroSpace reaches 1.0 or needs SIP changes; Hyprland box gets set up"}

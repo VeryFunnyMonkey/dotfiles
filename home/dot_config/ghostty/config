@@ -10,10 +10,14 @@ window-padding-y = 4
 window-padding-balance = true
 confirm-close-surface = false
 
-# tmux does tabs and splits; keep Ghostty's keys out of its way
+# Each window opens in tmux (see zshrc), which does tabs and splits: Ghostty's
+# own tab and split keys are off (Linux ctrl+shift, macOS cmd) so there's one way.
 keybind = ctrl+shift+t=unbind
 keybind = ctrl+shift+o=unbind
 keybind = ctrl+shift+e=unbind
+keybind = super+t=unbind
+keybind = super+d=unbind
+keybind = super+shift+d=unbind
 
 # clipboard: OSC52 from tmux and nvim (works over SSH too)
 clipboard-read = allow

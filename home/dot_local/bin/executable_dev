@@ -173,10 +173,12 @@ cmd_forget() {
 picker_items() {
   prune_registry
   local s p seen=$'\n'
-  # running sessions
-  while IFS=$'\t' read -r s p; do
+  # running sessions (not the throwaway ones each Ghostty window opens)
+  local w
+  while IFS=$'\t' read -r s p w; do
+    if [[ $w == 1 ]]; then continue; fi
     printf '●\t%s\t%s\n' "$s" "$p"; seen+="$p"$'\n'
-  done < <(tmux list-sessions -F '#{session_name}	#{session_path}' 2>/dev/null || true)
+  done < <(tmux list-sessions -F '#{session_name}	#{session_path}	#{@rig_window}' 2>/dev/null || true)
   # workspaces
   if [[ -f $REGISTRY ]]; then
     while IFS= read -r p; do
