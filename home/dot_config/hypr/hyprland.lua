@@ -28,6 +28,8 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" 
 
 ---------------------------------------------------------------- autostart ---
 hl.on("hyprland.start", function()
+    -- Desktop, Downloads, Pictures...: created if missing (as other desktops do)
+    hl.exec_cmd("xdg-user-dirs-update")
     hl.exec_cmd(run("waybar"))
     hl.exec_cmd(run("hypridle"))
     hl.exec_cmd(run("/usr/lib/hyprpolkitagent/hyprpolkitagent"))

@@ -44,6 +44,7 @@ catalog:
       - jq
       - xdg-utils
       - less
+      - xdg-user-dirs
       # files, fonts, the look of other apps
       - thunar
       - gvfs
