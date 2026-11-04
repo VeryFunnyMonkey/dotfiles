@@ -68,6 +68,35 @@ jobs:
       - uses: actions/checkout@v4
       - run: tests/run.sh languages archlinux:latest
 
+  wsl:
+    # Ubuntu under WSL2 on a Windows runner: the work-laptop path.
+    needs: lint
+    runs-on: windows-2025
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [wsl, roundtrip]
+    defaults:
+      run:
+        shell: wsl-bash {0}
+    steps:
+      - name: keep LF line endings
+        shell: pwsh
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: Vampire/setup-wsl@v7
+        with:
+          distribution: Ubuntu-24.04
+          additional-packages: sudo git curl ca-certificates openssh-client
+      - name: test user and repo copy
+        run: |
+          uname -r
+          useradd -m -s /bin/bash tester && echo "tester ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/tester
+          cp -r . /home/tester/dotfiles && chown -R tester:tester /home/tester/dotfiles
+      - name: ${{ matrix.test }}
+        run: sudo -iu tester /home/tester/dotfiles/tests/here.sh ${{ matrix.test }}
+
   macos:
     # the only real test of the macOS path until it's set up on a Mac. Not on
     # pull requests: macOS minutes cost more.
