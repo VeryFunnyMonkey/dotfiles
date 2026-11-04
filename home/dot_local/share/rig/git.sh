@@ -272,13 +272,20 @@ git_add() {
 
   say; info "${B}new git account${N}"
   local ndef=''; if [[ -z $existing ]]; then ndef=$first_default; fi
-  if [[ -z $n ]]; then ask n "Name for this account (e.g. personal, github-2)" "$ndef"; fi
+  # A wrong answer asks again; a blank one (with no default) cancels, so the
+  # setup menu gets control back instead of rig exiting.
+  if [[ -z $n ]]; then ask n "Name for this account (e.g. personal, github-2; blank to cancel)" "$ndef"; fi
   n=$(printf '%s' "$n" | tr 'A-Z ' 'a-z-' | tr -cd 'a-z0-9_-')
-  [[ -n $n ]] || die "need a name"
+  if [[ -z $n ]]; then say "  cancelled"; return 1; fi
   if [[ -f $ID_DIR/$n.meta ]]; then confirm "Account '$n' exists; set it up again?" || return 0; fi
 
   ask gname "Your name in commits" "$(git config --global user.name 2>/dev/null || true)"
-  while :; do ask email "Email for this account" "$(meta_get "$n" email)"; [[ $email == *@* ]] && break; say "  that doesn't look like an email"; done
+  while :; do
+    ask email "Email for this account (blank to cancel)" "$(meta_get "$n" email)"
+    if [[ -z $email ]]; then say "  cancelled"; return 1; fi
+    if [[ $email == *@* ]]; then break; fi
+    say "  that doesn't look like an email"
+  done
 
   choose host "Where is this account hosted?" 1 \
     "github     GitHub (logs in and adds the key for you, with gh)" \
@@ -291,11 +298,11 @@ git_add() {
   case $host in
     gitlab) ask hostname "GitLab server" gitlab.com ;;
     gitea) ask hostname "Server (Codeberg: codeberg.org)" codeberg.org ;;
-    other) ask hostname "Git server hostname (e.g. git.example.com)" ;;
+    other) ask hostname "Git server hostname (e.g. git.example.com; blank to cancel)" ;;
     none) ;;
     *) hostname=$(host_hostname "$host") ;;
   esac
-  [[ $host == none || -n $hostname ]] || die "need a hostname"
+  if [[ $host != none && -z $hostname ]]; then say "  cancelled"; return 1; fi
   if [[ -n $hostname ]]; then alias="$hostname-$n"; fi
 
   local fdef="$HOME/Projects/$n"; [[ -z $existing ]] && fdef="$HOME/Projects"
@@ -322,8 +329,10 @@ git_add() {
       if [[ ! -f $key ]]; then
         info "creating ${key/#$HOME/~}: pick a passphrase (the agent asks for it once per login)"
         mkdir -p "$SSH_DIR"; chmod 700 "$SSH_DIR"
-        if [[ $ktype == rsa ]]; then ssh-keygen -q -t rsa -b 4096 -C "$email" -f "$key" </dev/tty
-        else ssh-keygen -q -t ed25519 -C "$email" -f "$key" </dev/tty; fi
+        local kok=0
+        if [[ $ktype == rsa ]]; then ssh-keygen -q -t rsa -b 4096 -C "$email" -f "$key" </dev/tty && kok=1
+        else ssh-keygen -q -t ed25519 -C "$email" -f "$key" </dev/tty && kok=1; fi
+        if ((kok == 0)); then bad "the key wasn't created; nothing was saved"; return 1; fi
         printf '%s\t%s\t%s\t%s\n' ssh-key-created "$key" - "$(now)" >>"$RIG_STATE/system.log"
       fi
     fi

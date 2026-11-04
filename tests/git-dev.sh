@@ -24,6 +24,8 @@ tty_feed /tmp/in2 rig git add second
 check "second account written" '[[ -f ~/.config/git/identities/second.gitconfig ]]'
 check "ssh alias generated" 'grep -q "Host git.example.invalid-second" ~/.ssh/config.d/rig-git'
 check "ssh Include added" '[[ $(head -n1 ~/.ssh/config) == "Include config.d/*" ]]'
+printf '\n' > /tmp/blank; tty_feed /tmp/blank rig git add
+check "blank name cancels without an error exit or a new account" 'grep -q cancelled /tmp/feed.out && ! grep -q "need a name" /tmp/feed.out && [[ $(ls ~/.config/git/identities/*.meta | wc -l) == 2 ]]'
 
 # --- git: a GitLab account; a stub glab stands in for the real one (no network here)
 mkdir -p ~/.local/bin

@@ -79,7 +79,7 @@ apply_state() { # profile "selected" "extras" agent_default
 
   state_write "$@"
   info "applying"
-  chezmoi apply
+  chezmoi apply || { bad "applying didn't finish (the output above says why); fix it and run: rig sync"; return 1; }
   load_machine
   ledger_init
 
@@ -321,7 +321,11 @@ cmd_setup() {
       "Review & install")
         agent_def=$(pick_agent_default "$sel" "$agent_def" menu)
         review "$cur" "$sel"
-        if gum confirm "Install?" </dev/tty; then apply_state "$profile" "$sel" "$extras" "$agent_def"; return; fi ;;
+        if gum confirm "Install?" </dev/tty; then
+          if apply_state "$profile" "$sel" "$extras" "$agent_def"; then return; fi
+          cur=$sel   # saved, partly applied: back to the menu to change it or try again
+          gum input --placeholder "enter to go back to the menu" </dev/tty >/dev/null || true
+        fi ;;
       Quit)
         if [[ $sel != "$cur" ]] && ! gum confirm "Quit without installing your changes?" </dev/tty; then continue; fi
         return 0 ;;
