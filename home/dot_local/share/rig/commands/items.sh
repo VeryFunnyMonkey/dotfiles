@@ -6,7 +6,7 @@
 # rig add <item|package>...: a catalog item is selected; anything else becomes an
 # extra package for this machine. rig remove undoes either.
 cmd_add() {
-  load_machine; load_catalog
+  load_machine; repo_pull; load_catalog
   (($#)) || die "usage: rig add <item|package>... (rig setup lists the items)"
   local sel extras x
   sel=$(state_get selected); extras=$(state_get extra_packages)

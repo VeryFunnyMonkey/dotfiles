@@ -117,6 +117,7 @@ cmd_setup() {
     esac
     shift
   done
+  if [[ -r $MACHINE_ENV ]]; then load_machine; repo_pull; fi
   load_catalog
   local cur; cur=$(state_get selected 2>/dev/null || true)
   profile=$(state_get profile 2>/dev/null || true)

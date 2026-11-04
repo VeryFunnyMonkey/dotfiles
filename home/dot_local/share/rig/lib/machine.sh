@@ -33,6 +33,25 @@ src_dir() {
 
 cz_tmpl() { chezmoi execute-template --source "$(src_dir)" "$1"; }
 
+# Bring the dotfiles up to date before installing anything (rig setup, rig
+# add): a fast-forward pull, only when the checkout is clean and tracks a
+# branch. Otherwise, or offline, it says so and uses what's here.
+repo_pull() {
+  local root; root=$(repo_root 2>/dev/null) || return 0
+  git -C "$root" rev-parse '@{u}' >/dev/null 2>&1 || return 0
+  if [[ -n $(git -C "$root" status --porcelain 2>/dev/null) ]]; then
+    say "  ${DIM}dotfiles: local changes in ${root/#$HOME/~}, not pulling${N}"; return 0
+  fi
+  local before; before=$(git -C "$root" rev-parse HEAD)
+  if ! git -C "$root" pull -q --ff-only 2>/dev/null; then
+    say "  ${DIM}dotfiles: couldn't pull (offline, or local commits); using what's here${N}"; return 0
+  fi
+  if [[ $(git -C "$root" rev-parse HEAD) != "$before" ]]; then
+    ok "dotfiles updated ($(git -C "$root" rev-list --count "$before..HEAD") new commits)"
+    CATALOG='' PROFILES=''   # the catalog may have changed
+  fi
+}
+
 # ------------------------------------------------------------- selection ----
 # profile / selected / extra_packages / agent_default, in chezmoi's [data].
 

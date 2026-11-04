@@ -43,10 +43,32 @@ if [ -n "${RIG_SOURCE:-}" ]; then
   say "using the dotfiles at $RIG_SOURCE"
   chezmoi init --source "$RIG_SOURCE"
 else
-  say "cloning the dotfiles ($REPO${BRANCH:+, branch $BRANCH})"
+  if [ -d "${XDG_DATA_HOME:-$HOME/.local/share}/chezmoi/.git" ]; then say "using the dotfiles already here"
+  else say "cloning the dotfiles ($REPO${BRANCH:+, branch $BRANCH})"; fi
   if [ -n "$BRANCH" ]; then chezmoi init --branch "$BRANCH" "$REPO"; else chezmoi init "$REPO"; fi
 fi
 SRC=$(chezmoi source-path)
+
+# Already here (a re-run, or RIG_SOURCE): bring it up to date first, on the
+# branch asked for. Local changes, or history that doesn't fast-forward, are
+# left alone; offline, it carries on with what's there.
+ROOT=$(git -C "$SRC" rev-parse --show-toplevel 2>/dev/null || true)
+pull=no
+if [ -n "$ROOT" ]; then
+  if [ -n "$BRANCH" ] || git -C "$ROOT" rev-parse '@{u}' >/dev/null 2>&1; then pull=yes; fi
+fi
+if [ "$pull" = yes ]; then
+  if [ -n "$(git -C "$ROOT" status --porcelain)" ]; then
+    say "the dotfiles in $ROOT have local changes: not pulling"
+  else
+    if [ -n "$BRANCH" ] && [ "$(git -C "$ROOT" branch --show-current)" != "$BRANCH" ]; then
+      git -C "$ROOT" fetch -q origin "$BRANCH" && git -C "$ROOT" checkout -q "$BRANCH" ||
+        say "couldn't switch to branch $BRANCH; staying on $(git -C "$ROOT" branch --show-current)"
+    fi
+    if git -C "$ROOT" pull -q --ff-only 2>/dev/null; then say "dotfiles up to date ($(git -C "$ROOT" log -1 --format='%h %s'))"
+    else say "couldn't pull the dotfiles (offline, or local commits); using what's here"; fi
+  fi
+fi
 
 say "preparing the package manager"
 chezmoi execute-template --source "$SRC" < "$SRC/.chezmoiscripts/run_once_before_00-bootstrap.sh.tmpl" | bash
