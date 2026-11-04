@@ -10,6 +10,15 @@
 set -eu
 
 REPO=${RIG_REPO:-VeryFunnyMonkey}
+# ~/.config or ~/.local as a link to something that's gone (an old dotfiles
+# setup, a sync folder) makes every step fail with "no such file or directory".
+for d in "${XDG_CONFIG_HOME:-$HOME/.config}" "$HOME/.local"; do
+  if [ -L "$d" ] && [ ! -e "$d" ]; then
+    printf 'rig: %s is a link to %s, which no longer exists.\n' "$d" "$(readlink "$d")" >&2
+    printf '     Point it somewhere that exists, or remove the link (rm %s), then run this again.\n' "$d" >&2
+    exit 1
+  fi
+done
 BIN="$HOME/.local/bin"
 mkdir -p "$BIN"
 # A fresh macOS account has no ~/.config; chezmoi expects it there.
