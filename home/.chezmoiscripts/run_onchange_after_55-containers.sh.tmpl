@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# Podman: set up when selected, stopped when not. Re-runs when that changes:
-#   {{ has "podman" (dig "selected" list .) }}
-set -euo pipefail
-exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} containers sync

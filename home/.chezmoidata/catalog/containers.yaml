@@ -7,6 +7,7 @@ catalog:
     name: Podman (Docker-compatible)
     description: "rootless containers, no daemon; `docker` and `docker compose` work, and DOCKER_HOST points at Podman's socket"
     packages: [podman, podman-docker, docker-compose]
+    module: containers
     note: "macOS runs it in a small VM (podman machine), created on first setup"
   lazydocker:
     category: containers

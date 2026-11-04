@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# The item modules (containers, tailscale, ...): each sets up its item when
+# selected and undoes it when not. Re-runs when the selected items' modules change:
+#   {{ (includeTemplate "enabled" . | fromJson).modules | toJson }}
+set -euo pipefail
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync --items

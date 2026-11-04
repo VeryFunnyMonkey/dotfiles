@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Apply the OS settings of the selected items (and restore the ones that were
-# deselected). Re-runs when they change:
+# OS settings of the selected items, and the originals back for deselected
+# ones (the settings module). Re-runs when they change:
 #   {{ includeTemplate "settings-tsv" . | sha256sum }}
 set -euo pipefail
-exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} settings sync
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync settings

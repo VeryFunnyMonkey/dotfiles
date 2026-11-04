@@ -1,13 +1,14 @@
 # shellcheck shell=bash
-# rig agents: installing the coding agents selected in rig setup. Sourced by rig.
-# Install methods follow each vendor's docs; check them at every stack review.
-# Logins, API keys and agent settings are never touched.
+# modules/agents.sh: the coding agents selected in rig setup (catalog items
+# with `agent: true`). Install methods follow each vendor's docs; check them
+# at every stack review. Logins, API keys and agent settings are never touched.
 
 AGENT_NAMES="claude copilot codex gemini opencode"
 
 agent_cmd_name() { case $1 in claude) echo claude ;; copilot) echo copilot ;; codex) echo codex ;; gemini) echo gemini ;; opencode) echo opencode ;; esac; }
+
 agent_label() { case $1 in claude) echo "Claude Code" ;; copilot) echo "GitHub Copilot CLI" ;; codex) echo "OpenAI Codex CLI" ;; gemini) echo "Gemini CLI" ;; opencode) echo "OpenCode" ;; esac; }
-agent_known() { [[ " $AGENT_NAMES " == *" $1 "* ]]; }
+
 agent_npm_pkg() { case $1 in copilot) echo @github/copilot ;; codex) echo @openai/codex ;; gemini) echo @google/gemini-cli ;; esac; }
 
 # How each agent is installed on this machine
@@ -38,6 +39,7 @@ agent_install() {
     pacman\ *) pkg_install_cmd pacman "${m#pacman }" ;;
   esac
 }
+
 agent_remove() {
   local a=$1 m; m=$(agent_method "$a")
   case $m in
@@ -51,6 +53,7 @@ agent_remove() {
     pacman\ *) pkg_remove_cmd pacman "${m#pacman }" ;;
   esac
 }
+
 agent_update() {
   local a=$1 m; m=$(agent_method "$a")
   case $m in
@@ -60,12 +63,68 @@ agent_update() {
     pacman\ *) : ;;  # system update covers it
   esac
 }
+
 agent_present() { with_node; have "$(agent_cmd_name "$1")"; }
 
-# ledger: agent <name> <installed|preexisting>
-agent_status() { awk -F'\t' -v n="$1" '$1=="agent" && $2==n {s=$3} END {print s}' "$RIG_STATE/system.log"; }
+# ledger: agent <name> installed|preexisting|removed
+agent_status() { ledger_last agent "$1"; }
 
-cmd_agents() {
+agents_sync() {
+  local a
+  for a in $RIG_AGENTS; do
+    if agent_present "$a"; then
+      [[ -n $(agent_status "$a") ]] || ledger_record agent "$a" preexisting
+      ok "$(agent_label "$a") installed"
+    else
+      info "installing $(agent_label "$a")"
+      if agent_install "$a"; then
+        ledger_record agent "$a" installed
+        ok "$(agent_label "$a") installed (sign in on first run)"
+      else warn "couldn't install $a"; fi
+    fi
+  done
+  # deselected: uninstall the ones rig installed
+  for a in $AGENT_NAMES; do
+    in_list "$a" "$RIG_AGENTS" && continue
+    if [[ $(agent_status "$a") == installed ]] && agent_present "$a"; then
+      info "uninstalling $(agent_label "$a") (deselected)"
+      if agent_remove "$a"; then ledger_record agent "$a" removed; else warn "couldn't uninstall $a"; fi
+    fi
+  done
+  [[ -n $RIG_AGENTS ]] || ok "no agents selected"
+}
+
+agents_update() {
+  [[ -n $RIG_AGENTS ]] || return 0
+  info "agents"
+  local a
+  for a in $RIG_AGENTS; do if [[ $(agent_status "$a") == installed ]]; then agent_update "$a"; fi; done
+}
+
+agents_doctor() {
+  info "agents"
+  if [[ -z $RIG_AGENTS ]]; then say "  none selected (rig setup, or rig add <agent>)"; return 0; fi
+  local a
+  for a in $RIG_AGENTS; do
+    if agent_present "$a"; then check_ok "$(agent_label "$a")$( [[ $a == "$RIG_AGENT_DEFAULT" ]] && printf ' (dev default)')"
+    else check_bad "$(agent_label "$a") missing (rig agents sync)"; fi
+  done
+}
+
+# rig uninstall --agents: only the ones rig installed
+agents_uninstall() {
+  [[ ${UNINSTALL_AGENTS:-0} == 1 ]] || return 0
+  info "uninstalling agents rig installed"
+  local a
+  for a in $AGENT_NAMES; do
+    if [[ $(agent_status "$a") == installed ]] && agent_present "$a"; then
+      if agent_remove "$a"; then ok "uninstalled $(agent_label "$a")"; else warn "couldn't uninstall $a"; fi
+    fi
+  done
+}
+revert_agent() { :; }   # agents are removed by --agents (above)
+
+agents_cmd() {
   load_machine; ledger_init
   local sub=${1:-list}; (($#)) && shift
   case $sub in
@@ -73,43 +132,18 @@ cmd_agents() {
       local a
       for a in $AGENT_NAMES; do
         local mark="○" note=''
-        [[ " $RIG_AGENTS " == *" $a "* ]] && mark="${G}●${N}"
+        in_list "$a" "$RIG_AGENTS" && mark="${G}●${N}"
         [[ $a == "$RIG_AGENT_DEFAULT" ]] && note=" (dev default)"
-        agent_present "$a" && note+=" installed" || { [[ " $RIG_AGENTS " == *" $a "* ]] && note+=" ${Y}missing${N}"; }
+        if agent_present "$a"; then note+=" installed"; elif in_list "$a" "$RIG_AGENTS"; then note+=" ${Y}missing${N}"; fi
         printf '  %s %-9s %s%s\n' "$mark" "$a" "$(agent_label "$a")" "$note"
       done
       say "  ${DIM}select agents in rig setup (or rig add <name>) · rig agents default <name>${N}" ;;
     default)
-      local a=${1:-}; [[ " $RIG_AGENTS " == *" $a "* ]] || die "'$a' isn't one of this machine's agents ($RIG_AGENTS)"
+      local a=${1:-}; in_list "$a" "$RIG_AGENTS" || die "'$a' isn't one of this machine's agents ($RIG_AGENTS)"
       state_write "$RIG_PROFILE" "$(state_get selected)" "$(state_get extra_packages)" "$a"
       chezmoi apply --exclude=scripts >/dev/null; ok "dev starts $a" ;;
-    sync)
-      local a
-      for a in $RIG_AGENTS; do
-        if agent_present "$a"; then
-          [[ -n $(agent_status "$a") ]] || printf '%s\t%s\t%s\t%s\n' agent "$a" preexisting "$(now)" >>"$RIG_STATE/system.log"
-          ok "$(agent_label "$a") installed"
-        else
-          info "installing $(agent_label "$a")"
-          if agent_install "$a"; then
-            printf '%s\t%s\t%s\t%s\n' agent "$a" installed "$(now)" >>"$RIG_STATE/system.log"
-            ok "$(agent_label "$a") installed (sign in on first run)"
-          else warn "couldn't install $a"; fi
-        fi
-      done
-      [[ -n $RIG_AGENTS ]] || ok "no agents selected" ;;
-    update)
-      local a
-      for a in $RIG_AGENTS; do [[ $(agent_status "$a") == installed ]] && agent_update "$a"; done; true ;;
+    sync) agents_sync ;;
+    update) agents_update ;;
     *) die "usage: rig agents list|default <name>|sync" ;;
   esac
-}
-
-agents_uninstall_all() { # rig uninstall --agents: only the ones rig installed
-  local a
-  for a in $AGENT_NAMES; do
-    if [[ $(agent_status "$a") == installed ]] && agent_present "$a"; then
-      agent_remove "$a" && ok "uninstalled $(agent_label "$a")" || warn "couldn't uninstall $a"
-    fi
-  done
 }

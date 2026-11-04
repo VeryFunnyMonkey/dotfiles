@@ -1,0 +1,137 @@
+# shellcheck shell=bash
+# pkg/sync.sh: what the package list (packages.tsv, rendered by chezmoi from
+# packages.yaml and the selected items) means for this machine: install what's
+# missing, report drift, search, update, and clean up after a deselect.
+
+# packages.tsv: manager \t name(s) \t logical \t source
+pkg_declared() { awk -F'\t' 'NF>=2 && $1 !~ /^#/' "$PACKAGES_TSV"; }
+
+# Install everything declared for this machine that's missing.
+cmd_sync() {
+  load_machine; ledger_init
+  [[ -r $PACKAGES_TSV ]] || die "no package list ($PACKAGES_TSV); run chezmoi apply"
+  baseline_record
+  local -A todo=()
+  local m n logical
+  while IFS=$'\t' read -r m n logical _; do
+    if pkg_present "$m" "$n"; then
+      ledger_pkg_record "$m" "$n" "$logical" preexisting
+    else
+      todo[$m]+="$n"$'\n'
+      ledger_pkg_record "$m" "$n" "$logical" installed
+    fi
+  done < <(pkg_declared)
+  if ((${#todo[@]} == 0)); then ok "all declared packages are installed"; return 0; fi
+  local mgr names
+  for mgr in pacman apt dnf brew download; do
+    [[ -n ${todo[$mgr]:-} ]] || continue
+    names=$(printf '%s' "${todo[$mgr]}" | tr '\n' ' ')
+    info "installing with $mgr: $names"
+    # casks and downloads one at a time; the rest in one go
+    if [[ $mgr == download || $mgr == brew && $names == *--cask* ]]; then
+      while IFS= read -r n; do [[ -n $n ]] && pkg_install_cmd "$mgr" "$n"; done <<<"${todo[$mgr]}"
+    else
+      # shellcheck disable=SC2086
+      pkg_install_cmd "$mgr" $names
+    fi
+  done
+  ok "packages in sync"
+}
+
+# The explicitly-installed packages before rig touched this machine, so
+# `rig drift` only reports what changed since.
+baseline_record() {
+  if [[ -f $RIG_STATE/baseline ]]; then return 0; fi
+  pkg_explicit >"$RIG_STATE/baseline" 2>/dev/null || true
+}
+pkg_declared_names() { pkg_declared | awk -F'\t' '{n=split($2,a," "); if ($2 ~ /^--cask /) print $1"\t"$2; else for (i=1;i<=n;i++) print $1"\t"a[i]}'; }
+pkg_missing() { # "manager\tname (logical)" for each declared package that isn't installed
+  local m n logical
+  while IFS=$'\t' read -r m n logical _; do
+    pkg_present "$m" "$n" || printf '%s\t%s (%s)\n' "$m" "$n" "$logical"
+  done < <(pkg_declared)
+}
+
+cmd_drift() {
+  load_machine; ledger_init
+  local all=0; [[ ${1:-} == --all ]] && all=1
+  local tmp; tmp=$(mktemp -d)
+  pkg_explicit | sort -u >"$tmp/now"
+  pkg_declared_names | sort -u >"$tmp/declared"
+  if ((all)) || [[ ! -f $RIG_STATE/baseline ]]; then : >"$tmp/base"; else sort -u "$RIG_STATE/baseline" >"$tmp/base"; fi
+  comm -23 "$tmp/now" "$tmp/declared" | comm -23 - "$tmp/base" >"$tmp/extra"
+  pkg_missing >"$tmp/missing"
+  if [[ -s $tmp/extra ]]; then
+    info "installed but not declared$( ((all)) || printf ' (since rig was set up; --all for everything)')"
+    sed 's/^/  /' "$tmp/extra"
+    say "  ${DIM}keep one: rig install <name>  ·  remove one: rig remove <name>${N}"
+  else ok "nothing installed outside the declaration"; fi
+  if [[ -s $tmp/missing ]]; then
+    info "declared but missing (rig sync installs them)"; sed 's/^/  /' "$tmp/missing"
+  fi
+  rm -rf "$tmp"
+}
+
+cmd_search() {
+  load_machine
+  (($#)) || die "usage: rig search <query>"
+  "pm_${RIG_NATIVE}_search" "$@"
+  if [[ $RIG_NATIVE != brew ]] && have brew; then info "brew"; pm_brew_search "$@" || true; fi
+}
+
+# rig update: the system's own packages, then whatever is declared but missing
+pkg_update() {
+  info "system packages"
+  if declare -F "pm_${RIG_NATIVE}_upgrade" >/dev/null && [[ $RIG_NATIVE != brew ]]; then "pm_${RIG_NATIVE}_upgrade"; fi
+  if have brew; then info "brew"; pm_brew_upgrade; fi
+  if have flatpak; then info "flatpak"; flatpak update -y; fi
+  cmd_sync
+}
+
+pkg_doctor() {
+  info "packages"
+  local missing; missing=$(pkg_missing)
+  if [[ -z $missing ]]; then check_ok "all declared packages installed"
+  else while IFS=$'\t' read -r m rest; do check_bad "missing: $rest ($m)"; done <<<"$missing"; fi
+}
+
+# After a change of selection: packages rig installed that nothing needs now.
+pkg_cleanup() { # the package list from before
+  [[ -n $1 ]] || return 0
+  local gone=() m n
+  while IFS=$'\t' read -r m n _ _; do
+    [[ -z $m ]] && continue
+    awk -F'\t' -v m="$m" -v n="$n" '$1==m && $2==n {f=1} END {exit !f}' "$PACKAGES_TSV" && continue
+    [[ $(ledger_pkg_status "$m" "$n") == installed ]] && pkg_present "$m" "$n" && gone+=("$m"$'\t'"$n")
+  done <<<"$1"
+  ((${#gone[@]})) || return 0
+  say "  no longer needed (rig installed these):"
+  printf '    %s\n' "${gone[@]//$'\t'/: }"
+  if confirm "Uninstall them?"; then
+    local g
+    for g in "${gone[@]}"; do
+      pkg_remove_cmd "${g%%$'\t'*}" "${g#*$'\t'}" && ledger_pkg_forget "${g%%$'\t'*}" "${g#*$'\t'}"
+    done
+  else say "  ${DIM}kept; rig drift lists them${N}"; fi
+}
+
+# rig uninstall --packages: the ones rig installed (never ones already there)
+pkg_uninstall_all() {
+  local m n
+  tac_ "$RIG_STATE/packages.log" | awk -F'\t' '$4=="installed"' | while IFS=$'\t' read -r m n _ _ _; do
+    if pkg_present "$m" "$n"; then pkg_remove_cmd "$m" "$n" || warn "couldn't remove $n"; fi
+  done
+}
+
+# gum draws the installer's menus. On a fresh machine it isn't there yet:
+# install it (recorded like any other package).
+need_gum() {
+  have gum && return 0
+  local mgr=brew
+  [[ $(cz_tmpl '{{ (includeTemplate "detect" . | fromJson).platform }}') == arch ]] && mgr=pacman
+  ledger_init
+  info "installing gum (draws the installer menus)"
+  ledger_pkg_record "$mgr" gum gum installed
+  pkg_install_cmd "$mgr" gum || die "couldn't install gum"
+  hash -r
+}

@@ -1,16 +1,7 @@
 #!/usr/bin/env bash
 # Neovim: plugins (from the committed lockfile), treesitter parsers, Mason
-# tools. Re-runs when the lockfile or the enabled modules change:
+# tools (the nvim module). Re-runs when the lockfile or the selection changes:
 #   lock    {{ include "dot_config/nvim/nvim-pack-lock.json" | sha256sum }}
 #   items   {{ (includeTemplate "enabled" .) | sha256sum }}
 set -euo pipefail
-for b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
-  [[ -x $b ]] && { eval "$("$b" shellenv)"; break; }
-done
-# Node for Mason's npm-based servers, Go/Rust toolchains if enabled
-if command -v fnm >/dev/null; then eval "$(fnm env --shell bash)"; fi
-export GOPATH="${XDG_DATA_HOME:-$HOME/.local/share}/go" RUSTUP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/rustup" CARGO_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/cargo"
-PATH="$CARGO_HOME/bin:$GOPATH/bin:$HOME/.local/bin:$PATH"
-command -v nvim >/dev/null || { echo "rig: nvim not installed yet; skipping" >&2; exit 0; }
-echo "==> setting up neovim (plugins, parsers, language tools)"
-nvim --headless "+lua require('config.bootstrap').run()" +qa
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync nvim

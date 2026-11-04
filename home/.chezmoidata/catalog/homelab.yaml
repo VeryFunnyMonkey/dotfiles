@@ -4,3 +4,4 @@ catalog:
     name: Tailscale
     description: "installs Tailscale and logs in; offers to copy your servers into srv from a hosts file"
     packages: [tailscale]
+    module: tailscale

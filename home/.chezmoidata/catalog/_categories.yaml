@@ -10,6 +10,10 @@
 #   nvim                     servers, system_servers, mason, formatters, parsers
 #   note                     shown in the review when the item is skipped here
 #   requires                 other items this one only makes sense with
+#   module                   the rig module that sets it up beyond packages
+#                            (share/rig/modules/<name>.sh: services, logins, ...)
+#   files                    target paths only this item brings (ignored when it isn't
+#                            selected); files_<platform> only there
 #   settings                 OS settings it applies (see catalog/settings.yaml); rig
 #                            records each previous value and restores it on deselect
 categories:

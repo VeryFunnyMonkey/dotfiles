@@ -1,46 +1,4 @@
 #!/usr/bin/env bash
-# Make zsh the login shell. The previous shell is recorded for `rig uninstall`.
+# Make zsh the login shell (the shell module; the previous one is recorded).
 set -euo pipefail
-USER=${USER:-$(id -un)}
-STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
-mkdir -p "$STATE"; touch "$STATE/system.log"
-record() { printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$(date +%Y-%m-%dT%H:%M:%S)" >>"$STATE/system.log"; }
-sudo_() { if [[ $EUID -eq 0 ]]; then "$@"; else sudo "$@"; fi; }
-
-# Prefer a zsh /etc/shells already lists (e.g. /usr/bin/zsh), else whatever's on PATH.
-ZSH=""
-while IFS= read -r s; do
-  [[ $s == */zsh && -x $s ]] && { ZSH=$s; break; }
-done < <(grep -v '^#' /etc/shells 2>/dev/null)
-[[ -n $ZSH ]] || ZSH=$(command -v zsh || true)
-[[ -n $ZSH ]] || { echo "rig: zsh not found; skipping login shell" >&2; exit 0; }
-{{- if eq .chezmoi.os "darwin" }}
-current=$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')
-{{- else }}
-current=$(getent passwd "$USER" | cut -d: -f7)
-{{- end }}
-# Already a working zsh (on Arch /bin/zsh and /usr/bin/zsh are the same file)? Done.
-[[ ${current##*/} == zsh && -x $current ]] && exit 0
-
-if ! grep -qxF "$ZSH" /etc/shells; then
-  echo "$ZSH" | sudo_ tee -a /etc/shells >/dev/null
-  record etc-shells "$ZSH" added
-fi
-echo "rig: changing login shell to $ZSH"
-# macOS asks for your password; sudo (if it doesn't need one) works without.
-# If neither can, carry on: the login shell isn't worth failing the install.
-ok_=n
-{{- if eq .chezmoi.os "darwin" }}
-if sudo -n true 2>/dev/null; then
-  if sudo chsh -s "$ZSH" "$USER"; then ok_=y; fi
-elif [[ ${RIG_NONINTERACTIVE:-0} != 1 ]] && { : </dev/tty; } 2>/dev/null; then
-  if chsh -s "$ZSH" </dev/tty; then ok_=y; fi
-fi
-{{- else }}
-if sudo_ chsh -s "$ZSH" "$USER"; then ok_=y; fi
-{{- end }}
-if [[ $ok_ != y ]]; then
-  echo "rig: couldn't change the login shell; run: chsh -s $ZSH" >&2
-  exit 0
-fi
-record shell "$USER" "$current"
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync shell

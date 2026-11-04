@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# First run: offer to set up git accounts (skips quietly without a terminal,
-# or when accounts already exist). Any time later: rig git add.
+# First run: offer to set up git accounts (the git module; skips quietly
+# without a terminal, or when accounts already exist). Later: rig git add.
 set -euo pipefail
-exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} git setup
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync git

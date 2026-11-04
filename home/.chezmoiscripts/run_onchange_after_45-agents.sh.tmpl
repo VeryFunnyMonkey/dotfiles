@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the chosen coding agents. Re-runs when the choice changes:
+# The chosen coding agents (the agents module). Re-runs when the choice changes:
 #   {{ (includeTemplate "enabled" . | fromJson).agents | toJson }}
 set -euo pipefail
-exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} agents sync
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync agents

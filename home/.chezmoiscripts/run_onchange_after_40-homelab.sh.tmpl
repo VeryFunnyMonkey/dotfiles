@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# Tailscale item: running and logged in. Re-runs when it's selected or not:
-#   {{ has "tailscale" (dig "selected" list .) }}
-set -euo pipefail
-exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} homelab sync

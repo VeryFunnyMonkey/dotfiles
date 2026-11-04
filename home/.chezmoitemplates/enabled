@@ -1,7 +1,8 @@
 {{- /*
   JSON for this machine: selected (items that apply here), skipped (selected
   but not applicable: {id, reason}), runtimes (from the items' needs:),
-  agents (selected agent items), unknown (ids not in the catalog).
+  agents (selected agent items), modules (rig modules of the selected items),
+  unknown (ids not in the catalog).
 */ -}}
 {{- $d := includeTemplate "detect" . | fromJson -}}
 {{- $sel := list -}}{{- $skipped := list -}}{{- $unknown := list -}}
@@ -12,10 +13,12 @@
 {{-     else -}}{{- $skipped = append $skipped (dict "id" $id "reason" $why) -}}{{- end -}}
 {{-   else -}}{{- $unknown = append $unknown $id -}}{{- end -}}
 {{- end -}}
-{{- $rt := dict -}}{{- $agents := list -}}
+{{- $rt := dict -}}{{- $agents := list -}}{{- $mods := list -}}
 {{- range $id := $sel -}}
 {{-   $it := index $.catalog $id -}}
 {{-   range $r := (dig "needs" list $it) -}}{{- $_ := set $rt $r true -}}{{- end -}}
 {{-   if dig "agent" false $it -}}{{- $agents = append $agents $id -}}{{- end -}}
+{{-   $m := dig "module" "" $it -}}
+{{-   if and $m (not (has $m $mods)) -}}{{- $mods = append $mods $m -}}{{- end -}}
 {{- end -}}
-{{- dict "selected" $sel "skipped" $skipped "unknown" $unknown "runtimes" (keys $rt | sortAlpha) "agents" $agents | toJson -}}
+{{- dict "selected" $sel "skipped" $skipped "unknown" $unknown "runtimes" (keys $rt | sortAlpha) "agents" $agents "modules" ($mods | sortAlpha) | toJson -}}
