@@ -195,7 +195,7 @@ Neovim's built-ins work too: `grn` rename, `gra` action, `grr` references, `gri`
 
 ## Tests and upkeep
 
-- **Tests** run in throwaway containers: `tests/run.sh <test> [image]` with `roundtrip`, `installer`, `git-dev`, `languages`, `srv`, `settings`, `wm` (image `archlinux:latest` by default, or `ubuntu:24.04`). GitHub Actions (`.github/workflows/test.yml`) runs lint and these on every push and monthly: the container tests (Arch, Ubuntu), a **WSL** job (Ubuntu 24.04 under WSL2 on a Windows runner: `wsl` and `roundtrip`, through `tests/here.sh`), a **macOS** job (install, settings, srv over nfsmount, uninstall), and the heavy `languages` test monthly or by hand.
+- **Tests** run in throwaway containers (Docker or Podman, whichever is installed): `tests/run.sh <test> [image]` with `roundtrip`, `installer`, `git-dev`, `languages`, `srv`, `settings`, `wm` (image `archlinux:latest` by default, or `ubuntu:24.04`). GitHub Actions (`.github/workflows/test.yml`) runs lint and these on every push and monthly: the container tests (Arch, Ubuntu), a **WSL** job (Ubuntu 24.04 under WSL2 on a Windows runner: `wsl` and `roundtrip`, through `tests/here.sh`), a **macOS** job (install, settings, srv over nfsmount, uninstall), and the heavy `languages` test monthly or by hand.
 - **Pre-commit checks:** enable once per clone with `git config core.hooksPath .githooks` (shellcheck, zsh syntax, keys mentioned in docs exist, tutor exercises, the stack record, nothing private).
 - **Stack review:** `docs/stack.yaml` records every component, why it was chosen and when to look again. Every few months (`rig doctor` says when) ask your agent to "do the stack review" (procedure in AGENTS.md): it researches current upstream changes, reports, and changes only what you approve.
 
