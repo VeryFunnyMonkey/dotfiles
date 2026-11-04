@@ -1,0 +1,6 @@
+catalog:
+  github:
+    category: git
+    name: GitHub (gh)
+    description: "GitHub CLI: rig git add uses it to log in and upload keys; PRs and CI from the terminal"
+    packages: [gh]

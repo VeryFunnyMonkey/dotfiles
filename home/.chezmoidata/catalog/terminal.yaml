@@ -1,0 +1,25 @@
+catalog:
+  ghostty:
+    category: terminal
+    name: Ghostty
+    description: "fast native terminal; one config for Linux and macOS"
+    packages: [ghostty]
+    platforms: [arch, darwin]
+    display: true
+    note: "not packaged for this distro yet; on WSL use Windows Terminal"
+  nerd-font:
+    category: terminal
+    name: JetBrainsMono Nerd Font
+    description: "the font with icons used by nvim, eza and the prompt"
+    packages: [nerd-font]
+    platforms: [arch, fedora, debian, darwin]
+    display: true
+    note: "on WSL, install the font on Windows and pick it in Windows Terminal"
+  clipboard:
+    category: terminal
+    name: Clipboard tools
+    description: "system clipboard for nvim and tmux (wl-clipboard, xclip, or win32yank on WSL)"
+    packages: [clipboard]
+    platforms: [arch, fedora, debian, wsl]
+    display: true
+    note: "macOS has this built in"

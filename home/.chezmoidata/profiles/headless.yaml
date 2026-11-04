@@ -1,0 +1,4 @@
+profiles:
+  headless:
+    description: "No display: a VM or a box you SSH into"
+    select: [zoxide, eza, bat, delta, lazygit, yazi, tailscale]

@@ -1,0 +1,87 @@
+catalog:
+  python:
+    category: languages
+    name: Python
+    description: "pyright + ruff (lint, format, imports) in nvim; uv for environments"
+    packages: [uv]
+    needs: [node] # Mason installs pyright with npm
+    nvim:
+      servers: [pyright, ruff]
+      mason: [pyright, ruff]
+      formatters:
+        python: [ruff_organize_imports, ruff_format]
+      parsers: [python, requirements]
+  web:
+    category: languages
+    name: Web (TypeScript, JS, JSON, CSS, HTML)
+    description: "ts_ls + prettierd in nvim; needs Node (fnm)"
+    packages: []
+    needs: [node]
+    nvim:
+      servers: [ts_ls]
+      mason: [typescript-language-server, prettierd]
+      formatters:
+        javascript: [prettierd]
+        javascriptreact: [prettierd]
+        typescript: [prettierd]
+        typescriptreact: [prettierd]
+        json: [prettierd]
+        jsonc: [prettierd]
+        css: [prettierd]
+        html: [prettierd]
+        markdown: [prettierd]
+      parsers: [javascript, typescript, tsx, jsdoc, css, html]
+  ops:
+    category: languages
+    name: Ops (Ansible, YAML, OpenTofu, Docker, shell)
+    description: "Ansible, YAML with Compose/Actions schemas, OpenTofu, Docker, shell (shellcheck, shfmt)"
+    packages: [opentofu]
+    needs: [node]
+    nvim:
+      servers: [ansiblels, yamlls, tofu_ls, dockerls, docker_compose_language_service, bashls]
+      mason:
+        - ansible-language-server
+        - ansible-lint
+        - yaml-language-server
+        - tofu-ls
+        - dockerfile-language-server
+        - docker-compose-language-service
+        - bash-language-server
+        - shellcheck
+        - shfmt
+        - prettierd
+      formatters:
+        sh: [shfmt]
+        bash: [shfmt]
+        terraform: [tofu_fmt]
+        opentofu: [tofu_fmt]
+        terraform-vars: [tofu_fmt]
+        yaml: [prettierd]
+        yaml.ansible: [prettierd]
+        yaml.docker-compose: [prettierd]
+      parsers: [hcl, terraform, dockerfile, yaml, bash]
+  go:
+    category: languages
+    name: Go
+    description: "gopls (staticcheck), goimports + gofumpt on save; Go toolchain"
+    packages: []
+    needs: [go]
+    nvim:
+      servers: [gopls]
+      mason: [gopls, goimports, gofumpt]
+      formatters:
+        go: [goimports, gofumpt]
+      parsers: [go, gomod, gosum, gowork]
+  rust:
+    category: languages
+    name: Rust
+    description: "rust-analyzer (clippy), rustfmt; rustup toolchain"
+    packages: []
+    needs: [rust]
+    nvim:
+      # rust-analyzer comes from rustup so it matches the compiler, not Mason
+      system_servers: [rust_analyzer]
+      mason: []
+      formatters:
+        rust: [rustfmt]
+      parsers: [rust, toml]

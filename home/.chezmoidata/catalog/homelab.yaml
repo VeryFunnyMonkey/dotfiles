@@ -1,0 +1,6 @@
+catalog:
+  tailscale:
+    category: homelab
+    name: Tailscale
+    description: "join the homelab tailnet (servers can't reach personal devices)"
+    packages: [tailscale]

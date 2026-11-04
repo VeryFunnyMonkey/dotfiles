@@ -1,0 +1,8 @@
+# Coding agents: rig installs them through each vendor's route (rig's agents.sh;
+# check the methods at every stack review). Logins and settings are yours.
+catalog:
+  claude: {category: agents, name: Claude Code, description: "Anthropic's coding agent (native installer, updates itself)", agent: true}
+  copilot: {category: agents, name: GitHub Copilot CLI, description: "GitHub's coding agent; works with Copilot plans", agent: true, needs: [node]}
+  codex: {category: agents, name: OpenAI Codex CLI, description: "OpenAI's coding agent", agent: true, needs: [node]}
+  gemini: {category: agents, name: Gemini CLI, description: "Google's coding agent", agent: true, needs: [node]}
+  opencode: {category: agents, name: OpenCode, description: "open-source coding agent; many model providers", agent: true}

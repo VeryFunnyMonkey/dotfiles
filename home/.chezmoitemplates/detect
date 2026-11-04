@@ -1,0 +1,31 @@
+{{- /*
+  Facts about this machine, as JSON: platform (arch|fedora|debian|darwin|unknown),
+  wsl, display (wayland|x11|darwin|wsl|none), desktop (kde|hyprland|gnome|macos|"").
+  display and desktop are detected once and then kept in chezmoi's config, so an
+  apply from an SSH session doesn't decide the machine has no display.
+*/ -}}
+{{- $platform := includeTemplate "platform" . | trim -}}
+{{- $wsl := false -}}
+{{- if and (eq .chezmoi.os "linux") (hasKey .chezmoi "kernel") -}}
+{{-   if contains "microsoft" (lower .chezmoi.kernel.osrelease) -}}{{- $wsl = true -}}{{- end -}}
+{{- end -}}
+{{- $display := dig "display" "" . -}}
+{{- if not $display -}}
+{{-   if eq .chezmoi.os "darwin" -}}{{- $display = "darwin" -}}
+{{-   else if $wsl -}}{{- $display = "wsl" -}}
+{{-   else if or (env "WAYLAND_DISPLAY") (eq (env "XDG_SESSION_TYPE") "wayland") -}}{{- $display = "wayland" -}}
+{{-   else if env "DISPLAY" -}}{{- $display = "x11" -}}
+{{-   else -}}{{- $display = "none" -}}{{- end -}}
+{{- end -}}
+{{- $desktop := dig "desktop" "" . -}}
+{{- if not $desktop -}}
+{{-   $xdg := lower (env "XDG_CURRENT_DESKTOP") -}}
+{{-   if eq .chezmoi.os "darwin" -}}{{- $desktop = "macos" -}}
+{{-   else if contains "kde" $xdg -}}{{- $desktop = "kde" -}}
+{{-   else if contains "hyprland" $xdg -}}{{- $desktop = "hyprland" -}}
+{{-   else if contains "gnome" $xdg -}}{{- $desktop = "gnome" -}}
+{{-   end -}}
+{{- end -}}
+{{- /* the platform an item is matched against: wsl counts separately */ -}}
+{{- $target := $platform -}}{{- if $wsl -}}{{- $target = "wsl" -}}{{- end -}}
+{{- dict "platform" $platform "target" $target "wsl" $wsl "display" $display "desktop" $desktop | toJson -}}

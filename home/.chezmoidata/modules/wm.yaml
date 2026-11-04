@@ -1,6 +1,0 @@
-moduledefs:
-  wm:
-    description: "Keyboard-driven desktop: one keymap for AeroSpace (macOS) and KDE (built in phase 5)"
-    packages: []
-    needs: []
-    nvim: {}

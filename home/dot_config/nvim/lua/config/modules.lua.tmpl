@@ -1,14 +1,14 @@
--- Rendered by chezmoi from the enabled modules (.chezmoidata/modules/*.yaml).
--- Don't edit here; enable/disable modules with `rig module`.
+-- Rendered by chezmoi from the selected catalog items (.chezmoidata/catalog/).
+-- Don't edit here; pick languages with `rig setup` (or rig add/remove).
 {{- $en := includeTemplate "enabled" . | fromJson }}
--- Enabled modules: {{ join ", " $en.modules | default "none" }}
+-- Selected: {{ join ", " $en.selected | default "none" }}
 {{- $servers := list "lua_ls" }}
 {{- $system := list }}
 {{- $mason := list "lua-language-server" "stylua" }}
 {{- $parsers := list "bash" "c" "diff" "gitcommit" "json" "lua" "luadoc" "markdown" "markdown_inline" "query" "toml" "vim" "vimdoc" "yaml" }}
 {{- $fmt := dict "lua" (list "stylua") }}
-{{- range $m := $en.modules }}
-{{-   $nv := dig "nvim" dict (index $.moduledefs $m) }}
+{{- range $m := $en.selected }}
+{{-   $nv := dig "nvim" dict (index $.catalog $m) }}
 {{-   range $x := dig "servers" list $nv }}{{ if not (has $x $servers) }}{{ $servers = append $servers $x }}{{ end }}{{ end }}
 {{-   range $x := dig "system_servers" list $nv }}{{ if not (has $x $system) }}{{ $system = append $system $x }}{{ end }}{{ end }}
 {{-   range $x := dig "mason" list $nv }}{{ if not (has $x $mason) }}{{ $mason = append $mason $x }}{{ end }}{{ end }}

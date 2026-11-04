@@ -1,24 +1,21 @@
 {{- /*
-  JSON: {"modules": [...enabled module names], "runtimes": [...needed runtimes],
-         "agents": [...chosen agents]}. Runtimes come from the enabled modules'
-  and chosen agents' `needs:`.
+  JSON for this machine: selected (items that apply here), skipped (selected
+  but not applicable: {id, reason}), runtimes (from the items' needs:),
+  agents (selected agent items), unknown (ids not in the catalog).
 */ -}}
-{{- $mods := list -}}
-{{- range $name, $on := (dig "modules" dict .) -}}
-{{-   if and $on (hasKey $.moduledefs $name) -}}{{- $mods = append $mods $name -}}{{- end -}}
+{{- $d := includeTemplate "detect" . | fromJson -}}
+{{- $sel := list -}}{{- $skipped := list -}}{{- $unknown := list -}}
+{{- range $id := (dig "selected" list .) -}}
+{{-   if hasKey $.catalog $id -}}
+{{-     $why := includeTemplate "available" (dict "item" (index $.catalog $id) "id" $id "d" $d) | trim -}}
+{{-     if eq $why "ok" -}}{{- if not (has $id $sel) -}}{{- $sel = append $sel $id -}}{{- end -}}
+{{-     else -}}{{- $skipped = append $skipped (dict "id" $id "reason" $why) -}}{{- end -}}
+{{-   else -}}{{- $unknown = append $unknown $id -}}{{- end -}}
 {{- end -}}
-{{- $rt := dict -}}
-{{- range $m := $mods -}}
-{{-   range $r := (dig "needs" list (index $.moduledefs $m)) -}}{{- $_ := set $rt $r true -}}{{- end -}}
+{{- $rt := dict -}}{{- $agents := list -}}
+{{- range $id := $sel -}}
+{{-   $it := index $.catalog $id -}}
+{{-   range $r := (dig "needs" list $it) -}}{{- $_ := set $rt $r true -}}{{- end -}}
+{{-   if dig "agent" false $it -}}{{- $agents = append $agents $id -}}{{- end -}}
 {{- end -}}
-{{- $agents := list -}}
-{{- range $a := (dig "agents" list .) -}}
-{{-   range $x := splitList "," $a -}}
-{{-     $x = trim $x -}}
-{{-     if and $x (hasKey $.agentdefs $x) (not (has $x $agents)) -}}{{- $agents = append $agents $x -}}{{- end -}}
-{{-   end -}}
-{{- end -}}
-{{- range $a := $agents -}}
-{{-   range $r := (dig "needs" list (index $.agentdefs $a)) -}}{{- $_ := set $rt $r true -}}{{- end -}}
-{{- end -}}
-{{- dict "modules" ($mods | sortAlpha) "runtimes" (keys $rt | sortAlpha) "agents" $agents | toJson -}}
+{{- dict "selected" $sel "skipped" $skipped "unknown" $unknown "runtimes" (keys $rt | sortAlpha) "agents" $agents | toJson -}}

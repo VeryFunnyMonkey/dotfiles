@@ -1,0 +1,4 @@
+profiles:
+  minimal:
+    description: "Core only: zsh, tmux, nvim, git and the search tools"
+    select: []

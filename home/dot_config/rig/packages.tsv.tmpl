@@ -1,64 +1,56 @@
 {{- /*
-  This machine's resolved package list, rendered from .chezmoidata/packages.yaml.
-  One line per package: <manager> TAB <name(s)> TAB <logical> TAB <group>
-  Managers: pacman, apt, dnf, brew, download.
+  This machine's resolved package list. One line per package:
+    <manager> TAB <name(s)> TAB <logical> TAB <source>
+  Sources: core, item:<id>, runtime:<name>, extra. Managers: pacman, apt, dnf, brew, download.
 */ -}}
 {{- $p := .packages -}}
-{{- $platform := includeTemplate "platform" . | trim -}}
+{{- $d := includeTemplate "detect" . | fromJson -}}
+{{- $platform := $d.platform -}}
+{{- $en := includeTemplate "enabled" . | fromJson -}}
 {{- $native := "pacman" -}}
 {{- if eq $platform "debian" }}{{ $native = "apt" }}{{ end -}}
 {{- if eq $platform "fedora" }}{{ $native = "dnf" }}{{ end -}}
 
-{{- /* which groups apply to this machine */ -}}
-{{- $groups := list "base" -}}
-{{- if or (eq .session "gui") (eq .session "tui") -}}{{- $groups = append $groups "gui" -}}{{- end -}}
-{{- if or (eq .session "tui") (eq .session "headless") -}}{{- $groups = append $groups "yazi" -}}{{- end -}}
-{{- if .wsl -}}{{- $groups = append $groups "wsl" -}}{{- end -}}
-{{- if .github -}}{{- $groups = append $groups "github" -}}{{- end -}}
-{{- if eq $platform "darwin" -}}{{- $groups = append $groups "darwin" -}}{{- end -}}
-
-{{- /* (package, group) pairs: the groups above, then modules and runtimes */ -}}
-{{- $en := includeTemplate "enabled" . | fromJson -}}
+{{- /* (package, source) pairs */ -}}
 {{- $pairs := list -}}
-{{- range $group := $groups -}}
-{{-   range $pkg := index $p.groups $group -}}{{- $pairs = append $pairs (list $pkg $group) -}}{{- end -}}
-{{- end -}}
-{{- range $m := $en.modules -}}
-{{-   range $pkg := (dig "packages" list (index $.moduledefs $m)) -}}{{- $pairs = append $pairs (list $pkg (printf "module:%s" $m)) -}}{{- end -}}
+{{- range $pkg := $p.core -}}{{- $pairs = append $pairs (list $pkg "core") -}}{{- end -}}
+{{- range $id := $en.selected -}}
+{{-   range $pkg := (dig "packages" list (index $.catalog $id)) -}}
+{{-     if and (eq $pkg "clipboard") $d.wsl -}}
+{{-       $pairs = append $pairs (list "win32yank" (printf "item:%s" $id)) -}}
+{{-       $pairs = append $pairs (list "wslu" (printf "item:%s" $id)) -}}
+{{-     else -}}
+{{-       $pairs = append $pairs (list $pkg (printf "item:%s" $id)) -}}
+{{-     end -}}
+{{-   end -}}
 {{- end -}}
 {{- range $r := $en.runtimes -}}
 {{-   range $pkg := (dig "packages" list (index $.runtimes $r)) -}}{{- $pairs = append $pairs (list $pkg (printf "runtime:%s" $r)) -}}{{- end -}}
 {{- end -}}
+{{- range $pkg := (dig "extra_packages" list .) -}}{{- $pairs = append $pairs (list $pkg "extra") -}}{{- end -}}
 
 {{- range $pair := $pairs -}}
 {{-   $pkg := index $pair 0 -}}
-{{-   $group := index $pair 1 -}}
-{{-   if true -}}
-{{-     $mgr := "brew" -}}
-{{-     if eq $platform "arch" -}}
-{{-       $mgr = "pacman" -}}
-{{-     else if eq $platform "darwin" -}}
-{{-       $mgr = "brew" -}}
-{{-     else if has $pkg $p.download -}}
-{{-       $mgr = "download" -}}
-{{-     else if and (eq $pkg "nerd-font") (ne $platform "arch") -}}
-{{-       $mgr = "download" -}}
-{{-     else if has $pkg $p.native -}}
-{{-       $mgr = $native -}}
-{{-     end -}}
-{{-     if and (eq $pkg "win32yank") (eq $platform "arch") -}}{{- $mgr = "download" -}}{{- end -}}
-{{-     $name := $pkg -}}
-{{-     if eq $pkg "clipboard" -}}
-{{-       $name = "-" -}}
-{{-       if eq $.display "wayland" }}{{ $name = "wl-clipboard" }}{{ end -}}
-{{-       if eq $.display "x11" }}{{ $name = "xclip" }}{{ end -}}
-{{-     else if hasKey $p.names $mgr -}}
-{{-       $map := index $p.names $mgr -}}
-{{-       if hasKey $map $pkg }}{{ $name = index $map $pkg }}{{ end -}}
-{{-     end -}}
-{{-     if and (eq $pkg "wslu") (ne $mgr "apt") -}}{{- $name = "-" -}}{{- end -}}
-{{-     if ne $name "-" }}
-{{ $mgr }}	{{ $name }}	{{ $pkg }}	{{ $group }}
-{{-     end -}}
+{{-   $src := index $pair 1 -}}
+{{-   $mgr := "brew" -}}
+{{-   if eq $platform "arch" -}}{{- $mgr = "pacman" -}}
+{{-   else if eq $platform "darwin" -}}{{- $mgr = "brew" -}}
+{{-   else if has $pkg $p.download -}}{{- $mgr = "download" -}}
+{{-   else if eq $pkg "nerd-font" -}}{{- $mgr = "download" -}}
+{{-   else if has $pkg $p.native -}}{{- $mgr = $native -}}
+{{-   end -}}
+{{-   if eq $pkg "win32yank" -}}{{- $mgr = "download" -}}{{- end -}}
+{{-   $name := $pkg -}}
+{{-   if eq $pkg "clipboard" -}}
+{{-     $name = "-" -}}
+{{-     if eq $d.display "wayland" }}{{ $name = "wl-clipboard" }}{{ end -}}
+{{-     if eq $d.display "x11" }}{{ $name = "xclip" }}{{ end -}}
+{{-   else if hasKey $p.names $mgr -}}
+{{-     $map := index $p.names $mgr -}}
+{{-     if hasKey $map $pkg }}{{ $name = index $map $pkg }}{{ end -}}
+{{-   end -}}
+{{-   if and (eq $pkg "wslu") (ne $mgr "apt") -}}{{- $name = "-" -}}{{- end -}}
+{{-   if ne $name "-" }}
+{{ $mgr }}	{{ $name }}	{{ $pkg }}	{{ $src }}
 {{-   end -}}
 {{- end }}

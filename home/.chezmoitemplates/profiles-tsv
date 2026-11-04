@@ -1,0 +1,5 @@
+{{- /* profiles, one per line: name TAB description TAB selected ids (space-separated) */ -}}
+{{- range $name := keys .profiles | sortAlpha -}}
+{{-   $p := index $.profiles $name }}
+{{ $name }}	{{ dig "description" "" $p }}	{{ join " " (dig "select" list $p) }}
+{{- end }}

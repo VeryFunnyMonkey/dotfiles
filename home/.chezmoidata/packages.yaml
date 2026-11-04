@@ -1,5 +1,5 @@
 # The declared system: every package this machine should have.
-# `rig install <pkg>` / `rig remove <pkg>` edit this file for you.
+# Extra packages for one machine: `rig install <pkg>` (kept in that machine's config).
 #
 # Entries are logical names. Where each one comes from, and what it's called
 # there, is worked out per machine (see dot_config/rig/packages.tsv.tmpl):
@@ -10,36 +10,22 @@
 #                    Homebrew on Linux for the developer tools, which the
 #                    distros ship too old or not at all
 packages:
-  groups:
-    base:
-      - zsh
-      - tmux
-      - neovim
-      - git
-      - openssh
-      - curl
-      - unzip
-      - build-tools
-      - lazygit
-      - delta
-      - fzf
-      - ripgrep
-      - fd
-      - zoxide
-      - eza
-      - bat
-      - tree-sitter-cli
-    github: # machines that use GitHub (asked at setup; rig git add flips it)
-      - gh
-    gui: # session gui|tui
-      - nerd-font
-      - clipboard
-    yazi: # session tui|headless
-      - yazi
-    wsl: # WSL only
-      - wslu
-      - win32yank
-    darwin: [] # mac-specific core; more when the Mac arrives
+  # Always installed: what rig and the configs rely on. Everything else is a
+  # catalog item (catalog/*.yaml), picked with `rig setup`.
+  core:
+    - zsh
+    - tmux
+    - neovim
+    - git
+    - openssh
+    - curl
+    - unzip
+    - build-tools
+    - tree-sitter-cli
+    - fzf
+    - ripgrep
+    - fd
+    - gum
 
   # On Debian/Ubuntu and Fedora these come from the distro, everything else from brew.
   native: [zsh, git, openssh, curl, unzip, build-tools, clipboard, wslu]
@@ -71,4 +57,5 @@ packages:
       build-tools: "-"
       clipboard: "-"
       nerd-font: "--cask font-jetbrains-mono-nerd-font"
+      ghostty: "--cask ghostty"
       tailscale: "--cask tailscale"

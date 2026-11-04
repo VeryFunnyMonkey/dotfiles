@@ -2,7 +2,7 @@
 # Neovim: plugins (from the committed lockfile), treesitter parsers, Mason
 # tools. Re-runs when the lockfile or the enabled modules change:
 #   lock    {{ include "dot_config/nvim/nvim-pack-lock.json" | sha256sum }}
-#   modules {{ .modules | toJson | sha256sum }}
+#   items   {{ (includeTemplate "enabled" .) | sha256sum }}
 set -euo pipefail
 for b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
   [[ -x $b ]] && { eval "$("$b" shellenv)"; break; }

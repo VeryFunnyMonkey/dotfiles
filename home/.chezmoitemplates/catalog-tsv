@@ -1,0 +1,11 @@
+{{- /* The catalog for this machine, one item per line:
+       category TAB id TAB name TAB description TAB status ("ok" or why it's skipped here) */ -}}
+{{- $d := includeTemplate "detect" . | fromJson -}}
+{{- range $c := .categories -}}
+{{-   range $id := keys $.catalog | sortAlpha -}}
+{{-     $it := index $.catalog $id -}}
+{{-     if eq $it.category $c.id }}
+{{ $c.id }}	{{ $id }}	{{ $it.name }}	{{ $it.description }}	{{ includeTemplate "available" (dict "item" $it "d" $d) | trim }}
+{{-     end -}}
+{{-   end -}}
+{{- end }}

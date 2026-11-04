@@ -1,6 +1,0 @@
-moduledefs:
-  homelab:
-    description: "Tailscale: joins the homelab tailnet (servers can't reach personal devices)"
-    packages: [tailscale]
-    needs: []
-    nvim: {}

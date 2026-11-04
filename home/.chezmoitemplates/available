@@ -1,0 +1,14 @@
+{{- /* For one catalog item (.item, .id) on this machine (.d = detect): prints "ok" or the reason it's skipped */ -}}
+{{- $it := .item -}}
+{{- $d := .d -}}
+{{- $plats := dig "platforms" list $it -}}
+{{- $desks := dig "desktops" list $it -}}
+{{- if and $plats (not (has $d.target $plats)) -}}
+{{-   dig "note" (printf "not available on %s" $d.target) $it -}}
+{{- else if and $desks (not (has $d.desktop $desks)) -}}
+{{-   printf "needs %s (this is %s)" (join " or " $desks) ($d.desktop | default "no desktop") -}}
+{{- else if and (dig "display" false $it) (eq $d.display "none") -}}
+{{-   print "needs a display (none detected)" -}}
+{{- else -}}
+ok
+{{- end -}}

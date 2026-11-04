@@ -1,0 +1,8 @@
+catalog:
+  zoxide: {category: cli, name: zoxide, description: "z <part of a path>: jump to folders you use", packages: [zoxide]}
+  eza: {category: cli, name: eza, description: "ls with git status, icons and tree view (ls, ll, la, lt)", packages: [eza]}
+  bat: {category: cli, name: bat, description: "cat with syntax highlighting; fzf previews and man pages", packages: [bat]}
+  delta: {category: cli, name: delta, description: "readable, highlighted git diffs (git diff, lazygit)", packages: [delta]}
+  lazygit: {category: cli, name: lazygit, description: "git UI in the terminal (prefix g, <leader>gg)", packages: [lazygit]}
+  jq: {category: cli, name: jq, description: "query and reshape JSON", packages: [jq]}
+  tealdeer: {category: cli, name: tealdeer, description: "tldr: short practical examples for commands", packages: [tealdeer]}

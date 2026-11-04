@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # First run: offer to set up git accounts (skips quietly without a terminal,
 # or when accounts already exist). Any time later: rig git add.
-#   {{ .github }}
 set -euo pipefail
 exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} git setup

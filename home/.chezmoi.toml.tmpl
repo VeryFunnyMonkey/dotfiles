@@ -1,130 +1,19 @@
 {{- /*
-  Machine profile. Asked once per machine at `chezmoi init`, stored in
-  ~/.config/chezmoi/chezmoi.toml. Change answers with `rig profile`.
-
-  The preset comes first and fills in everything else; only "custom" asks
-  question by question. Presets are defined here (the config template can't
-  read .chezmoidata).
+  chezmoi's config for this machine. It asks nothing: `rig setup` (the
+  installer) writes the choices below, and detection fills in the facts.
+  Re-rendered by `chezmoi init`, keeping whatever is stored.
 */ -}}
-
-{{- $wsl := false -}}
-{{- if and (eq .chezmoi.os "linux") (hasKey .chezmoi "kernel") -}}
-{{-   if contains "microsoft" (lower .chezmoi.kernel.osrelease) -}}
-{{-     $wsl = true -}}
-{{-   end -}}
-{{- end -}}
-
-{{- $presets := list "personal-desktop" "work" "tui" "headless" "custom" -}}
-{{- $preset := promptChoiceOnce . "preset" "Machine preset (personal-desktop / work / tui / headless / custom)" $presets "personal-desktop" -}}
-
-{{- /* defaults, overridden per preset below */ -}}
-{{- $work := false -}}
-{{- $session := "gui" -}}
-{{- $github := "ask" -}}
-{{- $modules := dict "wm" false "homelab" false "lang-python" false "lang-web" false "lang-ops" false "lang-go" false "lang-rust" false -}}
-
-{{- if eq $preset "personal-desktop" -}}
-{{-   $session = "gui" -}}
-{{-   $github = true -}}
-{{-   $_ := set $modules "homelab" true -}}
-{{-   $_ := set $modules "lang-python" true -}}
-{{-   $_ := set $modules "lang-web" true -}}
-{{-   $_ := set $modules "lang-ops" true -}}
-{{- else if eq $preset "work" -}}
-{{-   $work = true -}}
-{{-   $session = "gui" -}}
-{{-   $_ := set $modules "lang-python" true -}}
-{{-   $_ := set $modules "lang-web" true -}}
-{{-   $_ := set $modules "lang-ops" true -}}
-{{- else if eq $preset "tui" -}}
-{{-   $session = "tui" -}}
-{{-   $github = true -}}
-{{-   $_ := set $modules "homelab" true -}}
-{{-   $_ := set $modules "lang-python" true -}}
-{{-   $_ := set $modules "lang-web" true -}}
-{{-   $_ := set $modules "lang-ops" true -}}
-{{- else if eq $preset "headless" -}}
-{{-   $session = "headless" -}}
-{{-   $github = false -}}
-{{-   $_ := set $modules "homelab" true -}}
-{{- else -}}
-{{-   $work = promptBoolOnce . "work" "Work machine" false -}}
-{{-   if not $wsl -}}
-{{-     $session = promptChoiceOnce . "session" "Session (gui / tui / headless)" (list "gui" "tui" "headless") "gui" -}}
-{{-   end -}}
-{{-   $stored := dict -}}
-{{-   if hasKey . "modules" -}}{{- $stored = .modules -}}{{- end -}}
-{{-   range $name := list "homelab" "lang-python" "lang-web" "lang-ops" "lang-go" "lang-rust" "wm" -}}
-{{-     $_ := set $modules $name (promptBoolOnce $stored $name (printf "Enable module %s" $name) false) -}}
-{{-   end -}}
-{{- end -}}
-
-{{- /* GitHub: decides whether gh is installed. `rig git add` flips it when you
-       add (or remove the last) GitHub account. */ -}}
-{{- if eq (toString $github) "ask" -}}
-{{-   $github = promptBoolOnce . "github" "Do you use GitHub on this machine" false -}}
-{{- else if hasKey . "github" -}}
-{{-   $github = .github -}}
-{{- end -}}
-
-{{- /* Coding agents: none, one or several. `rig agents add|remove|default` later.
-       (Names must match .chezmoidata/agents.yaml.) */ -}}
-{{- $agentChoices := list "claude" "copilot" "codex" "gemini" "opencode" -}}
-{{- $picked := promptMultichoiceOnce . "agents" "Coding agents to install (pick none, one or several)" $agentChoices (list) -}}
-{{- $agents := list -}}
-{{- range $a := $picked -}}
-{{-   range $x := splitList "," $a -}}
-{{-     $x = trim $x -}}
-{{-     if and (has $x $agentChoices) (not (has $x $agents)) -}}{{- $agents = append $agents $x -}}{{- end -}}
-{{-   end -}}
-{{- end -}}
-{{- $agentDefault := "" -}}
-{{- if eq (len $agents) 1 -}}
-{{-   $agentDefault = index $agents 0 -}}
-{{- else if gt (len $agents) 1 -}}
-{{-   $stored := dig "agent_default" "" . -}}
-{{-   if has $stored $agents -}}{{- $agentDefault = $stored -}}
-{{-   else -}}{{- $agentDefault = promptChoice "Which agent should dev start" $agents (index $agents 0) -}}{{- end -}}
-{{- end -}}
-
-{{- /* WSL has no Linux desktop: terminal-only, with Windows behind it */ -}}
-{{- if $wsl -}}
-{{-   $session = "headless" -}}
-{{- end -}}
-
-{{- /* answers already stored on this machine win over the preset */ -}}
-{{- if hasKey . "modules" -}}
-{{-   range $k, $v := .modules -}}
-{{-     $_ := set $modules $k $v -}}
-{{-   end -}}
-{{- end -}}
-
-{{- $display := "none" -}}
-{{- if eq .chezmoi.os "darwin" -}}
-{{-   $display = "darwin" -}}
-{{- else if $wsl -}}
-{{-   $display = "wsl" -}}
-{{- else if ne $session "headless" -}}
-{{-   $display = "wayland" -}}
-{{-   if and (env "XDG_SESSION_TYPE") (eq (env "XDG_SESSION_TYPE") "x11") -}}
-{{-     $display = "x11" -}}
-{{-   end -}}
-{{- end -}}
-
+{{- $d := includeTemplate "detect" . | fromJson -}}
 sourceDir = {{ .chezmoi.sourceDir | quote }}
 mode = "symlink"
 
 [data]
-    preset = {{ $preset | quote }}
-    work = {{ $work }}
-    github = {{ $github }}
-    session = {{ $session | quote }}
-    wsl = {{ $wsl }}
-    display = {{ $display | quote }}
-    agents = {{ $agents | toToml }}
-    agent_default = {{ $agentDefault | quote }}
-
-[data.modules]
-{{- range $k := keys $modules | sortAlpha }}
-    {{ $k | quote }} = {{ index $modules $k }}
-{{- end }}
+    # chosen with `rig setup` (or rig add/remove, rig profile use)
+    profile = {{ dig "profile" "" . | quote }}
+    selected = {{ dig "selected" list . | toToml }}
+    extra_packages = {{ dig "extra_packages" list . | toToml }}
+    agent_default = {{ dig "agent_default" "" . | quote }}
+    # detected
+    wsl = {{ $d.wsl }}
+    display = {{ $d.display | quote }}
+    desktop = {{ $d.desktop | quote }}

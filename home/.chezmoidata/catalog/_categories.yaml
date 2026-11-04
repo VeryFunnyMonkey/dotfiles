@@ -1,0 +1,18 @@
+# Installer sections, in menu order. Items live in catalog/<category>.yaml.
+# Item fields:
+#   name, description        shown in the installer
+#   packages                 logical package names (resolved per OS by packages.yaml)
+#   platforms                where it exists: arch fedora debian darwin wsl (default: all)
+#   desktops                 only on these desktops: kde hyprland gnome macos (default: any)
+#   display                  true = needs a display (not on headless machines)
+#   needs                    runtimes: node go rust (runtimes.yaml)
+#   nvim                     servers, system_servers, mason, formatters, parsers
+#   note                     shown in the review when the item is skipped here
+categories:
+  - {id: cli, name: "CLI tools"}
+  - {id: terminal, name: "Terminal & desktop"}
+  - {id: tui, name: "TUI apps"}
+  - {id: languages, name: "Languages"}
+  - {id: homelab, name: "Homelab"}
+  - {id: git, name: "Git hosting"}
+  - {id: agents, name: "Coding agents"}
