@@ -84,6 +84,46 @@ cmd_shot() {
   esac
 }
 
+# The battery. watch: a notification at BATTERY_LOW %, an urgent one at
+# BATTERY_CRITICAL %, once each per discharge; woken by the kernel's battery
+# events (udev), with a look every two minutes for batteries that don't send
+# them. No battery: nothing to do. suspend-if-unplugged: hypridle's long idle
+# step, so laptops on battery sleep and plugged-in machines stay on.
+BATTERY_LOW=15 BATTERY_CRITICAL=5
+POWER_SUPPLY=${DESK_POWER_SUPPLY:-/sys/class/power_supply}
+battery_dir() {
+  local b; for b in "$POWER_SUPPLY"/BAT*; do if [[ -r $b/capacity ]]; then echo "$b"; return 0; fi; done
+  return 1
+}
+on_battery() { local b; b=$(battery_dir) && [[ $(cat "$b/status") == Discharging ]]; }
+# One look: warned (0 none, 1 low, 2 critical) -> the new warned.
+battery_check() {
+  local b level warned=$1; b=$(battery_dir) || { echo 0; return 0; }
+  level=$(cat "$b/capacity")
+  if [[ $(cat "$b/status") != Discharging ]]; then warned=0
+  elif ((level <= BATTERY_CRITICAL && warned < 2)); then notify -u critical "Battery at ${level}%" "Plug in now"; warned=2
+  elif ((level <= BATTERY_LOW && warned < 1)); then notify "Battery low: ${level}%" "Plug in the charger soon"; warned=1
+  fi
+  echo "$warned"
+}
+battery_watch() {
+  battery_dir >/dev/null || exit 0
+  local warned=0 rc
+  while :; do
+    warned=$(battery_check "$warned")
+    rc=0; read -r -t 120 _ <&3 || rc=$?
+    if ((rc == 1)); then sleep 120; fi   # no events to wait on (udevadm gone): every two minutes
+  done 3< <(udevadm monitor --udev --subsystem-match=power_supply 2>/dev/null)
+}
+cmd_battery() {
+  case ${1:-watch} in
+    watch) battery_watch ;;
+    check) battery_check "${2:-0}" >/dev/null ;;
+    suspend-if-unplugged) if on_battery; then systemctl suspend; fi ;;
+    *) echo "usage: desk battery watch|check|suspend-if-unplugged" >&2; exit 1 ;;
+  esac
+}
+
 # The getting-started page (~/.config/hypr/welcome.txt): once on the first
 # login (--once), any time without it. --print just prints it.
 WELCOME="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/welcome.txt"
@@ -111,6 +151,8 @@ desk: actions for the Hyprland desktop (bound to keys; see mod+/)
   desk keys                the keys and what they do
   desk nightlight [status] night light on/off
   desk shot area|edit|screen   screenshots
+  desk battery watch       low-battery notifications (started at login; laptops only)
+  desk battery suspend-if-unplugged   suspend, but only on battery (hypridle's last step)
   desk welcome             the getting-started page (shown once on the first login)
 EOF
 }
@@ -127,6 +169,7 @@ main() {
     keys) cmd_keys ;;
     nightlight) cmd_nightlight "$@" ;;
     shot) cmd_shot "$@" ;;
+    battery) cmd_battery "$@" ;;
     welcome) cmd_welcome "$@" ;;
     help|-h|--help) cmd_help ;;
     *) echo "desk: unknown command '$cmd' (desk help)" >&2; exit 1 ;;

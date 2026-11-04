@@ -56,10 +56,15 @@ hl.monitor({ output = "DP-1", mode = "2560x1440@165", position = "0x0", scale = 
 hl.config({ input = { kb_layout = "gb" } })
 ```
 
-## Idle
-Dim at 5 minutes, lock at 10, screen off at 11; the screen locks before
-sleep. There's no automatic suspend; add a listener to `hypridle.conf` in a
-local copy if you want one.
+## Idle and the battery
+Dim at 5 minutes, lock at 10, screen off at 11. At 30 minutes a laptop on
+battery suspends; plugged in, nothing sleeps, so the machine stays reachable.
+The screen locks before any sleep.
+
+- **Closing the lid** locks and suspends (logind's default); with an external
+  screen connected it does nothing, so a docked laptop keeps working.
+- **Low battery:** a notification at 15%, and an urgent one that stays until
+  dismissed at 5%. The bar shows the level.
 
 ## Under the hood
 - Configs: `~/.config/hypr` (`hyprland.lua`, Lua since Hyprland 0.55; lock and

@@ -36,6 +36,14 @@ missing=$(for c in $cmds; do command -v "$c" >/dev/null || printf '%s ' "$c"; do
 check "every program the desktop calls is installed" '[[ -z $missing ]]' || echo "  missing: $missing"
 check "the welcome page renders" 'desk welcome --print | grep -q "Welcome to Hyprland" && desk welcome --print | grep -q "rig info hyprland"'
 check "desk works" 'desk help | grep -q "desk power" && desk nightlight status | jq -e ".class == \"off\"" >/dev/null'
+# the battery: a fake one, and a notify-send that writes down what it's asked
+mkdir -p /tmp/ps/BAT0 /tmp/nbin; printf '#!/bin/sh\necho "$*" >> /tmp/notified\n' >/tmp/nbin/notify-send; chmod +x /tmp/nbin/notify-send
+bat() { echo "$1" >/tmp/ps/BAT0/capacity; echo "$2" >/tmp/ps/BAT0/status; PATH=/tmp/nbin:$PATH DESK_POWER_SUPPLY=/tmp/ps desk battery check "$3"; }
+bat 50 Discharging 0; bat 14 Discharging 0; bat 4 Discharging 1; bat 14 Charging 2
+check "battery: low and critical notifications" '[[ $(grep -c "Battery low: 14%" /tmp/notified) == 1 && $(grep -c -- "-u critical Battery at 4%" /tmp/notified) == 1 && $(wc -l </tmp/notified) == 2 ]]' || cat /tmp/notified
+check "battery: no battery, nothing to watch" 'DESK_POWER_SUPPLY=/tmp/none timeout 5 desk battery watch'
+check "battery: plugged in, no suspend" 'DESK_POWER_SUPPLY=/tmp/ps desk battery suspend-if-unplugged'
+check "idle suspends on battery only" 'grep -q "desk battery suspend-if-unplugged" ~/.config/hypr/hypridle.conf'
 check "login screen: greetd starting Hyprland through uwsm" 'grep -q "uwsm start hyprland.desktop" /etc/greetd/config.toml && grep -q "enable --now greetd.service" /tmp/systemctl.log'
 check "NetworkManager enabled for the bar's Wi-Fi" 'grep -q "enable --now NetworkManager.service" /tmp/systemctl.log'
 check "the original greetd config is kept in the ledger" 'grep -q "^etc-file	/etc/greetd/config.toml	" ~/.local/state/rig/system.log'

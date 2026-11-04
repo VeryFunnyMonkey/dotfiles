@@ -36,6 +36,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(run("swayosd-server"))
     hl.exec_cmd(run("wl-paste --watch cliphist store"))
     hl.exec_cmd(desk .. " welcome --once")   -- the getting-started page, on the first login only
+    hl.exec_cmd(run(desk .. " battery watch"))  -- low-battery notifications (exits where there's no battery)
     -- the power button opens the power menu (below) instead of logind shutting
     -- down: Hyprland holds the key while it runs, as KDE and GNOME do
     hl.exec_cmd(run("systemd-inhibit --what=handle-power-key --who=Hyprland --why='power button opens the power menu' --mode=block sleep infinity"))
