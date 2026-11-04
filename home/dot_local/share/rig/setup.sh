@@ -147,6 +147,14 @@ need_gum() {
   pkg_install_cmd "$mgr" gum || die "couldn't install gum"
   hash -r
 }
+# gum choose prints "nothing selected" when a menu is left with Esc; that's how
+# you go back here, so erase the line instead of leaving it over the next menu.
+gum_choose() {
+  local rc=0
+  gum choose "$@" || rc=$?
+  if ((rc)); then printf '\033[1A\033[2K' >/dev/tty; fi
+  return $rc
+}
 G_HEAD() { gum style --foreground 109 --bold "$@"; }
 
 menu_category() { # category-id category-name selected -> prints new selection
@@ -159,7 +167,7 @@ menu_category() { # category-id category-name selected -> prints new selection
   done <<<"$CATALOG"
   local notes; notes=$(awk -F'\t' -v c="$cat" '$1==c && $5!="ok" {print "not here: " $3 " (" $5 ")"}' <<<"$CATALOG")
   local picked
-  picked=$(gum choose --no-limit --height 20 \
+  picked=$(gum_choose --no-limit --height 20 \
     --header "$cname: space to tick, enter when done${notes:+$'\n'$notes}" \
     "${pre[@]/#/--selected=}" -- "${labels[@]}" </dev/tty) || { printf '%s' "$sel"; return; }
   # keep selections from other categories (and items not available here)
@@ -172,7 +180,7 @@ menu_category() { # category-id category-name selected -> prints new selection
 menu_profile() { # current -> prints chosen profile name (or empty)
   local opts=() n d ids
   while IFS=$'\t' read -r n d ids; do opts+=("$n  ·  $d"); done <<<"$PROFILES"
-  local pick; pick=$(gum choose --header "Start from a profile (replaces the current selection)" "${opts[@]}" </dev/tty) || return 0
+  local pick; pick=$(gum_choose --header "Start from a profile (replaces the current selection)" "${opts[@]}" </dev/tty) || return 0
   printf '%s' "${pick%%  ·  *}"
 }
 
@@ -181,7 +189,7 @@ menu_agent_default() { # agents -> prints the one dev starts
   if ((n == 0)); then return; fi
   if ((n == 1)); then printf '%s' "$1"; return; fi
   # shellcheck disable=SC2086
-  gum choose --header "Which agent should dev start?" $1 </dev/tty || printf '%s' "${1%% *}"
+  gum_choose --header "Which agent should dev start?" $1 </dev/tty || printf '%s' "${1%% *}"
 }
 
 save_profile() { # selected
@@ -216,17 +224,17 @@ menu_git() {
     rows+=("Host CLIs: $clis" "Back")
     local head="Git: accounts (set up after the first install: rig git add)"
     if ((accounts)); then head="Git: accounts $(identities | tr '\n' ' ')"; fi
-    pick=$(gum choose --header "$head" "${rows[@]}" </dev/tty) || return
+    pick=$(gum_choose --header "$head" "${rows[@]}" </dev/tty) || return
     case $pick in
       "Add an account") RIG_SETUP_MENU=1 git_add || true ;;
       "Remove an account")
         local n ids; mapfile -t ids < <(identities)
         ((${#ids[@]})) || continue
-        n=$(gum choose --header "Remove which account?" "${ids[@]}" </dev/tty) || continue
+        n=$(gum_choose --header "Remove which account?" "${ids[@]}" </dev/tty) || continue
         RIG_YES=1 git_remove "$n" || true ;;
       Default*)
         local n ids; mapfile -t ids < <(identities)
-        n=$(gum choose --header "Default account (none: commits need a matching account)" "${ids[@]}" none </dev/tty) || continue
+        n=$(gum_choose --header "Default account (none: commits need a matching account)" "${ids[@]}" none </dev/tty) || continue
         git_set_default "$n" ;;
       "Test accounts") git_doctor || true; gum input --placeholder "enter to continue" </dev/tty >/dev/null || true ;;
       Host*) sel=$(menu_category git "Git host CLIs (adding an account on a host selects its CLI)" "$sel") ;;
@@ -294,7 +302,7 @@ cmd_setup() {
     rows+=("$(printf '%-20s %s' Git "$(git_row) · CLIs: $(git_clis "$sel")")")
     rows+=("Save as profile…" "Review & install" "Quit")
     local choice
-    choice=$(gum choose --height 20 --header "rig setup · $detected" "${rows[@]}" </dev/tty) || choice=Quit
+    choice=$(gum_choose --height 20 --header "rig setup · $detected" "${rows[@]}" </dev/tty) || choice=Quit
     case $choice in
       Profile*) local p; p=$(menu_profile); if [[ -n $p ]]; then profile=$p; sel=$(profile_ids "$p"); fi ;;
       Git*) menu_git ;;
