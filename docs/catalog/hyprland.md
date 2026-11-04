@@ -38,6 +38,7 @@ where to find more. `desk welcome` shows it again; the text is
 | `mod+a` / `mod+w` / `mod+b` | audio / Wi-Fi / Bluetooth (TUIs, floating) |
 | `mod+n` | night light on/off |
 | `mod+escape` / `mod+shift+escape` | lock / power menu |
+| power button | the power menu too (outside Hyprland it still powers off) |
 | `Print` / `shift+Print` / `ctrl+Print` | screenshot: area to clipboard / area, then annotate / whole screen |
 | media keys | volume, brightness, play/pause, with a popup |
 | `mod` + drag | move (left button) or resize (right button) a window |

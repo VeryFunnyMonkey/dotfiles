@@ -7,7 +7,7 @@ The keys (mod = Super)                                   all of them: mod+/
   mod+1..9            workspaces           mod+shift+1..9      send window there
   mod+q               close                mod+shift+f         fullscreen
   mod+v               clipboard history    mod+a / w / b       audio/Wi-Fi/Bluetooth
-  mod+escape          lock                 mod+shift+escape    power menu
+  mod+escape          lock                 mod+shift+escape    power menu (+ power key)
   Print               screenshot           shift+Print         screenshot + markup
 
 First things

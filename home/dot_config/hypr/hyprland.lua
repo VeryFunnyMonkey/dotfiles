@@ -36,6 +36,9 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(run("swayosd-server"))
     hl.exec_cmd(run("wl-paste --watch cliphist store"))
     hl.exec_cmd(desk .. " welcome --once")   -- the getting-started page, on the first login only
+    -- the power button opens the power menu (below) instead of logind shutting
+    -- down: Hyprland holds the key while it runs, as KDE and GNOME do
+    hl.exec_cmd(run("systemd-inhibit --what=handle-power-key --who=Hyprland --why='power button opens the power menu' --mode=block sleep infinity"))
 end)
 -- mako starts on the first notification (D-Bus activation).
 
@@ -144,6 +147,7 @@ bind(key("N"), hl.dsp.exec_cmd(desk .. " nightlight"), "night light on/off")
 -- session
 bind(key("ESCAPE"), hl.dsp.exec_cmd("loginctl lock-session"), "lock")
 bind(key("SHIFT + ESCAPE"), hl.dsp.exec_cmd(desk .. " power"), "power menu")
+bind("XF86PowerOff", hl.dsp.exec_cmd(desk .. " power"), "power menu (power button)", { locked = false })
 bind(key("SLASH"), hl.dsp.exec_cmd(desk .. " keys"), "these keys")
 
 -- screenshots
