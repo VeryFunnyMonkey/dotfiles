@@ -14,6 +14,6 @@ catalog:
     packages: [glab]
   gitea:
     category: git
-    name: Gitea CLI (tea)
+    name: Gitea CLI (gt)
     description: "logs in and uploads keys for Gitea, Forgejo and Codeberg accounts; PRs and issues from the terminal"
-    packages: [tea]
+    packages: [gitea-cli]

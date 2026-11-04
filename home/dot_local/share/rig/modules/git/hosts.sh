@@ -9,7 +9,7 @@
 
 GIT_HOSTS='github|GitHub (logs in and adds the key for you, with gh)|GitHub|github.com||github|gh|https://github.com/settings/keys|successfully authenticated|ed25519|yes|gh ssh-key list, then gh ssh-key delete <id>|
 gitlab|GitLab: gitlab.com or your own (with glab)|GitLab|gitlab.com|GitLab server|gitlab|glab|https://{host}/-/user_settings/ssh_keys|Welcome to GitLab|ed25519|yes|glab ssh-key list, then glab ssh-key delete <id>|on GitLab, set its usage to '"'"'Authentication & Signing'"'"'
-gitea|Gitea, Forgejo or Codeberg (with tea)|Gitea/Forgejo|codeberg.org|Server (Codeberg: codeberg.org)|gitea|tea|https://{host}/user/settings/keys|successfully authenticated|ed25519|yes|its settings page, then tea login delete rig-{name}|then press Verify next to it, so signed commits show as verified
+gitea|Gitea, Forgejo or Codeberg (with gt)|Gitea/Forgejo|codeberg.org|Server (Codeberg: codeberg.org)|gitea|gt|https://{host}/user/settings/keys|successfully authenticated|ed25519|yes|its settings page, then gt auth logout <user> --host <server>|then press Verify next to it, so signed commits show as verified
 bitbucket|Bitbucket (you paste the key)|Bitbucket|bitbucket.org||||https://bitbucket.org/account/settings/ssh-keys/|authenticated via;logged in as|ed25519|yes|its settings page|
 azure|Azure DevOps (you paste the key)|Azure DevOps|ssh.dev.azure.com||||https://dev.azure.com/_usersSettings/keys|Shell access is not supported|rsa|no|its settings page|
 other|another git server|the server||Git server hostname (e.g. git.example.com; blank to cancel)||||||ed25519|yes|its settings page|'
@@ -123,23 +123,31 @@ git_connect_gitlab() { # name key hostname
   ok "GitLab account ${cur:-?} on $h: key added"
 }
 
-# tea logs in with an access token; each rig account gets its own tea login.
+# gt (Gitea's CLI) logs in with an access token. A server can hold several
+# accounts; rig picks this one with --user, so it never depends on which is active.
 git_connect_gitea() { # name key hostname
-  local n=$1 key=$2 h=$3 token out
-  local login="rig-$n"
+  local n=$1 key=$2 h=$3 token user out
   ensure_host_cli gitea || return 1
-  if ! tea login list 2>/dev/null | grep -qw -- "$login"; then
+  user=$(meta_get "$n" cli_user)
+  if [[ -z $user ]] || ! gt auth status --host "$h" --user "$user" >/dev/null 2>&1; then
     local url="https://$h/user/settings/applications"
-    say "  tea needs an access token: create one at $url"
+    say "  gt needs an access token: create one at $url"
     say "  with read and write access to 'user' (that's what adds the key), then paste it here"
     open_url "$url" || true
     printf '  token (hidden): ' >/dev/tty; IFS= read -rs token <&3 || token=''; printf '\n' >/dev/tty
     [[ -n $token ]] || return 1
-    tea login add --name "$login" --url "https://$h" --token "$token" >/dev/null || return 1
+    user=$(GITEA_TOKEN=$token GITEA_CLI_HOST=$h gt api user --jq .login 2>/dev/null) || user=''
+    [[ -n $user ]] || { warn "$h didn't accept that token"; return 1; }
+    # the system keyring where there is one (desktop, macOS), else gt's private file
+    printf '%s\n' "$token" | gt auth login --host "$h" --with-token --yes >/dev/null 2>&1 ||
+      printf '%s\n' "$token" | gt auth login --host "$h" --with-token --yes --credential-store file >/dev/null || return 1
+    printf 'cli_user=%s\n' "$user" >>"$ID_DIR/$n.meta"
   fi
-  printf 'cli_login=%s\n' "$login" >>"$ID_DIR/$n.meta"
-  out=$(tea ssh-keys add --login "$login" --title "$(key_title "$n")" "$key.pub" 2>&1) ||
-    [[ $out == *"already"* ]] || { warn "tea couldn't add the key: $out"; return 1; }
-  ok "$h account: key added (tea login $login)"
+  local pub; pub=$(awk '{print $2}' "$key.pub")
+  if ! gt ssh-key list --host "$h" --user "$user" --json key --jq '.[].key' 2>/dev/null | grep -qF -- "$pub"; then
+    out=$(gt ssh-key create "$key.pub" --host "$h" --user "$user" --title "$(key_title "$n")" 2>&1) ||
+      { warn "gt couldn't add the key: $out"; return 1; }
+  fi
+  ok "$h account $user: key added"
   if [[ $(meta_get "$n" sign) == yes ]]; then say "  for verified signed commits, press Verify next to the key: https://$h/user/settings/keys"; fi
 }

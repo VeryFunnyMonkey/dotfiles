@@ -82,7 +82,7 @@ components:
   - {name: greetd + tuigreet, role: login screen where there is none, why: "tiny, terminal-styled; only installed when no display manager exists", alternatives: [SDDM (kept where present), ly], revisit_if: "never really"}
   - {name: github, role: gh CLI, why: "rig git logs in and uploads auth + signing keys with it", alternatives: [], revisit_if: "gh auth/ssh-key flags change"}
   - {name: gitlab, role: glab CLI, why: "rig git logs in and uploads keys (usage auth_and_signing) for gitlab.com and self-hosted GitLab", alternatives: [], revisit_if: "glab auth/ssh-key flags change"}
-  - {name: gitea, role: tea CLI, why: "rig git logs in (token) and uploads keys for Gitea, Forgejo and Codeberg", alternatives: [fj (Forgejo-only, less packaged)], revisit_if: "tea ssh-keys changes, or Forgejo's API drifts from Gitea's"}
+  - {name: gitea, role: "gt CLI (gitea-cli; replaced tea at 1.0, 2026-11)", why: "rig git logs in (token) and uploads keys for Gitea, Forgejo and Codeberg; 1.x promises stable commands, flags and --json fields", alternatives: [fj (Forgejo-only, less packaged), tea (superseded by gt)], revisit_if: "gt auth or ssh-key changes in a 2.0, or Forgejo's API drifts from Gitea's"}
   - {name: claude, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (native installer)"}
   - {name: copilot, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (npm @github/copilot / brew copilot-cli)"}
   - {name: codex, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (npm @openai/codex / brew cask codex)"}

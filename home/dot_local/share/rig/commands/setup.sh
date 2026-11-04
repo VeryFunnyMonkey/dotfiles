@@ -56,7 +56,7 @@ write_profile() { # name desc selected file
 }
 
 # The Git section: accounts, the default account, and the host CLIs (gh,
-# glab, tea). Adding an account selects its host's CLI by itself.
+# glab, gt). Adding an account selects its host's CLI by itself.
 menu_git() {
   local accounts=1
   if ! declare -F identities >/dev/null || [[ ! -r $MACHINE_ENV ]]; then accounts=0; fi

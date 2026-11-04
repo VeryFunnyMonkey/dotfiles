@@ -41,10 +41,10 @@ check "gitlab: key uploaded with glab for login and signing" 'grep -q "ssh-key a
 check "gitlab: account user recorded" 'grep -q "^cli_user=tester$" ~/.config/git/identities/lab.meta'
 rm ~/.local/bin/glab
 
-# --- git: a Codeberg-style account selects and installs tea; its login fails here, so rig falls back
+# --- git: a Codeberg-style account selects and installs gt; its login fails here, so rig falls back
 printf 'Test User\ng@example.invalid\n3\ngit.example.invalid\n\n1\n\n\n\n@sleep 90\ntok\n@sleep 5\n\n' > /tmp/in4
 tty_feed /tmp/in4 rig git add forge
-check "gitea: tea item selected and installed" 'grep -q "\"gitea\"" ~/.config/chezmoi/chezmoi.toml && command -v tea >/dev/null'
+check "gitea: gt item selected and installed" 'grep -q "\"gitea\"" ~/.config/chezmoi/chezmoi.toml && command -v gt >/dev/null'
 check "gitea: falls back to pasting the key" 'grep -q "add it by hand instead" /tmp/feed.out && grep -q "git.example.invalid/user/settings/keys" /tmp/feed.out' || tail -20 /tmp/feed.out
 check "gitea: account written" '[[ -f ~/.config/git/identities/forge.gitconfig ]]'
 
