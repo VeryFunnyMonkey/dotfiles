@@ -46,6 +46,8 @@ main() {
     update|up) cmd_update "$@" ;;
     doctor) cmd_doctor "$@" ;;
     edit) cmd_edit "$@" ;;
+    export) cmd_export "$@" ;;
+    import) cmd_import "$@" ;;
     diff) chezmoi diff "$@" ;;
     apply) chezmoi apply "$@" ;;
     reset) cmd_reset "$@" ;;

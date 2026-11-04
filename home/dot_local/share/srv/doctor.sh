@@ -33,6 +33,7 @@ ${B}srv${N}: mount your servers at ~/Servers/<host>, over SSH
   ${B}srv add${N} [name user@host[:port] [path]]   add a host
   ${B}srv rm${N} <host> · ${B}srv edit${N} · ${B}srv ls${N}
   ${B}srv import${N} [file]          add hosts from a hosts file or an Ansible inventory (re-reads the last one)
+  ${B}srv export${N}                 print the hosts; srv import --merge <file> adds them elsewhere (rig export does both)
   ${B}srv doctor${N}                 check rclone/FUSE and stale mounts
 EOF
 }

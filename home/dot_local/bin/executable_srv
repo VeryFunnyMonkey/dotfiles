@@ -54,6 +54,7 @@ main() {
     dev) cmd_dev "$@" ;;
     ssh) cmd_ssh "$@" ;;
     import|import-homelab) cmd_import "$@" ;;
+    export) cmd_export ;;
     doctor) cmd_doctor ;;
     _status) cmd_status "$@" ;;
     _preview) cmd_preview "$@" ;;

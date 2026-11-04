@@ -61,3 +61,9 @@ revert_shell() { # user previous-shell
 revert_etc_shells() { # path
   sudo_ sed -i.bak "\#^$1\$#d" /etc/shells && ok "removed $1 from /etc/shells"
 }
+
+# local.zsh: this machine's own additions to zsh (not in the repo)
+shell_local() { printf '%s/zsh/local.zsh' "$CONFIG_HOME"; }
+shell_export() { local_file_export "$1" "$(shell_local)"; }
+shell_exported() { local_file_exported "$1" "$(shell_local)"; }
+shell_import() { local_file_import "$1" "$(shell_local)"; }

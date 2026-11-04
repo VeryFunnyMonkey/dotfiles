@@ -9,6 +9,10 @@
 #   <m>_reset      rig reset <m>: rebuild it
 #   <m>_uninstall  its part of rig uninstall (UNINSTALL_* say what was asked)
 #   <m>_cmd        rig <m> <subcommand>...
+#   <m>_export <dir>    rig export: this machine's own settings for it (never
+#                       keys or tokens), as files in <dir>
+#   <m>_exported <dir>  one line saying what <dir> holds (rig import shows it)
+#   <m>_import <dir>    rig import: set them up here; what's already here stays
 #   revert_<kind>  undo one ledger entry of that kind
 # Core modules always apply. Item modules belong to catalog items (an item's
 # `module:` field) and are active while one of those items is selected.
@@ -65,4 +69,24 @@ cmd_modules() {
       done < <(modules_all) ;;
     *) die "usage: rig modules sync <name>...|--items | list" ;;
   esac
+}
+
+# For <m>_export/<m>_import: a machine-local file (not in the repo) moves as
+# is. One that's already here stays; the incoming copy lands next to it.
+local_file_export() { # dir path
+  if [[ -f $2 ]]; then mkdir -p "$1/files"; cp "$2" "$1/files/$(basename "$2")"; fi
+}
+local_file_exported() { # dir path
+  if [[ -f $1/files/$(basename "$2") ]]; then printf '%s\n' "${2/#$HOME/\~}"; fi
+}
+local_file_import() { # dir path
+  local f; f="$1/files/$(basename "$2")"
+  [[ -f $f ]] || return 0
+  if [[ ! -f $2 ]]; then
+    mkdir -p "$(dirname "$2")"; cp "$f" "$2"; ok "${2/#$HOME/\~}"
+  elif cmp -s "$f" "$2"; then :
+  else
+    cp "$f" "$2.imported"
+    warn "${2/#$HOME/\~} is already here, kept; the imported one is ${2/#$HOME/\~}.imported"
+  fi
 }

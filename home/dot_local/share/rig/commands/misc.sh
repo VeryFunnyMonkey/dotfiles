@@ -27,6 +27,9 @@ ${B}rig${N}: this machine's setup
   ${B}rig git${N} add|list|which|remove|clone|doctor   git accounts (GitHub, GitLab, ...)
   ${B}rig agents${N} list|default <name>   coding agents (select them in rig setup)
   ${B}rig modules${N} list|sync <name>     the features rig sets up, and running one's setup again
+  ${B}rig export${N} [file]          this machine's own setup in one file: selection, git accounts,
+                             servers, local configs (no keys or tokens)
+  ${B}rig import${N} <file> [--yes]   set this machine up from it (new keys, logins again)
   ${B}rig edit${N} [file]            edit the dotfiles (then apply)
   ${B}rig diff${N} / ${B}rig apply${N}        chezmoi diff / apply
   ${B}rig reset${N} nvim|mason|zsh|chezmoi|all   rebuild a part that misbehaves

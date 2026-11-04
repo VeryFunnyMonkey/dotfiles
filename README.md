@@ -52,6 +52,7 @@ Always installed (core): zsh, tmux, Neovim, git, fzf, ripgrep, fd, gum and build
 | `rig sync` | install whatever is declared but missing |
 | `rig git add\|list\|which\|remove\|clone\|doctor` | git accounts (below) |
 | `rig agents list\|default <name>` | coding agents, and which one `dev` starts |
+| `rig export [file]` / `rig import <file>` | move this machine's own setup to another one: the selection, git accounts (the new machine makes its own keys and logs in again), srv servers, `local.zsh` and `hypr/local.lua`. No keys or tokens; the file is private (it has your emails and server names) |
 | `rig edit [file]` | edit the dotfiles, then apply |
 | `rig diff` / `rig apply` | `chezmoi diff` / `chezmoi apply` |
 | `rig reset nvim\|mason\|zsh\|chezmoi\|all` | rebuild a part that misbehaves (your files and history stay) |

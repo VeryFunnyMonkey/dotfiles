@@ -49,6 +49,7 @@ import_file() {
 }
 
 cmd_import() {
+  if [[ ${1:-} == --merge ]]; then shift; import_merge "$@"; return; fi
   local arg=${1:-}
   if [[ -z $arg ]]; then
     [[ -f $(IMPORT_SRC) ]] || die "usage: srv import <hosts file | Ansible inventory> (example: extras/srv-hosts.example in the dotfiles)"
@@ -87,4 +88,20 @@ cmd_import() {
   mv "$tmp" "$HOSTS"
   printf '%s\n' "$file" >"$(IMPORT_SRC)"
   ok "imported $n hosts from ${file/#$HOME/~} (srv ls; srv import again re-reads it)"
+}
+
+# srv export: the hosts, in srv's own format (moving them to another machine:
+# rig export). srv import --merge <file> adds the ones that aren't here yet,
+# each keeping its source, and leaves everything else alone.
+cmd_export() { [[ -f $HOSTS ]] || return 0; awk -F'\t' '$1 !~ /^#/ && NF>=2' "$HOSTS"; }
+import_merge() { # file
+  local file=${1:?usage: srv import --merge <file from srv export>} name target path src n=0
+  [[ -f $file ]] || die "no file at $file"
+  hosts_init
+  while IFS=$'\t' read -r name target path src; do
+    [[ -n $name && $name != \#* && $target == *@* ]] || continue
+    if [[ -n $(host_line "$name") ]]; then continue; fi
+    printf '%s\t%s\t%s\t%s\n' "$name" "$target" "${path:-~}" "${src:-manual}" >>"$HOSTS"; n=$((n + 1))
+  done <"$file"
+  ok "added $n hosts (srv ls)"
 }

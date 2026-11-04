@@ -137,6 +137,12 @@ revert_etc_file() { # path backup|none
   elif [[ -f $2 ]]; then sudo_ tee "$1" <"$2" >/dev/null && ok "restored $1"; fi
 }
 
+# local.lua: this machine's monitors, keyboard and overrides (not in the repo)
+desktop_local() { printf '%s/hypr/local.lua' "$CONFIG_HOME"; }
+desktop_export() { local_file_export "$1" "$(desktop_local)"; }
+desktop_exported() { local_file_exported "$1" "$(desktop_local)"; }
+desktop_import() { local_file_import "$1" "$(desktop_local)"; }
+
 desktop_cmd() {
   load_machine; ledger_init
   case ${1:-sync} in

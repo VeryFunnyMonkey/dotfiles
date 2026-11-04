@@ -14,8 +14,8 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
   - `lib/`: the building blocks. `sys` (helpers), `ui` (output, prompts, gum menus, doctor checks), `machine` (paths and this machine's selection), `ledger` (the undo record and its revert dispatcher), `units` (systemd units), `catalog`, `apply` (change the selection and apply), `modules` (the module registry and contract).
   - `pkg/`: packages. `managers.sh` has one `pm_<manager>_*` set per package manager; `downloads.sh` one `dl_<name>_*` set per download; `sync.sh` holds sync, drift, search, update and cleanup.
   - `modules/`: one feature each, with helpers in `modules/<name>/`. Core: srv, shell, ssh-agent, git (with the host table in `git/hosts.sh`), agents, runtimes, nvim, settings (kinds in `settings/kinds.sh`). Item modules, active while their item is selected: containers (Podman), tailscale.
-  - `commands/`: what you type. setup (the installer), items (add/remove/profile/info), doctor, update, reset, uninstall, misc. Commands loop over modules; they don't know any feature.
-- **The module contract** (`lib/modules.sh`). A module `<m>` may define `<m>_sync`, `<m>_doctor`, `<m>_update`, `<m>_reset`, `<m>_uninstall` and `<m>_cmd` (for `rig <m> ...`), plus `revert_<kind>` for each ledger kind it records. To add a feature:
+  - `commands/`: what you type. setup (the installer), items (add/remove/profile/info), doctor, update, reset, uninstall, transfer (export/import), misc. Commands loop over modules; they don't know any feature.
+- **The module contract** (`lib/modules.sh`). A module `<m>` may define `<m>_sync`, `<m>_doctor`, `<m>_update`, `<m>_reset`, `<m>_uninstall` and `<m>_cmd` (for `rig <m> ...`), `<m>_export`/`<m>_exported`/`<m>_import` (its machine-local part, for `rig export`/`rig import`; never keys or tokens), plus `revert_<kind>` for each ledger kind it records. To add a feature:
   1. write `modules/<name>.sh`;
   2. give its catalog item `module: <name>` (or add it to `RIG_CORE_MODULES` if every machine needs it);
   3. declare its files in the item (`files:`).
