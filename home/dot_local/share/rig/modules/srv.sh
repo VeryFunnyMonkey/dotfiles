@@ -1,6 +1,24 @@
 # shellcheck shell=bash
-# modules/srv.sh: server mounts (the srv command). rig's part: health, and
-# unmounting plus removing srv's data on uninstall.
+# modules/srv.sh: server mounts (the srv command). rig's part: a one-time
+# offer to import your servers, health, and unmounting plus removing srv's
+# data on uninstall.
+
+# Once per machine: import servers from a hosts file (a simple list, or an
+# Ansible inventory). Skipped when hosts are already there; srv import works
+# any time.
+srv_sync() {
+  local hosts="$CONFIG_HOME/srv/hosts" asked="$RIG_STATE/srv-import-offered"
+  have srv || return 0
+  if [[ -e $asked ]] || { [[ -f $hosts ]] && grep -qv '^\s*\(#\|$\)' "$hosts"; }; then return 0; fi
+  can_ask || { say "  ${DIM}srv: add your servers later with srv import <hosts file> (or srv add)${N}"; return 0; }
+  touch "$asked"
+  say "  srv can mount your servers at ~/Servers/<host>. Import them from a hosts file?"
+  say "  ${DIM}a simple list (see extras/srv-hosts.example) or an Ansible inventory; blank to skip${N}"
+  local f
+  if have gum; then f=$(gum input --placeholder "path to a hosts file or inventory (blank: skip)" </dev/tty || true)
+  else printf '  file: ' >/dev/tty; IFS= read -r f </dev/tty || f=''; fi
+  if [[ -n $f ]]; then srv import "${f/#\~/$HOME}" || warn "import failed; try again with: srv import <file>"; fi
+}
 
 srv_doctor() {
   have srv || return 0

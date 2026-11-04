@@ -75,7 +75,13 @@ pm_dnf_explicit() { dnf repoquery --userinstalled --qf '%{name}\n' 2>/dev/null |
 
 # ------------------------------------------------------------- brew ---------
 pm_brew_present() {
-  if [[ $1 == --cask\ * ]]; then brew list --cask "${1#--cask }" >/dev/null 2>&1
+  if [[ $1 == --cask\ * ]]; then
+    local c=${1#--cask } app
+    brew list --cask "$c" >/dev/null 2>&1 && return 0
+    # installed another way (the App Store, a download): the cask's app is there,
+    # so rig doesn't install over it (and, as "already there", never removes it)
+    app=$(brew info --cask "$c" 2>/dev/null | awk '/^==> Artifacts/ {f=1; next} f && /\.app/ {sub(/ \(App\).*/, ""); print; exit}')
+    [[ -n $app ]] && { [[ -d /Applications/$app ]] || [[ -d $HOME/Applications/$app ]]; }
   else brew list --formula "$1" >/dev/null 2>&1; fi
 }
 

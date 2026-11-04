@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Once per machine: offer to import your servers into srv (the srv module).
+set -euo pipefail
+exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync srv
