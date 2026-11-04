@@ -214,7 +214,8 @@ menu_git() {
       rows+=("Add an account" "Remove an account" "Default account: $def" "Test accounts")
     fi
     rows+=("Host CLIs: $clis" "Back")
-    local head="Git: accounts $(if ((accounts)); then identities | tr '\n' ' '; else echo '(set up after the first install: rig git add)'; fi)"
+    local head="Git: accounts (set up after the first install: rig git add)"
+    if ((accounts)); then head="Git: accounts $(identities | tr '\n' ' ')"; fi
     pick=$(gum choose --header "$head" "${rows[@]}" </dev/tty) || return
     case $pick in
       "Add an account") RIG_SETUP_MENU=1 git_add || true ;;

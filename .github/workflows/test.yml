@@ -20,7 +20,7 @@ jobs:
           sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
       - name: shellcheck
         run: |
-          shellcheck -S warning install.sh tests/run.sh home/dot_local/bin/executable_rig \
+          shellcheck -S warning install.sh tests/run.sh tests/here.sh home/dot_local/bin/executable_rig \
             home/dot_local/bin/executable_dev home/dot_local/bin/executable_srv home/dot_local/share/rig/*.sh
       - name: zsh syntax
         run: for f in home/dot_zshenv home/dot_config/zsh/dot_zshrc home/dot_config/zsh/dot_zprofile home/dot_config/zsh/*.zsh; do zsh -n "$f"; done

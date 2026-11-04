@@ -244,7 +244,8 @@ gitlab_connect() { # name key hostname
 
 # tea logs in with an access token; each rig account gets its own tea login.
 gitea_connect() { # name key hostname
-  local n=$1 key=$2 h=$3 login="rig-$n" token out
+  local n=$1 key=$2 h=$3 token out
+  local login="rig-$n"
   ensure_host_cli gitea tea || return 1
   if ! tea login list 2>/dev/null | grep -qw -- "$login"; then
     local url="https://$h/user/settings/applications"
