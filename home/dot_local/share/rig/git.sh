@@ -372,7 +372,7 @@ git_add() {
 git_setup() {
   load_machine
   if [[ -n $(identities) ]]; then return 0; fi
-  { : </dev/tty; } 2>/dev/null || { say "rig: no terminal; set up git accounts later with: rig git add"; return 0; }
+  can_ask || { say "rig: no terminal; set up git accounts later with: rig git add"; return 0; }
   tty_in
   say; info "${B}git accounts${N}"
   say "  Set up the git accounts this machine uses: name, email, SSH key, and the host login."

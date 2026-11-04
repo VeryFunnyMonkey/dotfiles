@@ -33,7 +33,7 @@ ok_=n
 {{- if eq .chezmoi.os "darwin" }}
 if sudo -n true 2>/dev/null; then
   if sudo chsh -s "$ZSH" "$USER"; then ok_=y; fi
-elif { : </dev/tty; } 2>/dev/null; then
+elif [[ ${RIG_NONINTERACTIVE:-0} != 1 ]] && { : </dev/tty; } 2>/dev/null; then
   if chsh -s "$ZSH" </dev/tty; then ok_=y; fi
 fi
 {{- else }}

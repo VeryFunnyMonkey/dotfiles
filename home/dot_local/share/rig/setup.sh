@@ -268,6 +268,7 @@ cmd_setup() {
   for x in "${del[@]}"; do sel=$(list_del "$x" "$sel"); done
 
   if ((yes)); then
+    export RIG_NONINTERACTIVE=1
     agent_def=$(pick_agent_default "$sel" "$agent_def")
     review "$cur" "$sel"
     apply_state "$profile" "$sel" "$extras" "$agent_def"

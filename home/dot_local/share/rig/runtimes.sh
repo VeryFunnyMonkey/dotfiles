@@ -87,7 +87,7 @@ cmd_homelab() {
   homelab_offer_import
   if tailscale status >/dev/null 2>&1; then
     ok "tailscale: on the tailnet as $(tailscale status --self --json 2>/dev/null | sed -n 's/.*"DNSName": *"\([^"]*\)".*/\1/p' | head -1)"
-  elif { : </dev/tty; } 2>/dev/null; then
+  elif can_ask; then
     info "logging this machine in to the tailnet (follow the link)"
     sudo_ tailscale up </dev/tty || warn "tailscale up didn't finish; run: sudo tailscale up"
   else
@@ -107,7 +107,7 @@ homelab_offer_import() {
   local hosts="${XDG_CONFIG_HOME:-$HOME/.config}/srv/hosts"
   have srv || return 0
   if [[ -f $hosts ]] && grep -qE $'\t(import|homelab)$' "$hosts"; then return 0; fi
-  { : </dev/tty; } 2>/dev/null || { say "  ${DIM}srv: add your servers later with srv import <hosts file> (or srv add)${N}"; return 0; }
+  can_ask || { say "  ${DIM}srv: add your servers later with srv import <hosts file> (or srv add)${N}"; return 0; }
   say "  srv can mount your servers at ~/Servers/<host>. Import them from a hosts file?"
   say "  ${DIM}a simple list (see extras/srv-hosts.example) or an Ansible inventory; blank to skip${N}"
   local f

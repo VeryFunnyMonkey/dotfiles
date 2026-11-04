@@ -38,9 +38,13 @@ warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*" >&2; }
 bad()  { printf '  %s✗%s %s\n' "$R" "$N" "$*"; }
 die()  { printf '%srig:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
+# Can rig ask the user something? Not without a terminal, and not under
+# `rig setup --yes` (RIG_NONINTERACTIVE), which reaches chezmoi's scripts too.
+can_ask() { [[ ${RIG_NONINTERACTIVE:-0} != 1 ]] && { : </dev/tty; } 2>/dev/null; }
 confirm() {
   local reply
   if [[ ${RIG_YES:-0} == 1 ]]; then return 0; fi
+  can_ask || return 1   # nobody to ask: the answer is no
   read -r -p "$1 [y/N] " reply </dev/tty || return 1
   [[ $reply == [yY]* ]]
 }
