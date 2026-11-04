@@ -204,10 +204,11 @@ picker_entries() { # kind \t name \t path \t tabs
 }
 # Rows: name (as wide as the longest), status, the folder it's in (dim).
 picker_items() {
-  local entries kind name path tabs label width=8
+  local entries kind name path tabs label width=8 scol=0
   entries=$(picker_entries)
   while IFS=$'\t' read -r kind name path tabs; do
     [[ -n $kind ]] || continue
+    if [[ $kind != dir ]]; then scol=15; fi   # a status column only if something has one
     label=${path##*/}; [[ $kind == run ]] && label=$name
     if ((${#label} > width)); then width=${#label}; fi
   done <<<"$entries"
@@ -222,8 +223,9 @@ picker_items() {
       ws)  text="workspace"; state=$'\033[34m★ '"$text"$'\033[0m' ;;
     esac
     # padded by hand: printf counts bytes, and the symbols are 3 bytes each
-    local pad=$((15 - (${#text} ? ${#text} + 2 : 0)))
-    printf '%-*s  %s%*s  \033[2m%s\033[0m\t%s\t%s\t%s\n' "$width" "$label" "$state" "$pad" '' \
+    local pad=$((scol - (${#text} ? ${#text} + 2 : 0)))
+    if ((scol)); then pad=$((pad + 2)); fi
+    printf '%-*s  %s%*s\033[2m%s\033[0m\t%s\t%s\t%s\n' "$width" "$label" "$state" "$pad" '' \
       "${where/#"$HOME"/\~}" "$kind" "$name" "$path"
   done <<<"$entries"
 }
