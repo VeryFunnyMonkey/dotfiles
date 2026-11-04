@@ -9,6 +9,8 @@ window-padding-x = 6
 window-padding-y = 4
 window-padding-balance = true
 confirm-close-surface = false
+# a steady cursor: calmer, and no redraw twice a second (battery)
+cursor-style-blink = false
 
 # Each window opens in tmux (see zshrc), which does tabs and splits: Ghostty's
 # own tab and split keys are off (Linux ctrl+shift, macOS cmd) so there's one way.

@@ -69,7 +69,8 @@ cmd_nightlight() {
     return 0
   fi
   if pgrep -x hyprsunset >/dev/null; then pkill -x hyprsunset; notify "Night light off"
-  else (cmd_run hyprsunset --temperature "$NIGHT_TEMP" >/dev/null 2>&1 &); notify "Night light on"; fi
+  else (cmd_run hyprsunset --temperature "$NIGHT_TEMP" >/dev/null 2>&1 &); sleep 0.2; notify "Night light on"; fi
+  pkill -RTMIN+8 -x waybar 2>/dev/null || true   # the bar's night light icon (signal 8)
 }
 
 cmd_shot() {
