@@ -64,7 +64,7 @@ components:
   - {name: ops, role: language item (Ansible, YAML, OpenTofu, Docker, shell), why: "matches the homelab repo", alternatives: [], revisit_if: "tofu-ls or ansible-language-server change hands"}
   - {name: go, role: language item (gopls, goimports, gofumpt), why: standard, alternatives: [], revisit_if: never really}
   - {name: rust, role: language item (rust-analyzer via rustup), why: "matches the toolchain", alternatives: [], revisit_if: "rust-analyzer distribution changes"}
-  - {name: tailscale, role: homelab tailnet (+ srv host import), why: "the homelab already uses it", alternatives: [], revisit_if: never}
+  - {name: tailscale, role: Tailscale (+ copies inventory hosts into srv), why: "the homelab already uses it", alternatives: [], revisit_if: never}
   - {name: github, role: gh CLI, why: "rig git logs in and uploads keys with it", alternatives: [], revisit_if: "gh auth/ssh-key flags change"}
   - {name: claude, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (native installer)"}
   - {name: copilot, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (npm @github/copilot / brew copilot-cli)"}

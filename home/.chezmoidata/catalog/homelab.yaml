@@ -2,5 +2,5 @@ catalog:
   tailscale:
     category: homelab
     name: Tailscale
-    description: "join the homelab tailnet (servers can't reach personal devices)"
+    description: "installs Tailscale and logs in; offers to copy your servers from the ansible inventory into srv"
     packages: [tailscale]
