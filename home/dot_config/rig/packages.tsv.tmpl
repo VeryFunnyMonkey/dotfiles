@@ -1,7 +1,7 @@
 {{- /*
   This machine's resolved package list. One line per package:
     <manager> TAB <name(s)> TAB <logical> TAB <source>
-  Sources: core, item:<id>, runtime:<name>, extra. Managers: pacman, apt, dnf, brew, download.
+  Sources: core, item:<id>, runtime:<name>, extra. Managers: pacman, aur, apt, dnf, brew, download.
   The rules (virtual packages, downloads, per-manager names) are data in
   .chezmoidata/packages.yaml.
 */ -}}
@@ -40,6 +40,7 @@
 {{-   $logical := index $pair 2 -}}
 {{-   $mgr := "brew" -}}
 {{-   if has $pkg $p.download_everywhere -}}{{- $mgr = "download" -}}
+{{-   else if and (eq $d.platform "arch") (has $pkg $p.aur) -}}{{- $mgr = "aur" -}}
 {{-   else if eq $d.platform "arch" -}}{{- $mgr = "pacman" -}}
 {{-   else if eq $d.platform "darwin" -}}{{- $mgr = "brew" -}}
 {{-   else if has $pkg $p.download -}}{{- $mgr = "download" -}}

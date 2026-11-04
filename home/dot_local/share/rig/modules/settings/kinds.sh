@@ -77,3 +77,17 @@ setting_line_write() { line_add "$1" "$2"; }
 setting_line_restore() { if [[ $2 == "$UNSET" ]]; then line_del "$1" "$3"; fi; }
 setting_line_type() { printf '%s' "$1"; }
 setting_line_wanted() { printf present; }
+
+# ------------------------------------------------------------- gsettings ----
+# id = schema|key; the value is a GVariant ("'prefer-dark'"). Needs a D-Bus
+# session (a desktop); without one the write is skipped and tried again on
+# the next sync.
+setting_gsettings_read() {
+  local s k v; IFS='|' read -r s k <<<"$1"; v=$(gsettings get "$s" "$k" 2>/dev/null || true)
+  printf '%s' "${v:-$UNSET}"
+}
+setting_gsettings_write() {
+  local s k; IFS='|' read -r s k <<<"$1"
+  if [[ $2 == "$UNSET" ]]; then gsettings reset "$s" "$k" 2>/dev/null || true
+  else gsettings set "$s" "$k" "$2" 2>/dev/null || warn "couldn't set $s $k yet (no desktop session); rig settings sync applies it later"; fi
+}

@@ -32,8 +32,20 @@ install_brew() {
 }
 
 {{- if eq $platform "arch" }}
-note_pkgs pacman "pacman -Q" git curl
-have git && have curl || sudo_ pacman -S --needed --noconfirm git curl
+note_pkgs pacman "pacman -Q" git curl base-devel
+have git && have curl && pacman -Qg base-devel >/dev/null 2>&1 || sudo_ pacman -S --needed --noconfirm git curl base-devel
+# The AUR helper (rig installs AUR items and updates with it): yay, unless yay
+# or paru is already here. Built as yay-bin; only the main package is installed
+# (makepkg may also build a -debug one).
+if ! have yay && ! have paru; then
+  echo "==> installing yay (the AUR helper)"
+  note_pkgs pacman "pacman -Q" yay-bin
+  tmp=$(mktemp -d)
+  git clone -q --depth 1 https://aur.archlinux.org/yay-bin.git "$tmp/yay-bin"
+  (cd "$tmp/yay-bin" && makepkg -s --noconfirm --needed &&
+    sudo_ pacman -U --noconfirm --needed "$(find . -maxdepth 1 -name 'yay-bin-[0-9]*.pkg.tar.*' | head -n1)")
+  rm -rf "$tmp"
+fi
 {{- else if eq $platform "debian" }}
 PRE=(git curl ca-certificates build-essential procps file zsh)
 note_pkgs apt dpkg_has "${PRE[@]}"

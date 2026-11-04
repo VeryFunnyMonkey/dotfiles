@@ -11,3 +11,4 @@ setting_kinds:
   defaults: {when: {platform: darwin}, id: [domain, key], extra: type}
   mime: {when: {not_platform: darwin}, each: types, value: desktop}
   line: {when: {not_platform: darwin}, id: [path]}
+  gsettings: {when: {desktop: hyprland}, id: [schema, key]}

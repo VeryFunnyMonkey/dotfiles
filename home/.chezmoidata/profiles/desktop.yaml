@@ -1,4 +1,4 @@
 profiles:
   desktop:
     description: "A desktop or laptop with a GUI"
-    select: [zoxide, eza, bat, delta, lazygit, ghostty, nerd-font, clipboard, github, tailscale]
+    select: [zoxide, eza, bat, delta, lazygit, ghostty, nerd-font, clipboard, helium, browser-default, github, tailscale]

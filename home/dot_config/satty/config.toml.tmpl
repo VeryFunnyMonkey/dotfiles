@@ -1,0 +1,13 @@
+# Screenshot annotation (shift+Print); the palette is gruvbox (theme.yaml). Enter copies and closes; ctrl+s saves
+# to ~/Pictures/Screenshots.
+[general]
+initial-tool = "arrow"
+copy-command = "wl-copy"
+early-exit = true
+actions-on-enter = ["save-to-clipboard"]
+output-filename = "~/Pictures/Screenshots/%Y-%m-%d_%H-%M-%S.png"
+annotation-size-factor = 1
+
+[color-palette]
+{{- $t := .theme }}
+palette = ["{{ $t.red }}", "{{ $t.yellow }}", "{{ $t.green }}", "{{ $t.blue }}", "{{ $t.purple }}", "{{ $t.fg }}"]

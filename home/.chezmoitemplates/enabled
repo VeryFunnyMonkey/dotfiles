@@ -6,7 +6,13 @@
 */ -}}
 {{- $d := includeTemplate "detect" . | fromJson -}}
 {{- $sel := list -}}{{- $skipped := list -}}{{- $unknown := list -}}
+{{- /* the selection, plus what selected items include (includes:) */ -}}
+{{- $want := list -}}
 {{- range $id := (dig "selected" list .) -}}
+{{-   $want = append $want $id -}}
+{{-   if hasKey $.catalog $id -}}{{- range $inc := (dig "includes" list (index $.catalog $id)) -}}{{- $want = append $want $inc -}}{{- end -}}{{- end -}}
+{{- end -}}
+{{- range $id := $want -}}
 {{-   if hasKey $.catalog $id -}}
 {{-     $why := includeTemplate "available" (dict "item" (index $.catalog $id) "id" $id "d" $d) | trim -}}
 {{-     if eq $why "ok" -}}{{- if not (has $id $sel) -}}{{- $sel = append $sel $id -}}{{- end -}}

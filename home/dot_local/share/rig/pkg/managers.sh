@@ -27,12 +27,14 @@ pkg_remove_cmd() { # manager names...
 }
 pkg_explicit() { # every manager in use here
   if declare -F "pm_${RIG_NATIVE:-}_explicit" >/dev/null; then "pm_${RIG_NATIVE}_explicit"; fi
+  if [[ ${RIG_NATIVE:-} == pacman ]]; then pm_aur_explicit; fi
   if [[ ${RIG_NATIVE:-} != brew ]] && have brew; then pm_brew_explicit; fi
 }
 
 # ------------------------------------------------------------- pacman -------
-# AUR helper if there is one (it also installs repo packages).
-pacman_helper() { if have paru; then echo paru; elif have yay; then echo yay; else echo pacman; fi; }
+# The AUR helper if there is one (it also installs and upgrades repo packages,
+# so rig update updates AUR packages too): yay, else paru, else plain pacman.
+pacman_helper() { if have yay; then echo yay; elif have paru; then echo paru; else echo pacman; fi; }
 pm_pacman_present() { pacman -Q "$1" >/dev/null 2>&1 || pacman -Qg "$1" >/dev/null 2>&1; }
 pm_pacman_install() {
   local h; h=$(pacman_helper)
@@ -41,7 +43,19 @@ pm_pacman_install() {
 pm_pacman_remove() { sudo_ pacman -Rns --noconfirm "$@"; }
 pm_pacman_search() { local h; h=$(pacman_helper); if [[ $h == pacman ]]; then pacman -Ss "$@"; else "$h" -Ss "$@"; fi; }
 pm_pacman_upgrade() { local h; h=$(pacman_helper); if [[ $h == pacman ]]; then sudo_ pacman -Syu --noconfirm; else "$h" -Syu --noconfirm; fi; }
-pm_pacman_explicit() { pacman -Qqe | sed 's/^/pacman\t/'; }
+pm_pacman_explicit() { pacman -Qqen | sed 's/^/pacman\t/'; }   # repo packages (the AUR ones: pm_aur_explicit)
+
+# ------------------------------------------------------------- aur ----------
+# AUR packages, built by the AUR helper. On Arch the bootstrap installs yay
+# (yay-bin) unless yay or paru is already there.
+aur_helper() {
+  if have yay; then echo yay; elif have paru; then echo paru
+  else die "no AUR helper (yay); run: chezmoi state delete-bucket --bucket=scriptState && chezmoi apply"; fi
+}
+pm_aur_present() { pm_pacman_present "$1"; }
+pm_aur_install() { local h; h=$(aur_helper); "$h" -S --needed --noconfirm "$@"; }
+pm_aur_remove() { pm_pacman_remove "$@"; }
+pm_aur_explicit() { pacman -Qqem | sed 's/^/aur\t/'; }
 
 # ------------------------------------------------------------- apt ----------
 pm_apt_present() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }

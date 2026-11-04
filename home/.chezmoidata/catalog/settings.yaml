@@ -5,6 +5,7 @@
 #   defaults macOS defaults: domain, key, type, value; restart: an app to restart
 #   mime     xdg-mime default: desktop file for each type     (Linux desktops)
 #   line     a line in a file (e.g. ~/.config/xdg-terminals.list)
+#   gsettings  gsettings set: schema, key, value (a GVariant, e.g. "'prefer-dark'")
 # Which machines each kind applies to, and its fields: _setting-kinds.yaml.
 catalog:
   terminal-default:
@@ -19,6 +20,17 @@ catalog:
       - {kind: kde, file: kdeglobals, group: General, key: TerminalService, value: com.mitchellh.ghostty.desktop}
       - {kind: line, path: ".config/xdg-terminals.list", value: com.mitchellh.ghostty.desktop}
     note: "macOS has no default-terminal setting: keep Ghostty in the Dock"
+  browser-default:
+    category: settings
+    name: Helium as default browser
+    description: "links open in Helium: KDE, Hyprland and GTK apps (mimeapps.list); macOS asks for this itself"
+    platforms: [arch, fedora, debian]
+    display: true
+    requires: [helium]
+    settings:
+      - {kind: kde, file: kdeglobals, group: General, key: BrowserApplication, value: helium.desktop}
+      - {kind: mime, desktop: helium.desktop, types: [x-scheme-handler/http, x-scheme-handler/https, text/html, application/xhtml+xml]}
+    note: "on macOS, pick Helium in System Settings, Desktop & Dock, Default web browser (Helium also offers it on first start)"
   text-in-nvim:
     category: settings
     name: Open text files in Neovim

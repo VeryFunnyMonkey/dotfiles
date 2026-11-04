@@ -1,0 +1,28 @@
+Welcome to Hyprland
+
+The keys (mod = Super)                                   all of them: mod+/
+  mod+return          terminal             mod+space           launcher
+  mod+shift+return    browser              mod+e               files (yazi)
+  mod+h/j/k/l         move between windows mod+shift+h/j/k/l   move a window
+  mod+1..9            workspaces           mod+shift+1..9      send window there
+  mod+q               close                mod+shift+f         fullscreen
+  mod+v               clipboard history    mod+a / w / b       audio/Wi-Fi/Bluetooth
+  mod+escape          lock                 mod+shift+escape    power menu (+ power key)
+  Print               screenshot           shift+Print         screenshot + markup
+
+First things
+  1. Wi-Fi: mod+w, or click it in the bar.
+  2. Your screens: add them to ~/.config/hypr/local.lua (rig info hyprland
+     shows how). It's yours, not in the repo, and can change anything else too.
+  3. Check the machine: rig doctor
+  4. Git accounts: rig git add
+  5. The terminal runs tmux: Ctrl-Space then c makes a tab, Ctrl-Space then
+     Space lists the keys. Projects: Ctrl-Space then f.
+  6. Neovim: run nvim, then :Tutor dotfiles
+
+More
+  rig info hyprland    this desktop, in full
+  desk help            what the keys run
+  rig help             everything else
+
+This shows once. See it again any time: desk welcome          q closes it

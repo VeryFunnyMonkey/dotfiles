@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# desk: the small actions behind the Hyprland item's keys and bar (run
+# `desk help`). Everything shows in fuzzel or a floating Ghostty, gruvbox.
+set -euo pipefail
+
+SHOTS="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+NIGHT_TEMP=4000
+
+have() { command -v "$1" >/dev/null 2>&1; }
+notify() { if have notify-send; then notify-send -a desk "$@"; fi; }
+menu() { fuzzel --dmenu "$@"; }
+
+# Start an app: in its own systemd scope under uwsm, directly otherwise.
+cmd_run() {
+  if have uwsm && uwsm check is-active >/dev/null 2>&1; then exec uwsm app -- "$@"; fi
+  exec "$@"
+}
+
+cmd_launch() {
+  if have uwsm && uwsm check is-active >/dev/null 2>&1; then exec fuzzel --launch-prefix="uwsm app -- "; fi
+  exec fuzzel
+}
+
+# The default browser (xdg-settings: what "Helium as default browser" sets).
+cmd_browser() {
+  local app; app=$(xdg-settings get default-web-browser 2>/dev/null || true)
+  if [[ -n $app ]] && have gtk-launch; then exec gtk-launch "${app%.desktop}" "$@"; fi
+  if [[ -n $app ]]; then cmd_run xdg-open "${1:-about:blank}"; fi
+  notify "No default browser" "Select Helium in rig setup"; exit 1
+}
+
+# A terminal program in a centred floating window (window rule: rig.float).
+cmd_float() { cmd_run ghostty --class=rig.float -e "$@"; }
+
+cmd_clipboard() {
+  local pick; pick=$(cliphist list | menu --prompt="  " --width=70) || exit 0
+  cliphist decode <<<"$pick" | wl-copy
+}
+
+cmd_power() {
+  local pick
+  pick=$(printf '%s\n' "  Lock" "󰍃  Log out" "󰤄  Suspend" "  Reboot" "  Shut down" | menu --prompt="  " --lines=5 --width=24) || exit 0
+  case $pick in
+    *Lock) loginctl lock-session ;;
+    *"Log out") if have uwsm && uwsm check is-active >/dev/null 2>&1; then uwsm stop; else hyprctl dispatch 'hl.dsp.exit()'; fi ;;
+    *Suspend) systemctl suspend ;;
+    *Reboot) systemctl reboot ;;
+    *"Shut down") systemctl poweroff ;;
+  esac
+}
+
+# The keys, from Hyprland itself (each bind's description), as a list.
+cmd_keys() {
+  hyprctl -j binds | jq -r '
+    def mods: [ (if . % 2 >= 1 then "shift" else empty end),
+                (if (. / 4 | floor) % 2 == 1 then "ctrl" else empty end),
+                (if (. / 8 | floor) % 2 == 1 then "alt" else empty end),
+                (if (. / 64 | floor) % 2 == 1 then "mod" else empty end) ];
+    .[] | select(.description != "")
+        | "\(((.modmask | mods) + [.key | ascii_downcase]) | join("+"))\t\(.description)"' |
+    awk -F'\t' '!seen[$2]++ {printf "%-22s %s\n", $1, $2}' |
+    menu --prompt="keys  " --width=60 --lines=20 >/dev/null || true
+}
+
+cmd_nightlight() {
+  if [[ ${1:-} == status ]]; then
+    if pgrep -x hyprsunset >/dev/null; then echo '{"text": "󰖔", "class": "on", "tooltip": "night light on"}'
+    else echo '{"text": "󰖙", "class": "off", "tooltip": "night light off"}'; fi
+    return 0
+  fi
+  if pgrep -x hyprsunset >/dev/null; then pkill -x hyprsunset; notify "Night light off"
+  else (cmd_run hyprsunset --temperature "$NIGHT_TEMP" >/dev/null 2>&1 &); sleep 0.2; notify "Night light on"; fi
+  pkill -RTMIN+8 -x waybar 2>/dev/null || true   # the bar's night light icon (signal 8)
+}
+
+cmd_shot() {
+  mkdir -p "$SHOTS"
+  local file; file="$SHOTS/$(date +%Y-%m-%d_%H-%M-%S).png"
+  case ${1:-area} in
+    area)   grim -g "$(slurp)" - | wl-copy --type image/png && notify "Screenshot copied" ;;
+    edit)   grim -g "$(slurp)" - | satty --filename - ;;
+    screen) grim "$file" && wl-copy --type image/png <"$file" && notify "Screenshot saved and copied" "$file" ;;
+    *) echo "usage: desk shot area|edit|screen" >&2; exit 1 ;;
+  esac
+}
+
+# The getting-started page (~/.config/hypr/welcome.txt): once on the first
+# login (--once), any time without it. --print just prints it.
+WELCOME="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/welcome.txt"
+WELCOMED="${XDG_STATE_HOME:-$HOME/.local/state}/rig/hyprland-welcomed"
+cmd_welcome() {
+  [[ -r $WELCOME ]] || exit 0
+  case ${1:-} in
+    --once) if [[ -e $WELCOMED ]]; then exit 0; fi; mkdir -p "$(dirname "$WELCOMED")"; touch "$WELCOMED" ;;
+    --print) welcome_render; return 0 ;;
+  esac
+  cmd_run ghostty --class=rig.float --title=Welcome -e sh -c "\"$0\" welcome --print | less -R -P'q closes this'"
+}
+# Headings (lines that don't start with a space) in bold aqua, the rest as is.
+welcome_render() { sed -E $'s/^([^ ].*)$/\033[1;36m\\1\033[0m/' "$WELCOME"; }
+
+cmd_help() {
+  cat <<'EOF'
+desk: actions for the Hyprland desktop (bound to keys; see mod+/)
+  desk run <cmd...>        start an app (in a uwsm scope when there is one)
+  desk launch              the app launcher
+  desk browser [url]       the default browser
+  desk float <cmd...>      a terminal program in a floating window
+  desk clipboard           clipboard history
+  desk power               lock, log out, suspend, reboot, shut down
+  desk keys                the keys and what they do
+  desk nightlight [status] night light on/off
+  desk shot area|edit|screen   screenshots
+  desk welcome             the getting-started page (shown once on the first login)
+EOF
+}
+
+main() {
+  local cmd=${1:-help}; (($#)) && shift
+  case $cmd in
+    run) cmd_run "$@" ;;
+    launch) cmd_launch ;;
+    browser) cmd_browser "$@" ;;
+    float) cmd_float "$@" ;;
+    clipboard) cmd_clipboard ;;
+    power) cmd_power ;;
+    keys) cmd_keys ;;
+    nightlight) cmd_nightlight "$@" ;;
+    shot) cmd_shot "$@" ;;
+    welcome) cmd_welcome "$@" ;;
+    help|-h|--help) cmd_help ;;
+    *) echo "desk: unknown command '$cmd' (desk help)" >&2; exit 1 ;;
+  esac
+}
+main "$@"

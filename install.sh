@@ -3,6 +3,8 @@
 #   sh -c "$(curl -fsSL https://raw.githubusercontent.com/VeryFunnyMonkey/dotfiles/main/install.sh)"
 # Non-interactive (scripts, CI):
 #   sh -c "$(curl -fsSL .../install.sh)" -- --profile desktop --yes
+# Another branch (to try one out): RIG_BRANCH=<branch> in front, and the URL's
+# "main" changed to it.
 #
 # Installs chezmoi, prepares the package manager (the repo's bootstrap step,
 # recorded so rig uninstall can undo it), clones the dotfiles, then starts the
@@ -10,6 +12,7 @@
 set -eu
 
 REPO=${RIG_REPO:-VeryFunnyMonkey}
+BRANCH=${RIG_BRANCH:-}
 # ~/.config or ~/.local as a link to something that's gone (an old dotfiles
 # setup, a sync folder) makes every step fail with "no such file or directory".
 for d in "${XDG_CONFIG_HOME:-$HOME/.config}" "$HOME/.local"; do
@@ -40,8 +43,8 @@ if [ -n "${RIG_SOURCE:-}" ]; then
   say "using the dotfiles at $RIG_SOURCE"
   chezmoi init --source "$RIG_SOURCE"
 else
-  say "cloning the dotfiles ($REPO)"
-  chezmoi init "$REPO"
+  say "cloning the dotfiles ($REPO${BRANCH:+, branch $BRANCH})"
+  if [ -n "$BRANCH" ]; then chezmoi init --branch "$BRANCH" "$REPO"; else chezmoi init "$REPO"; fi
 fi
 SRC=$(chezmoi source-path)
 

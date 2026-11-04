@@ -34,7 +34,7 @@ cmd_mount() {
   need_host "$n"
   have rclone || die "rclone isn't installed (rig sync)"
   local mp; mp=$(mount_point "$n")
-  if is_mounted "$mp"; then state_add "$n"; ok "$n is already mounted at ${mp/#$HOME/~}"; return 0; fi
+  if is_mounted "$mp"; then state_add "$n"; status_push; ok "$n is already mounted at ${mp/#$HOME/~}"; return 0; fi
   # rclone: a relative path is relative to the login's home; blank is the home itself
   [[ -n $path ]] || path=$(host_path "$n")
   # shellcheck disable=SC2088  # the server's ~, not ours
@@ -60,7 +60,7 @@ cmd_mount() {
   fi
   local _; for _ in $(seq 1 20); do is_mounted "$mp" && break; sleep 0.25; done
   is_mounted "$mp" || die "rclone started but nothing is mounted (see ${LOGS/#$HOME/~}/$n.log)"
-  state_add "$n"
+  state_add "$n"; status_push
   ok "mounted $n at ${mp/#$HOME/~}"
 }
 
@@ -105,7 +105,7 @@ cmd_umount() {
       say_hint "close them, or: srv umount --force $n"
       continue
     fi
-    state_del "$n"
+    state_del "$n"; status_push
     rmdir "$mp" 2>/dev/null || true
     ok "unmounted $n"
   done

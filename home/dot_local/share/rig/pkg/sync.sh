@@ -23,7 +23,7 @@ cmd_sync() {
   done < <(pkg_declared)
   if ((${#todo[@]} == 0)); then ok "all declared packages are installed"; return 0; fi
   local mgr names
-  for mgr in pacman apt dnf brew download; do
+  for mgr in pacman aur apt dnf brew download; do
     [[ -n ${todo[$mgr]:-} ]] || continue
     names=$(printf '%s' "${todo[$mgr]}" | tr '\n' ' ')
     info "installing with $mgr: $names"
@@ -59,7 +59,11 @@ cmd_drift() {
   pkg_explicit | sort -u >"$tmp/now"
   pkg_declared_names | sort -u >"$tmp/declared"
   if ((all)) || [[ ! -f $RIG_STATE/baseline ]]; then : >"$tmp/base"; else sort -u "$RIG_STATE/baseline" >"$tmp/base"; fi
-  comm -23 "$tmp/now" "$tmp/declared" | comm -23 - "$tmp/base" >"$tmp/extra"
+  # rig's own installs (an AUR helper, say) aren't drift either
+  awk -F'\t' '$4=="installed" {print $1 "\t" $2}' "$RIG_STATE/packages.log" | sed 's/^aur\t/pacman\t/' | sort -u >"$tmp/rigs"
+  sed 's/^aur\t/pacman\t/' "$tmp/now" | sort -u >"$tmp/now.n"; mv "$tmp/now.n" "$tmp/now"
+  sed 's/^aur\t/pacman\t/' "$tmp/declared" | sort -u >"$tmp/declared.n"; mv "$tmp/declared.n" "$tmp/declared"
+  comm -23 "$tmp/now" "$tmp/declared" | comm -23 - "$tmp/base" | comm -23 - "$tmp/rigs" >"$tmp/extra"
   pkg_missing >"$tmp/missing"
   if [[ -s $tmp/extra ]]; then
     info "installed but not declared$( ((all)) || printf ' (since rig was set up; --all for everything)')"
@@ -90,6 +94,9 @@ pkg_update() {
 
 pkg_doctor() {
   info "packages"
+  if [[ ${RIG_NATIVE:-} == pacman ]]; then
+    if [[ $(pacman_helper) != pacman ]]; then check_ok "AUR helper: $(pacman_helper)"; else check_bad "no AUR helper (yay); the bootstrap installs it"; fi
+  fi
   local missing; missing=$(pkg_missing)
   if [[ -z $missing ]]; then check_ok "all declared packages installed"
   else while IFS=$'\t' read -r m rest; do check_bad "missing: $rest ($m)"; done <<<"$missing"; fi
@@ -109,17 +116,46 @@ pkg_cleanup() { # the package list from before
   printf '    %s\n' "${gone[@]//$'\t'/: }"
   if confirm "Uninstall them?"; then
     local g
+    pkg_remove_set < <(printf '%s\n' "${gone[@]}")
     for g in "${gone[@]}"; do
-      pkg_remove_cmd "${g%%$'\t'*}" "${g#*$'\t'}" && ledger_pkg_forget "${g%%$'\t'*}" "${g#*$'\t'}"
+      pkg_present "${g%%$'\t'*}" "${g#*$'\t'}" || ledger_pkg_forget "${g%%$'\t'*}" "${g#*$'\t'}"
     done
   else say "  ${DIM}kept; rig drift lists them${N}"; fi
 }
 
 # rig uninstall --packages: the ones rig installed (never ones already there)
 pkg_uninstall_all() {
+  awk -F'\t' '$4=="installed" {print $1 "\t" $2}' "$RIG_STATE/packages.log" | pkg_remove_set
+  # the AUR helper's cache and settings, when rig installed the helper
+  if [[ $(ledger_pkg_status pacman yay-bin) == installed ]]; then rm -rf "$CACHE_HOME/yay" "$CONFIG_HOME/yay"; fi
+}
+
+# Remove "manager<TAB>name" lines. Each manager's packages go in one
+# transaction, so it works out the order between packages that depend on each
+# other. If that fails (one is needed by something rig didn't install), it
+# goes one at a time, in passes, until a pass removes nothing.
+pkg_remove_set() {
+  local -A by=()
   local m n
-  tac_ "$RIG_STATE/packages.log" | awk -F'\t' '$4=="installed"' | while IFS=$'\t' read -r m n _ _ _; do
-    if pkg_present "$m" "$n"; then pkg_remove_cmd "$m" "$n" || warn "couldn't remove $n"; fi
+  while IFS=$'\t' read -r m n; do
+    [[ -n $m ]] || continue
+    if pkg_present "$m" "$n"; then by[$m]+="$n"$'\n'; fi
+  done
+  for m in "${!by[@]}"; do
+    local -a names=() left=()
+    mapfile -t names < <(printf '%s' "${by[$m]}")
+    # shellcheck disable=SC2068  # each name may hold several packages (split on purpose)
+    if [[ $m != download ]] && pkg_remove_cmd "$m" ${names[@]} >/dev/null 2>&1; then continue; fi
+    local progress=1
+    while ((progress)); do
+      progress=0; left=()
+      for n in "${names[@]}"; do
+        pkg_present "$m" "$n" || continue
+        if pkg_remove_cmd "$m" "$n" >/dev/null 2>&1; then progress=1; else left+=("$n"); fi
+      done
+      names=("${left[@]+"${left[@]}"}")
+    done
+    for n in "${names[@]+"${names[@]}"}"; do warn "kept $n ($m): something else still needs it"; done
   done
 }
 

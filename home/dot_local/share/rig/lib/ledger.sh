@@ -9,6 +9,18 @@
 # system.log newest-first through those functions.
 
 # ---------------------------------------------------------------- ledger ------
+# The original of one file, from the backup made on the first apply (if any).
+# It leaves the "seen" list, so taking the file over again backs it up again.
+backup_restore_one() { # path relative to ~
+  local manifest="$RIG_STATE/backup.manifest" dir
+  [[ -f $manifest ]] || return 1
+  dir=$(awk -F'\t' -v r="$1" '$1=="file" && $2==r {d=$3} END {print d}' "$manifest")
+  [[ -n $dir ]] && { [[ -e $dir/$1 || -L $dir/$1 ]]; } || return 1
+  mkdir -p "$(dirname "$HOME/$1")"
+  cp -aP "$dir/$1" "$HOME/$1" && ok "put back your earlier ~/$1"
+  if [[ -f $RIG_STATE/seen ]]; then grep -vxF "$1" "$RIG_STATE/seen" >"$RIG_STATE/seen.new" || true; mv "$RIG_STATE/seen.new" "$RIG_STATE/seen"; fi
+}
+
 ledger_init() { mkdir -p "$RIG_STATE"; touch "$RIG_STATE/packages.log" "$RIG_STATE/system.log"; }
 
 # ------------------------------------------------------------- packages -----

@@ -54,6 +54,7 @@ jobs:
           - {test: settings, image: "archlinux:latest"}
           - {test: wm, image: "archlinux:latest"}
           - {test: podman, image: "archlinux:latest"}
+          - {test: hyprland, image: "archlinux:latest"}
     steps:
       - uses: actions/checkout@v5
       - name: let containers use user namespaces and pasta (Ubuntu runners restrict them with AppArmor)

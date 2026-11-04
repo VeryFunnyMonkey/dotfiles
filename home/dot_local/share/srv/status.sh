@@ -15,10 +15,18 @@ cmd_ls() {
 }
 # For the prompt and tmux: mounted host names, or nothing.
 cmd_status() {
+  if [[ ${1:-} == --push ]]; then status_push; return 0; fi
   local m; m=$(mounted_hosts | tr '\n' ' '); m=${m% }
   [[ -n $m ]] || return 0
   case ${1:-} in
     --tmux) printf '#[fg=yellow]⇅ %s ' "$m" ;;
     *) printf '%s\n' "$m" ;;
   esac
+}
+
+# tmux shows the indicator from an option (@srv) that srv sets whenever a
+# mount comes or goes, so nothing polls. tmux.conf also runs this at start.
+status_push() {
+  command -v tmux >/dev/null 2>&1 && tmux has-session 2>/dev/null || return 0
+  tmux set -g @srv "$(cmd_status --tmux)" \; refresh-client -S 2>/dev/null || true
 }

@@ -1,0 +1,10 @@
+# The browser.
+catalog:
+  helium:
+    category: terminal
+    name: Helium browser
+    description: "Chromium without Google's services, uBlock Origin built in; Vimium works (extras/vimium-options.json)"
+    packages: [helium]
+    platforms: [arch, darwin]
+    display: true
+    note: "Arch (from the AUR) and macOS for now"

@@ -1,0 +1,50 @@
+/* Gruvbox, flat and quiet: the focused workspace in aqua, warnings in yellow/red. */
+@import "colors.css";
+
+* {
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 13px;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background: @bg;
+    color: @fg;
+}
+
+#workspaces button {
+    padding: 0 8px;
+    color: @gray;
+    background: transparent;
+}
+#workspaces button.active {
+    color: @bg;
+    background: @aqua;
+}
+#workspaces button.urgent {
+    color: @bg;
+    background: @yellow;
+}
+#workspaces button:hover {
+    background: @bg1;
+    box-shadow: none;
+}
+
+#window { color: @gray; padding: 0 8px; }
+#clock { font-weight: bold; }
+
+#pulseaudio, #network, #bluetooth, #battery, #custom-nightlight, #tray {
+    padding: 0 8px;
+}
+#pulseaudio.muted, #network.disconnected, #bluetooth.disabled { color: @gray; }
+#battery.warning { color: @yellow; }
+#battery.critical { color: @red; }
+#custom-nightlight.on { color: @orange; }
+
+tooltip {
+    background: @bg1;
+    border: 1px solid @bg2;
+}
+tooltip label { color: @fg; }

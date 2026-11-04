@@ -147,6 +147,7 @@ cmd_setup() {
   local detected; detected=$(cz_tmpl '{{ $d := includeTemplate "detect" . | fromJson }}{{ $d.platform }}{{ if $d.wsl }} (WSL){{ end }} · {{ $d.desktop | default "no desktop" }} · display: {{ $d.display }}')
   local choice=''
   while :; do
+    catalog_refresh "$sel"   # what's available follows the choices so far (a desktop brings a display)
     local rows=() cid cname mod=''
     [[ -n $profile && $sel != "$(profile_ids "$profile")" ]] && mod=' (modified)'
     rows+=("$(printf '%-20s %s' Profile "${profile:-none}$mod")")

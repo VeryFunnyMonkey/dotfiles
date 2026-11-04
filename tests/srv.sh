@@ -18,6 +18,8 @@ check "prompt segment" 'zsh -ic "_srv_prompt; print -r -- \$SRV_SEG" 2>/dev/null
 check "srv ls marks it mounted" 'srv ls | grep -q "● srvbox"'
 DEV_NO_ATTACH=1 srv dev srvbox >/dev/null 2>&1; sleep 2
 check "srv dev: workspace in the mount" '[[ $(tmux display -p -t srvbox:code.1 "#{pane_current_path}") == "$HOME/Servers/srvbox" ]]'
+sleep 1
+check "tmux shows the mount (srv pushes it; nothing polls)" '[[ $(tmux show -gv @srv 2>/dev/null) == *srvbox* ]]'
 tmux kill-server 2>/dev/null
 srv umount srvbox > /tmp/um.log 2>&1
 check "srv umount" '! grep -q " $HOME/Servers/srvbox fuse" /proc/mounts && [[ -z $(srv _status) ]] && [[ ! -d ~/Servers/srvbox ]]'

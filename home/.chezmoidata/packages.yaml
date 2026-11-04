@@ -3,7 +3,8 @@
 #
 # Entries are logical names. Where each one comes from, and what it's called
 # there, is worked out per machine (see dot_config/rig/packages.tsv.tmpl):
-#   - Arch:          pacman for everything (yay/paru if present, for AUR names)
+#   - Arch:          pacman for everything; the AUR (aur: below) through yay,
+#                    which the bootstrap installs (paru is used if it's the only one)
 #   - macOS:         Homebrew for everything
 #   - Debian/Ubuntu,
 #     Fedora:        the distro for the base system only (`native` below),
@@ -46,12 +47,17 @@ packages:
   download: [nerd-font, tailscale]
   download_everywhere: [win32yank]
 
+  # On Arch, from the AUR, through the AUR helper (yay; the bootstrap installs it).
+  aur: [helium]
+
   # Packages that exist only for some managers (skipped elsewhere).
   only:
     wslu: [apt]
 
   # Per-manager names, where they differ from the logical name. "-" = not needed there.
   names:
+    aur:
+      helium: helium-browser-bin
     pacman:
       build-tools: base-devel
       delta: git-delta
@@ -79,4 +85,5 @@ packages:
       ghostty: "--cask ghostty"
       aerospace: "--cask nikitabobko/tap/aerospace"
       maccy: "--cask maccy"
+      helium: "--cask helium-browser"
       tailscale: "--cask tailscale"

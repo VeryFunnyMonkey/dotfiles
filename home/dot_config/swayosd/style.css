@@ -1,0 +1,29 @@
+/* The volume/brightness/caps-lock popup: a small gruvbox pill. */
+@import "colors.css";
+
+window#osd {
+    border-radius: 8px;
+    border: 2px solid @bg2;
+    background: alpha(@bg, 0.95);
+}
+window#osd #container { margin: 14px; }
+window#osd image, window#osd label { color: @fg; }
+window#osd progressbar, window#osd segmentedprogress {
+    min-height: 6px;
+    border-radius: 3px;
+    background: transparent;
+    border: none;
+}
+window#osd trough, window#osd segment {
+    min-height: inherit;
+    border-radius: inherit;
+    border: none;
+    background: @bg2;
+}
+window#osd progress, window#osd segment.active {
+    min-height: inherit;
+    border-radius: inherit;
+    border: none;
+    background: @aqua;
+}
+window#osd progressbar:disabled, window#osd image:disabled { opacity: 0.5; }

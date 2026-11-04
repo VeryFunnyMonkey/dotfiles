@@ -1,0 +1,18 @@
+# Notifications: top right, small, gruvbox; urgent ones in red and they stay.
+# Colours from colors (theme.yaml).
+include=~/.config/mako/colors
+
+font=JetBrainsMono Nerd Font 11
+anchor=top-right
+margin=8
+padding=10,14
+width=360
+border-size=2
+border-radius=4
+icons=1
+max-icon-size=32
+default-timeout=6000
+layer=overlay
+
+[urgency=critical]
+default-timeout=0
