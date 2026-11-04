@@ -1,0 +1,8 @@
+# Rendered per OS from the dotfiles (config-os.tmpl).
+{{- if eq .chezmoi.os "darwin" }}
+# Option works as Alt, so zsh's Alt-p / Alt-m and fzf's Alt-c work
+macos-option-as-alt = true
+font-size = 14
+{{- else }}
+# Linux: nothing extra
+{{- end }}

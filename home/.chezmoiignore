@@ -1,4 +1,11 @@
-# Templated: files only some machines get. (Module files are added in phase 3.)
+# Templated: files only some machines get.
 {{- if ne .chezmoi.os "darwin" }}
 Library/**
+{{- end }}
+
+{{- /* files that belong to a catalog item: only when it's selected */ -}}
+{{- $en := includeTemplate "enabled" . | fromJson }}
+{{- if not (has "ghostty" $en.selected) }}
+.config/ghostty
+.config/ghostty/**
 {{- end }}

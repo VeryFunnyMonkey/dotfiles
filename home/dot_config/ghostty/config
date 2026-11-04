@@ -1,0 +1,27 @@
+# Ghostty: the terminal on Linux and macOS desktops. Plain file (symlinked from
+# the repo); per-OS bits are in config-os, rendered by chezmoi.
+
+font-family = JetBrainsMono Nerd Font
+font-size = 12
+theme = Gruvbox Dark
+
+window-padding-x = 6
+window-padding-y = 4
+window-padding-balance = true
+confirm-close-surface = false
+
+# tmux does tabs and splits; keep Ghostty's keys out of its way
+keybind = ctrl+shift+t=unbind
+keybind = ctrl+shift+o=unbind
+keybind = ctrl+shift+e=unbind
+
+# clipboard: OSC52 from tmux and nvim (works over SSH too)
+clipboard-read = allow
+clipboard-write = allow
+copy-on-select = false
+
+# shell integration; over SSH, bring Ghostty's terminfo and environment along
+# so servers understand the terminal
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
+
+config-file = ?config-os
