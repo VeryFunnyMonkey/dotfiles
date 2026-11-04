@@ -228,11 +228,42 @@ picker_items() {
     printf '%-*s  %s%*s\033[2m%s\033[0m\t%s\t%s\t%s\n' "$width" "$label" "$state" "$pad" '' \
       "${where/#"$HOME"/\~}" "$kind" "$name" "$path"
   done <<<"$entries"
+  # then every other folder under your home, so fuzzy search finds any path
+  local projects; projects=$(cut -f3 <<<"$entries")
+  all_dirs | awk -v home="$HOME" -v seen="$projects" '
+    BEGIN { n = split(seen, a, "\n"); for (i = 1; i <= n; i++) skip[a[i]] = 1 }
+    { p = home "/" $0; sub(/\/$/, "", p); if (p in skip) next
+      n = p; sub(/.*\//, "", n); gsub(/[.:]/, "_", n)
+      printf "\033[2m~/%s\033[0m\tfolder\t%s\t%s\n", substr(p, length(home) + 2), n, p; fflush() }'
+}
+# Folders under your home, shallow ones first (fd in depth bands, so the list
+# still streams). fd's defaults skip what .gitignore ignores (node_modules,
+# build output); caches and the trash are left out too.
+all_dirs() {
+  local fd; if have fd; then fd=fd; elif have fdfind; then fd=fdfind; else fd=''; fi
+  if [[ -z $fd ]]; then
+    (cd "$HOME" && find . -mindepth 1 -maxdepth 6 -type d -not -path '*/.git*' -not -path './.cache*' -printf '%P\n' 2>/dev/null) || true
+    return 0
+  fi
+  # also left out: dependency and tool folders nobody opens a workspace in
+  local x=(--type d --hidden --base-directory "$HOME"
+           --exclude .git --exclude .cache --exclude Trash --exclude node_modules --exclude __pycache__
+           --exclude .venv --exclude venv --exclude site-packages --exclude .npm --exclude .cargo
+           --exclude .rustup --exclude .local/lib --exclude .local/share/nvim --exclude .local/share/fnm
+           --exclude go/pkg --exclude .wine --exclude .steam --exclude .local/share/Steam .)
+  "$fd" --max-depth 2 "${x[@]}" 2>/dev/null || true
+  "$fd" --min-depth 3 --max-depth 3 "${x[@]}" 2>/dev/null || true
+  "$fd" --min-depth 4 --max-depth 4 "${x[@]}" 2>/dev/null || true
+  "$fd" --min-depth 5 "${x[@]}" 2>/dev/null || true
 }
 cmd_preview() { # kind name path
   local kind=$1 name=$2 path=$3 ws
   printf '\033[1m%s\033[0m  %s\n\n' "${path##*/}" "${path/#"$HOME"/\~}"
-  if [[ $kind == run ]]; then
+  if [[ $kind == folder ]]; then
+    printf 'A folder. Enter opens it in tmux:\n  left:  %s\n  right: nvim\n\n' "$(left_pane)"
+    ls -A --color=always "$path" 2>/dev/null | head -n 40
+    return 0
+  elif [[ $kind == run ]]; then
     printf 'Open now. Enter switches to it. Its tabs:\n\n'
     tmux list-windows -t "=$name" -F '  #{window_index}: #{window_name}  (#{window_panes} panes)' 2>/dev/null
     printf '\nctrl-x closes it.\n'
@@ -261,47 +292,30 @@ typed_dir() { # query -> absolute folder, or nothing
   [[ -d $q ]] && (cd "$q" && pwd -P)
 }
 
-# ctrl-o: browse every folder under your home (not only projects)
-browse_dirs() {
-  local finder
-  if have fd; then finder=(fd --type d --hidden --follow --exclude .git --exclude node_modules --exclude .cache --base-directory "$HOME" .)
-  elif have fdfind; then finder=(fdfind --type d --hidden --follow --exclude .git --exclude node_modules --exclude .cache --base-directory "$HOME" .)
-  else finder=(find . -mindepth 1 -maxdepth 5 -type d -not -path '*/.git*' -printf '%P\n'); fi
-  local sel
-  # fd is cut off when you pick before it's done listing: that's not a failure
-  sel=$( { cd "$HOME" && "${finder[@]}" 2>/dev/null || true; } | pick --prompt='folder> ' \
-        --header=$'Open any folder (type to filter, paths are under ~)\nenter open · esc back' --header-first \
-        --preview="ls -A --color=always $(printf %q "$HOME")/{} 2>/dev/null | head -n 60" \
-        --preview-window='right,40%,border-left,<40(down,35%,border-top)') || true
-  [[ -n $sel ]] || return 1
-  printf '%s\n' "$HOME/${sel%/}"
-}
-
 cmd_ls() {
   have fzf || die "fzf isn't installed"
   local out query key line kind name path dir
   while :; do
     # enter with nothing matching still returns what was typed (a path, maybe)
-    out=$(picker_items | pick --ansi --delimiter='\t' --with-nth=1 --no-sort \
+    # ranked by match; equal matches keep list order (projects, then shallow folders)
+    out=$(picker_items | pick --ansi --delimiter='\t' --with-nth=1 --tiebreak=index \
           --prompt='project> ' --print-query --bind 'enter:accept-or-print-query' \
-          --header=$'Pick a project (type to filter), or type a path like ~/Downloads\nenter open · ctrl-o any folder · ctrl-x close · ctrl-e/ctrl-n workspace file · esc' \
+          --header=$'Projects first, then every folder under ~ (type to filter, or type a path)\nenter open · ctrl-x close · ctrl-e/ctrl-n workspace file · esc' \
           --header-first \
           --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo,<44(down,35%,border-top,wrap,noinfo)' \
-          --expect=ctrl-e,ctrl-x,ctrl-n,ctrl-o) || return 0
+          --expect=ctrl-e,ctrl-x,ctrl-n) || return 0
     query=$(sed -n 1p <<<"$out"); key=$(sed -n 2p <<<"$out"); line=$(sed -n 3p <<<"$out")
     # a typed path wins over whatever it happened to match
     if [[ -z $key ]] && dir=$(typed_dir "$query"); then open_project "$dir"; return; fi
-    if [[ $key == ctrl-o ]]; then
-      if dir=$(browse_dirs); then open_project "$dir"; return; fi
-      continue   # esc in the folder browser: back to the projects
-    fi
     [[ -n $line ]] || return 0
     IFS=$'\t' read -r _ kind name path <<<"$line"
     case $key in
       ctrl-e) (cd "$path" && cmd_edit) ;;
       ctrl-x) if [[ $kind == run ]]; then tmux kill-session -t "=$name" 2>/dev/null && ok "closed $name"; fi ;;
       ctrl-n) (cd "$path" && cmd_init) ;;
-      *) [[ -d $path ]] || die "$path doesn't exist"; open_project "$(project_root "$path")" ;;
+      *) [[ -d $path ]] || die "$path doesn't exist"
+         # a plain folder opens as itself, a project at its repo's root
+         if [[ $kind == folder ]]; then open_project "$path"; else open_project "$(project_root "$path")"; fi ;;
     esac
     return
   done
@@ -357,7 +371,7 @@ ${B}dev${N}: tmux workspaces
 
   ${B}dev${N} [dir]               open this project's workspace (or the picker, outside a project)
   ${B}dev ls${N}                  pick a project or open session (also: prefix f, Alt-p);
-                          type a path or press ctrl-o to open any other folder
+                          every folder under ~ is in it too, or type a path
   ${B}dev init${N} [template] [--local|--repo]   create a workspace (.dev) here; templates: $(ls "$TEMPLATES" 2>/dev/null | tr '\n' ' ')
   ${B}dev edit${N}                edit this project's workspace
   ${B}dev agent${N} [set <cmd> | unset]   the agent the 'agent' pane runs
