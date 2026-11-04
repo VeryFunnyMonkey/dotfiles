@@ -218,15 +218,18 @@ picker_items() {
     [[ -n $kind ]] || continue
     label=${path##*/}; [[ $kind == run ]] && label=$name
     if ((${#label} > width)); then label="${label:0:width-1}…"; fi
-    local state='' text='' where=${path%/*}
+    # the name in its kind's colour: open green, workspace blue, project plain
+    local state='' text='' where=${path%/*} c=''
     case $kind in
-      run) text="open, $tabs tab$([[ $tabs == 1 ]] || echo s)"; state=$'\033[32m● '"$text"$'\033[0m' ;;
-      ws)  text="workspace"; state=$'\033[34m★ '"$text"$'\033[0m' ;;
+      run) c='1;32'; text="open, $tabs tab$([[ $tabs == 1 ]] || echo s)"; state=$'\033[32m● '"$text"$'\033[0m' ;;
+      ws)  c='34'; text="workspace"; state=$'\033[34m★ '"$text"$'\033[0m' ;;
     esac
-    # padded by hand: printf counts bytes, and the symbols are 3 bytes each
+    # padded by hand: printf counts bytes, and … ● ★ are 3 bytes each
+    local name_pad; name_pad=$(printf '%*s' $((width - ${#label})) '')
+    if [[ -n $c ]]; then label=$'\033['"${c}m${label}"$'\033[0m'; fi
     local pad=$((scol - (${#text} ? ${#text} + 2 : 0)))
     if ((scol)); then pad=$((pad + 2)); fi
-    printf '%-*s  %s%*s\033[2m%s\033[0m\t%s\t%s\t%s\n' "$width" "$label" "$state" "$pad" '' \
+    printf '%s%s  %s%*s\033[2m%s\033[0m\t%s\t%s\t%s\n' "$label" "$name_pad" "$state" "$pad" '' \
       "${where/#"$HOME"/\~}" "$kind" "$name" "$path"
   done <<<"$entries"
   if [[ ${1:-} != --all ]]; then return 0; fi
@@ -310,7 +313,7 @@ cmd_ls() {
     # ranked by match; equal matches keep list order (projects, then shallow folders)
     out=$(picker_items | pick --ansi --delimiter='\t' --with-nth=1 --tiebreak=index \
           --prompt='project> ' --print-query --bind 'enter:accept-or-print-query' \
-          --header=$'Your projects. Type to search every folder in ~ (or a path)\nenter open · ^x close · ^e/^n workspace · ^/ preview' \
+          --header=$'\033[32m● open\033[0m · \033[34m★ workspace\033[0m · project · type to search all of ~\nenter open · ^x close · ^e/^n workspace · ^/ preview' \
           --bind "change:transform:$on_change" \
           --header-first \
           --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo' \
