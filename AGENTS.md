@@ -58,4 +58,6 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 ## Checks
 `scripts/shell-files.sh` lists every shell file; the hook and CI shellcheck exactly that list.
 
+`scripts/check-packages.sh` asks each package manager (`pm_<manager>_exists`) whether every package rig could install on this OS still exists under its name. The `packages` workflow runs it weekly on Arch, Ubuntu, Fedora and macOS, and on pushes that change a package name. A new manager or download needs its `pm_<m>_exists` (or `dl_<d>_url`) for it.
+
 `.githooks/pre-commit` (enable once per clone: `git config core.hooksPath .githooks`) runs shellcheck, zsh syntax, `scripts/check-keys.sh`, `scripts/build-tutor-json.py --check`, `scripts/check-stack.py` and a scan for private data, skipping a check when its tool isn't installed.

@@ -1,0 +1,51 @@
+# Does every package rig could install still exist under its name, on each OS?
+# Installs nothing (scripts/check-packages.sh). Weekly, because renames upstream
+# (tea -> gitea-cli) happen without anything here changing, and on pushes that
+# change a package name.
+name: packages
+
+on:
+  schedule:
+    - cron: "41 5 * * 1"   # Mondays
+  workflow_dispatch:
+  push:
+    paths:
+      - home/.chezmoidata/packages.yaml
+      - home/.chezmoidata/runtimes.yaml
+      - home/.chezmoidata/catalog/**
+      - home/dot_config/rig/packages.tsv.tmpl
+      - home/dot_local/share/rig/pkg/**
+      - scripts/check-packages.sh
+      - .github/workflows/packages.yml
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: arch, image: "archlinux:latest", prep: "pacman -Sy --noconfirm --needed curl"}
+          - {os: ubuntu, image: "ubuntu:24.04", prep: "apt-get update -qq && apt-get install -y -qq curl ca-certificates"}
+          - {os: fedora, image: "fedora:latest", prep: "dnf -q makecache"}
+    name: ${{ matrix.os }}
+    container: ${{ matrix.image }}
+    steps:
+      - name: package database and tools
+        run: |
+          ${{ matrix.prep }}
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
+      - uses: actions/checkout@v5
+      - run: scripts/check-packages.sh
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: tools (rig needs bash 4+)
+        run: brew install bash chezmoi
+      - name: check
+        run: |
+          "$(brew --prefix)/bin/bash" scripts/check-packages.sh
