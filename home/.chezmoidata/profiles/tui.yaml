@@ -1,4 +1,4 @@
 profiles:
   tui:
     description: "A keyboard-driven graphical machine (Hyprland)"
-    select: [zoxide, eza, bat, delta, lazygit, hyprland, ghostty, nerd-font, clipboard, yazi, github, tailscale]
+    select: [zoxide, eza, bat, delta, lazygit, hyprland, ghostty, nerd-font, clipboard, yazi, helium, browser-default, github, tailscale]

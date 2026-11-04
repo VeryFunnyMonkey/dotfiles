@@ -43,6 +43,7 @@ catalog:
       - bluetui
       - jq
       - xdg-utils
+      - less
       # files, fonts, the look of other apps
       - thunar
       - gvfs

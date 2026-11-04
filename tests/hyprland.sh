@@ -29,6 +29,11 @@ check "waybar config is valid JSON" 'grep -v "^\s*//" ~/.config/waybar/config.js
 check "Helium from the AUR, through yay (installed by the bootstrap)" 'pacman -Q helium-browser-bin yay-bin >/dev/null && command -v helium-browser >/dev/null'
 check "links open in Helium" '[[ $(awk -F= "/^x-scheme-handler\/https=/ {print \$2}" ~/.config/mimeapps.list) == helium.desktop ]]'
 check "drift: rig's own yay isn't reported" '! rig drift 2>&1 | grep -q yay'
+# every program the desktop starts or a key runs must be installed (a minimal
+# Arch install lacks things a container image happens to have, like less)
+cmds="waybar hypridle hyprlock swayosd-server swayosd-client wl-paste wl-copy cliphist fuzzel ghostty thunar yazi wiremix nmtui bluetui hyprsunset grim slurp satty jq gtk-launch xdg-settings notify-send uwsm playerctl brightnessctl wpctl loginctl less pgrep"
+missing=$(for c in $cmds; do command -v "$c" >/dev/null || printf '%s ' "$c"; done)
+check "every program the desktop calls is installed" '[[ -z $missing ]]' || echo "  missing: $missing"
 check "the welcome page renders" 'desk welcome --print | grep -q "Welcome to Hyprland" && desk welcome --print | grep -q "rig info hyprland"'
 check "desk works" 'desk help | grep -q "desk power" && desk nightlight status | jq -e ".class == \"off\"" >/dev/null'
 check "login screen: greetd starting Hyprland through uwsm" 'grep -q "uwsm start hyprland.desktop" /etc/greetd/config.toml && grep -q "enable --now greetd.service" /tmp/systemctl.log'
