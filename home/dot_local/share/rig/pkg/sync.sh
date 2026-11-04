@@ -109,17 +109,44 @@ pkg_cleanup() { # the package list from before
   printf '    %s\n' "${gone[@]//$'\t'/: }"
   if confirm "Uninstall them?"; then
     local g
+    pkg_remove_set < <(printf '%s\n' "${gone[@]}")
     for g in "${gone[@]}"; do
-      pkg_remove_cmd "${g%%$'\t'*}" "${g#*$'\t'}" && ledger_pkg_forget "${g%%$'\t'*}" "${g#*$'\t'}"
+      pkg_present "${g%%$'\t'*}" "${g#*$'\t'}" || ledger_pkg_forget "${g%%$'\t'*}" "${g#*$'\t'}"
     done
   else say "  ${DIM}kept; rig drift lists them${N}"; fi
 }
 
 # rig uninstall --packages: the ones rig installed (never ones already there)
 pkg_uninstall_all() {
+  awk -F'\t' '$4=="installed" {print $1 "\t" $2}' "$RIG_STATE/packages.log" | pkg_remove_set
+}
+
+# Remove "manager<TAB>name" lines. Each manager's packages go in one
+# transaction, so it works out the order between packages that depend on each
+# other. If that fails (one is needed by something rig didn't install), it
+# goes one at a time, in passes, until a pass removes nothing.
+pkg_remove_set() {
+  local -A by=()
   local m n
-  tac_ "$RIG_STATE/packages.log" | awk -F'\t' '$4=="installed"' | while IFS=$'\t' read -r m n _ _ _; do
-    if pkg_present "$m" "$n"; then pkg_remove_cmd "$m" "$n" || warn "couldn't remove $n"; fi
+  while IFS=$'\t' read -r m n; do
+    [[ -n $m ]] || continue
+    if pkg_present "$m" "$n"; then by[$m]+="$n"$'\n'; fi
+  done
+  for m in "${!by[@]}"; do
+    local -a names=() left=()
+    mapfile -t names < <(printf '%s' "${by[$m]}")
+    # shellcheck disable=SC2068  # each name may hold several packages (split on purpose)
+    if [[ $m != download ]] && pkg_remove_cmd "$m" ${names[@]} >/dev/null 2>&1; then continue; fi
+    local progress=1
+    while ((progress)); do
+      progress=0; left=()
+      for n in "${names[@]}"; do
+        pkg_present "$m" "$n" || continue
+        if pkg_remove_cmd "$m" "$n" >/dev/null 2>&1; then progress=1; else left+=("$n"); fi
+      done
+      names=("${left[@]+"${left[@]}"}")
+    done
+    for n in "${names[@]+"${names[@]}"}"; do warn "kept $n ($m): something else still needs it"; done
   done
 }
 

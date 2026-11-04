@@ -6,15 +6,35 @@
 # Write the new state, apply, then offer to remove packages nothing needs.
 apply_state() { # profile "selected" "extras" agent_default
   if [[ -r $MACHINE_ENV ]]; then load_machine; fi
-  local old_tsv=''
+  local old_tsv='' before
   [[ -f $PACKAGES_TSV ]] && old_tsv=$(cat "$PACKAGES_TSV")
+  before=$(managed_targets)
   state_write "$@"
   info "applying"
   chezmoi apply || { bad "applying didn't finish (the output above says why); fix it and run: rig sync"; return 1; }
   load_machine
   ledger_init
+  files_release "$before"
   pkg_cleanup "$old_tsv"
   ok "done"
+}
+
+managed_targets() { chezmoi managed --include=files,symlinks --path-style=absolute 2>/dev/null | sort || true; }
+
+# Files chezmoi managed before the change and no longer does (their item was
+# deselected; chezmoi only stops managing them): remove them, put back the
+# original rig backed up for that path if there was one, and drop folders
+# left empty.
+files_release() { # managed-before
+  local f d rel
+  while IFS= read -r f; do
+    [[ -n $f && $f == "$HOME"/* ]] || continue
+    if [[ -L $f || -f $f ]]; then rm -f "$f"; fi
+    rel=${f#"$HOME"/}
+    backup_restore_one "$rel" || true
+    d=$(dirname "$f")
+    while [[ $d == "$HOME"/* ]] && rmdir "$d" 2>/dev/null; do d=$(dirname "$d"); done
+  done < <(comm -23 <(printf '%s\n' "$1") <(managed_targets))
 }
 
 # ------------------------------------------------------------- review ---------

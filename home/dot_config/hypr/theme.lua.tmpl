@@ -1,0 +1,6 @@
+-- Rendered from .chezmoidata/theme.yaml: edit the theme there, then chezmoi apply.
+return {
+{{- range $n, $v := .theme }}{{ if hasPrefix "#" (toString $v) }}
+    {{ $n }} = "{{ $v }}",
+{{- end }}{{ end }}
+}

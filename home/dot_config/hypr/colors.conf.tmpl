@@ -1,0 +1,4 @@
+# Rendered from .chezmoidata/theme.yaml for hyprlock (as $name = rgb(...)).
+{{- range $n, $v := .theme }}{{ if hasPrefix "#" (toString $v) }}
+${{ $n }} = rgb({{ trimPrefix "#" $v }})
+{{- end }}{{ end }}

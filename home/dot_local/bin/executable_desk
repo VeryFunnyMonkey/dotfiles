@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# desk: the small actions behind the Hyprland item's keys and bar (run
+# `desk help`). Everything shows in fuzzel or a floating Ghostty, gruvbox.
+set -euo pipefail
+
+SHOTS="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+NIGHT_TEMP=4000
+
+have() { command -v "$1" >/dev/null 2>&1; }
+notify() { if have notify-send; then notify-send -a desk "$@"; fi; }
+menu() { fuzzel --dmenu "$@"; }
+
+# Start an app: in its own systemd scope under uwsm, directly otherwise.
+cmd_run() {
+  if have uwsm && uwsm check is-active >/dev/null 2>&1; then exec uwsm app -- "$@"; fi
+  exec "$@"
+}
+
+cmd_launch() {
+  if have uwsm && uwsm check is-active >/dev/null 2>&1; then exec fuzzel --launch-prefix="uwsm app -- "; fi
+  exec fuzzel
+}
+
+# A terminal program in a centred floating window (window rule: rig.float).
+cmd_float() { cmd_run ghostty --class=rig.float -e "$@"; }
+
+cmd_clipboard() {
+  local pick; pick=$(cliphist list | menu --prompt="  " --width=70) || exit 0
+  cliphist decode <<<"$pick" | wl-copy
+}
+
+cmd_power() {
+  local pick
+  pick=$(printf '%s\n' "  Lock" "󰍃  Log out" "󰤄  Suspend" "  Reboot" "  Shut down" | menu --prompt="  " --lines=5 --width=24) || exit 0
+  case $pick in
+    *Lock) loginctl lock-session ;;
+    *"Log out") if have uwsm && uwsm check is-active >/dev/null 2>&1; then uwsm stop; else hyprctl dispatch 'hl.dsp.exit()'; fi ;;
+    *Suspend) systemctl suspend ;;
+    *Reboot) systemctl reboot ;;
+    *"Shut down") systemctl poweroff ;;
+  esac
+}
+
+# The keys, from Hyprland itself (each bind's description), as a list.
+cmd_keys() {
+  hyprctl -j binds | jq -r '
+    def mods: [ (if . % 2 >= 1 then "shift" else empty end),
+                (if (. / 4 | floor) % 2 == 1 then "ctrl" else empty end),
+                (if (. / 8 | floor) % 2 == 1 then "alt" else empty end),
+                (if (. / 64 | floor) % 2 == 1 then "mod" else empty end) ];
+    .[] | select(.description != "")
+        | "\(((.modmask | mods) + [.key | ascii_downcase]) | join("+"))\t\(.description)"' |
+    awk -F'\t' '!seen[$2]++ {printf "%-22s %s\n", $1, $2}' |
+    menu --prompt="keys  " --width=60 --lines=20 >/dev/null || true
+}
+
+cmd_nightlight() {
+  if [[ ${1:-} == status ]]; then
+    if pgrep -x hyprsunset >/dev/null; then echo '{"text": "󰖔", "class": "on", "tooltip": "night light on"}'
+    else echo '{"text": "󰖙", "class": "off", "tooltip": "night light off"}'; fi
+    return 0
+  fi
+  if pgrep -x hyprsunset >/dev/null; then pkill -x hyprsunset; notify "Night light off"
+  else (cmd_run hyprsunset --temperature "$NIGHT_TEMP" >/dev/null 2>&1 &); notify "Night light on"; fi
+}
+
+cmd_shot() {
+  mkdir -p "$SHOTS"
+  local file; file="$SHOTS/$(date +%Y-%m-%d_%H-%M-%S).png"
+  case ${1:-area} in
+    area)   grim -g "$(slurp)" - | wl-copy --type image/png && notify "Screenshot copied" ;;
+    edit)   grim -g "$(slurp)" - | satty --filename - ;;
+    screen) grim "$file" && wl-copy --type image/png <"$file" && notify "Screenshot saved and copied" "$file" ;;
+    *) echo "usage: desk shot area|edit|screen" >&2; exit 1 ;;
+  esac
+}
+
+cmd_help() {
+  cat <<'EOF'
+desk: actions for the Hyprland desktop (bound to keys; see mod+/)
+  desk run <cmd...>        start an app (in a uwsm scope when there is one)
+  desk launch              the app launcher
+  desk float <cmd...>      a terminal program in a floating window
+  desk clipboard           clipboard history
+  desk power               lock, log out, suspend, reboot, shut down
+  desk keys                the keys and what they do
+  desk nightlight [status] night light on/off
+  desk shot area|edit|screen   screenshots
+EOF
+}
+
+main() {
+  local cmd=${1:-help}; (($#)) && shift
+  case $cmd in
+    run) cmd_run "$@" ;;
+    launch) cmd_launch ;;
+    float) cmd_float "$@" ;;
+    clipboard) cmd_clipboard ;;
+    power) cmd_power ;;
+    keys) cmd_keys ;;
+    nightlight) cmd_nightlight "$@" ;;
+    shot) cmd_shot "$@" ;;
+    help|-h|--help) cmd_help ;;
+    *) echo "desk: unknown command '$cmd' (desk help)" >&2; exit 1 ;;
+  esac
+}
+main "$@"

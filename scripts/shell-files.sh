@@ -5,5 +5,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 printf '%s\n' install.sh tests/run.sh tests/here.sh \
-  home/dot_local/bin/executable_rig home/dot_local/bin/executable_dev home/dot_local/bin/executable_srv
+  home/dot_local/bin/executable_rig home/dot_local/bin/executable_dev home/dot_local/bin/executable_srv \
+  home/dot_local/bin/executable_desk
 find home/dot_local/share -name '*.sh' | sort

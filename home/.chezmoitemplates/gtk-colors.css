@@ -1,0 +1,4 @@
+/* Rendered from .chezmoidata/theme.yaml: gruvbox for GTK-styled tools (waybar, swayosd). */
+{{- range $n, $v := .theme }}{{ if hasPrefix "#" (toString $v) }}
+@define-color {{ $n }} {{ $v }};
+{{- end }}{{ end }}

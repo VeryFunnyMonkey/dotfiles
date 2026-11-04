@@ -1,0 +1,68 @@
+# Desktops: a whole graphical environment as one item.
+catalog:
+  hyprland:
+    category: terminal
+    name: Hyprland desktop
+    description: "keyboard-first tiling desktop, gruvbox: Waybar, fuzzel, lock and idle, screenshots, night light; mod+/ lists the keys"
+    platforms: [arch]
+    module: desktop
+    # selecting it selects these too (the terminal, font, clipboard and file manager it uses)
+    includes: [ghostty, nerd-font, clipboard, yazi]
+    packages:
+      # the compositor and its session
+      - hyprland
+      - uwsm
+      - xdg-desktop-portal-hyprland
+      - xdg-desktop-portal-gtk
+      - hyprpolkitagent
+      - hyprland-qt-support
+      - hyprland-guiutils
+      - qt5-wayland
+      - qt6-wayland
+      # bar, launcher, notifications, lock, idle, night light, on-screen popups
+      - waybar
+      - fuzzel
+      - mako
+      - libnotify
+      - hyprlock
+      - hypridle
+      - hyprsunset
+      - swayosd
+      # clipboard history, screenshots
+      - cliphist
+      - grim
+      - slurp
+      - satty
+      # keys and system controls (TUIs in a floating terminal)
+      - brightnessctl
+      - playerctl
+      - wiremix
+      - networkmanager
+      - bluez
+      - bluez-utils
+      - bluetui
+      - jq
+      # files, fonts, the look of other apps
+      - thunar
+      - gvfs
+      - noto-fonts
+      - noto-fonts-emoji
+      - adw-gtk-theme
+      - papirus-icon-theme
+      # sound
+      - pipewire
+      - wireplumber
+      - pipewire-pulse
+    files:
+      - .config/hypr
+      - .config/waybar
+      - .config/fuzzel
+      - .config/mako
+      - .config/swayosd
+      - .config/satty
+      - .config/uwsm
+      - .local/bin/desk
+    settings:
+      # GTK4 / portal apps follow this for dark mode
+      - {kind: gsettings, schema: org.gnome.desktop.interface, key: color-scheme, value: "'prefer-dark'"}
+    note: "Arch only for now (Hyprland's own packages); on KDE it's an extra session at the login screen"

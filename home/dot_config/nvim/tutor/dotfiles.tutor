@@ -154,6 +154,8 @@ In the shell:
 A window whose program needs you (an agent finished, say) lights up in tmux's
 status bar.
 
+On the Hyprland desktop, `Super+/` lists the desktop's own keys.
+
 # Done
 
 That's the tour. `<leader>fk` is the one key to remember: it finds the rest.

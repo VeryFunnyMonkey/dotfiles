@@ -5,6 +5,7 @@
 #   defaults macOS defaults: domain, key, type, value; restart: an app to restart
 #   mime     xdg-mime default: desktop file for each type     (Linux desktops)
 #   line     a line in a file (e.g. ~/.config/xdg-terminals.list)
+#   gsettings  gsettings set: schema, key, value (a GVariant, e.g. "'prefer-dark'")
 # Which machines each kind applies to, and its fields: _setting-kinds.yaml.
 catalog:
   terminal-default:

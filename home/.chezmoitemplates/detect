@@ -26,6 +26,12 @@
 {{-   else if contains "gnome" $xdg -}}{{- $desktop = "gnome" -}}
 {{-   end -}}
 {{- end -}}
+{{- /* A machine with the Hyprland item gets its display from it, even when set
+       up from a console (where nothing was detected, or "none" was stored). */ -}}
+{{- if and (has "hyprland" (dig "selected" list .)) (ne .chezmoi.os "darwin") (not $wsl) -}}
+{{-   if eq $display "none" -}}{{- $display = "wayland" -}}{{- end -}}
+{{-   if not $desktop -}}{{- $desktop = "hyprland" -}}{{- end -}}
+{{- end -}}
 {{- /* the platform an item is matched against: wsl counts separately */ -}}
 {{- $target := $platform -}}{{- if $wsl -}}{{- $target = "wsl" -}}{{- end -}}
 {{- dict "platform" $platform "target" $target "wsl" $wsl "display" $display "desktop" $desktop | toJson -}}

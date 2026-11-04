@@ -93,7 +93,7 @@ rig git remove clienta
 | Category | Items |
 |---|---|
 | CLI tools | zoxide, eza, bat, delta, lazygit, jq, tealdeer |
-| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools, keyboard-driven desktop (KDE shortcuts / AeroSpace) |
+| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools, keyboard-driven desktop (KDE shortcuts / AeroSpace), **Hyprland desktop** (Arch: a complete keyboard-first gruvbox desktop; `rig info hyprland` has its keys) |
 | TUI apps | yazi, btop |
 | Containers | Podman (rootless, `docker` and `docker compose` work, `DOCKER_HOST` set; podman machine on macOS), lazydocker |
 | Languages | python (pyright, ruff, uv), web (ts_ls, prettierd), ops (Ansible, YAML schemas, OpenTofu, Docker, shell), go, rust |

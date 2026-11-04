@@ -14,7 +14,7 @@ catalog:
     desktops: [kde, macos]
     packages_darwin: [aerospace, maccy]
     files_darwin: [.config/aerospace]
-    note: "needs KDE Plasma or macOS (Hyprland comes later)"
+    note: "needs KDE Plasma or macOS (the Hyprland item has these keys built in)"
     settings:
       - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Left", value: "Meta+H,Meta+Alt+Left,Switch to Window to the Left"}
       - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Down", value: "Meta+J,Meta+Alt+Down,Switch to Window Below"}
