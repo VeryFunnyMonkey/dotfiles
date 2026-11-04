@@ -68,6 +68,17 @@ ensure_host_cli() { # host
 
 key_title() { printf '%s (rig: %s)' "$(hostname -s 2>/dev/null || uname -n)" "$1"; }
 
+# How gh opens the login page. On Linux, xdg-open starts the browser attached
+# to this terminal, and Chromium-based ones print startup warnings over gh's
+# prompt: run it in the background with its output dropped. gh splits this
+# like a shell would and adds the URL ($0). The user's own choice wins.
+quiet_browser() {
+  if [[ -n ${GH_BROWSER:-} ]]; then printf '%s' "$GH_BROWSER"
+  elif [[ $(uname -s) == Linux && -z ${BROWSER:-} ]] && have xdg-open; then
+    printf '%s' "sh -c 'xdg-open \"\$0\" >/dev/null 2>&1 &'"
+  fi
+}
+
 git_connect_github() { # name key [hostname]
   local n=$1 key=$2 user=''
   ensure_host_cli github || return 1
@@ -76,7 +87,7 @@ git_connect_github() { # name key [hostname]
     gh auth switch -h github.com -u "$user" >/dev/null
   else
     info "logging in to GitHub in your browser (pick the right account there)"
-    gh auth login -h github.com -p ssh --web --skip-ssh-key -s admin:public_key,admin:ssh_signing_key </dev/tty || return 1
+    GH_BROWSER=$(quiet_browser) gh auth login -h github.com -p ssh --web --skip-ssh-key -s admin:public_key,admin:ssh_signing_key </dev/tty || return 1
     user=$(gh api user -q .login)
   fi
   printf 'cli_user=%s\n' "$user" >>"$ID_DIR/$n.meta"
