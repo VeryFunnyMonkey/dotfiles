@@ -1,6 +1,7 @@
 -- Headless setup and updates, used by chezmoi's setup script and `rig update`:
 --   nvim --headless "+lua require('config.bootstrap').run()" +qa
---   nvim --headless "+lua require('config.bootstrap').update()" +qa
+--   nvim --headless "+lua require('config.bootstrap').update()" +qa            plugins stay pinned
+--   nvim --headless "+lua require('config.bootstrap').update({latest = true})" +qa   newest plugins
 -- Plugins themselves are installed by vim.pack when config.pack loads.
 local M = {}
 
@@ -65,6 +66,23 @@ local function remove_unused_plugins()
   end
 end
 
+-- A parser whose version file is missing (an install that was cut short)
+-- makes nvim-treesitter's update fail; reinstall those first.
+local function repair_parsers()
+  local site = vim.fn.stdpath("data") .. "/site"
+  local broken = {}
+  for name in vim.fs.dir(site .. "/parser") do
+    local lang = name:match("^(.-)%.so$")
+    if lang and not vim.uv.fs_stat(site .. "/parser-info/" .. lang .. ".revision") then
+      table.insert(broken, lang)
+    end
+  end
+  if #broken > 0 then
+    log("treesitter: reinstalling " .. table.concat(broken, ", ") .. " (version unknown)")
+    require("nvim-treesitter").install(broken, { force = true }):wait(600000)
+  end
+end
+
 function M.run()
   remove_unused_plugins()
   -- Plugins already on disk keep whatever revision they had; move them to the
@@ -81,11 +99,21 @@ function M.run()
   log("nvim bootstrap done")
 end
 
-function M.update()
+-- Plugins stay at the committed lockfile's versions, as on every machine;
+-- {latest = true} moves them to the newest (and changes the lockfile: commit
+-- it from the machine you do that on).
+function M.update(opts)
+  opts = opts or {}
   remove_unused_plugins()
-  log("plugins: updating")
-  vim.pack.update(nil, { force = true })
+  if opts.latest then
+    log("plugins: updating to the newest versions")
+    vim.pack.update(nil, { force = true })
+  else
+    log("plugins: at the pinned versions (rig update --plugins for the newest)")
+    vim.pack.update(nil, { target = "lockfile", force = true })
+  end
   local mods = require("config.modules")
+  repair_parsers()
   require("nvim-treesitter").update():wait(600000)
 
   -- Mason: reinstall anything with a newer version

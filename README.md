@@ -41,7 +41,7 @@ Always installed (core): zsh, tmux, Neovim, git, fzf, ripgrep, fd, gum and build
 | Command | What it does |
 |---|---|
 | `rig doctor` | check this machine: dotfiles applied, packages, shell, SSH agent, Neovim |
-| `rig update` | update everything: dotfiles, system packages, brew, flatpak, Neovim plugins and tools |
+| `rig update` | update everything: dotfiles, system packages, brew, flatpak, Neovim's parsers and tools (plugins stay at the pinned versions; `rig update --plugins` moves them to the newest and changes `nvim-pack-lock.json`: commit it) |
 | `rig setup` | the installer (menus; `--profile`, `--select`, `--deselect`, `--yes` without them) |
 | `rig add <item\|pkg>` | select a catalog item, or add an extra package for this machine |
 | `rig remove <item\|pkg>` | deselect it; offers to uninstall what rig installed for it |

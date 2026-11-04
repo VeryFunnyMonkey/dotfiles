@@ -21,7 +21,8 @@ ${B}rig${N}: this machine's setup
   ${B}rig sync${N}                   install whatever is selected but missing
   ${B}rig search${N} <query>         search the package managers
   ${B}rig drift${N} [--all]          installed-but-undeclared, declared-but-missing
-  ${B}rig update${N}                 update everything: dotfiles, packages, plugins
+  ${B}rig update${N} [--plugins]     update everything: dotfiles, packages, tools; --plugins also
+                             moves Neovim plugins to their newest (commit the lockfile)
   ${B}rig doctor${N}                 check this machine
   ${B}rig git${N} add|list|which|remove|clone|doctor   git accounts (GitHub, GitLab, ...)
   ${B}rig agents${N} list|default <name>   coding agents (select them in rig setup)

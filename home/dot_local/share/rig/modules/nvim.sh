@@ -24,7 +24,9 @@ nvim_update() {
   have nvim || return 0
   info "neovim plugins and Mason tools"
   nvim_env
-  nvim --headless "+lua require('config.bootstrap').update()" +qa 2>&1 | tail -n 20 || warn "nvim update had errors"
+  local how=''
+  if [[ ${RIG_UPDATE_PLUGINS:-0} == 1 ]]; then how='{latest = true}'; fi
+  nvim --headless "+lua require('config.bootstrap').update($how)" +qa 2>&1 | tail -n 20 || warn "nvim update had errors"
   if [[ -n $(git -C "$(repo_root)" status --porcelain -- home/dot_config/nvim/nvim-pack-lock.json 2>/dev/null) ]]; then
     say "  ${DIM}nvim-pack-lock.json changed (plugin updates); commit it to pin them on every machine${N}"
   fi

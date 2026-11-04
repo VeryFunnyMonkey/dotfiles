@@ -24,6 +24,11 @@ check "git pager is delta... only if delta selected (it isn't)" '[[ $(git config
 doc=$(rig doctor 2>&1)
 check "doctor: packages" '[[ $doc == *"all declared packages installed"* ]]'
 check "doctor: nvim healthy" '[[ $doc == *"checkhealth: no errors"* ]]'
+# an install that was cut short: a parser with no version file (seen on a Mac)
+rm -f ~/.local/share/nvim/site/parser-info/query.revision
+nvim --headless "+lua require('config.bootstrap').update()" +qa > /tmp/nvim-update.log 2>&1
+check "nvim update repairs a parser with no version" '[[ -f ~/.local/share/nvim/site/parser-info/query.revision ]] && ! grep -q E5108 /tmp/nvim-update.log' || tail -15 /tmp/nvim-update.log
+check "nvim update keeps plugins at the pinned versions" '[[ -z $(git -C ~/dotfiles status --porcelain -- home/dot_config/nvim/nvim-pack-lock.json) ]]'
 
 ~/.local/bin/rig uninstall --everything --yes > /tmp/uninstall.log 2>&1
 check "uninstall ok" '[[ $? -eq 0 ]]'
