@@ -31,10 +31,24 @@ packages:
     - fuse3    # srv on Linux (FUSE is in the kernel; macOS uses NFS instead)
 
   # On Debian/Ubuntu and Fedora these come from the distro, everything else from brew.
-  native: [bash, zsh, git, openssh, curl, unzip, build-tools, clipboard, wslu, fuse3, podman, podman-docker, docker-compose]
+  native: [bash, zsh, git, openssh, curl, unzip, build-tools, wl-clipboard, xclip, wslu, fuse3, podman, podman-docker, docker-compose]
 
-  # Installed by rig itself on Debian/Ubuntu and Fedora (not packaged suitably there).
-  download: [win32yank, tailscale]
+  # Virtual packages: one logical name that means different packages (or none)
+  # depending on the machine: "wsl", else the display (wayland, x11, ...).
+  virtual:
+    clipboard:
+      wsl: [win32yank, wslu]
+      wayland: [wl-clipboard]
+      x11: [xclip]
+
+  # Installed by rig itself (share/rig/pkg/downloads.sh): on Debian/Ubuntu and
+  # Fedora (not packaged suitably there), or on every platform.
+  download: [nerd-font, tailscale]
+  download_everywhere: [win32yank]
+
+  # Packages that exist only for some managers (skipped elsewhere).
+  only:
+    wslu: [apt]
 
   # Per-manager names, where they differ from the logical name. "-" = not needed there.
   names:
@@ -59,7 +73,6 @@ packages:
       curl: "-"
       unzip: "-"
       build-tools: "-"
-      clipboard: "-"
       fuse3: "-"     # macOS: srv uses rclone nfsmount, no FUSE
       podman-docker: "-"  # macOS: rig makes `docker` run podman instead
       nerd-font: "--cask font-jetbrains-mono-nerd-font"

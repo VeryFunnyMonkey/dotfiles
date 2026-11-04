@@ -5,19 +5,33 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 ## Layout
 - `home/` is the chezmoi source (`.chezmoiroot`); chezmoi runs in **symlink mode**, so plain files in `~` are symlinks into the repo. Templates (`*.tmpl`) and executables are copies: after editing them, `chezmoi apply`.
 - `home/.chezmoi.toml.tmpl`: chezmoi's config for the machine. It asks nothing: `rig setup` writes profile/selected/extra_packages/agent_default; detection (`.chezmoitemplates/detect`) adds wsl/display/desktop.
-- `home/.chezmoidata/`: `catalog/*.yaml` (every selectable item, by category: packages, platforms, needs, nvim), `profiles/*.yaml` (saved selections), `packages.yaml` (core + per-OS names), `runtimes.yaml`, `theme.yaml`. `.chezmoitemplates/enabled` works out what applies on this machine (selected, skipped, runtimes, agents).
-- `home/.chezmoiscripts/`: setup steps (bootstrap, backup ledger, packages, shell, ssh agent, nvim).
-- `home/dot_local/bin/executable_rig`: the `rig` command; its libraries in `home/dot_local/share/rig/` (found next to rig, so it runs from the repo too): `setup.sh` (installer, add/remove, profiles), `git.sh` (git accounts), `runtimes.sh` (runtimes, Tailscale), `agents.sh` (coding agents), `settings.sh` (OS settings with recorded originals), `containers.sh` (Podman setup).
+- `home/.chezmoidata/`: all the data, no logic.
+  - `catalog/*.yaml`: every selectable item, by category. Fields: packages, platforms, needs, nvim, settings, `module` (the rig module behind it), `files` (paths only it brings). The meaning of each field is in `catalog/_categories.yaml`; the OS setting kinds are in `catalog/_setting-kinds.yaml`.
+  - `profiles/*.yaml` (saved selections), `packages.yaml` (core, per-manager names, virtual packages, downloads), `runtimes.yaml`, `theme.yaml`.
+  - `.chezmoitemplates/enabled` works out what applies on this machine: selected, skipped, runtimes, agents, modules.
+- `home/.chezmoiscripts/`: the setup steps. The bootstrap and the backup run on their own; every other step is one line, `rig sync` or `rig modules sync <module>`, plus the template values that make it re-run.
+- `home/dot_local/bin/executable_rig`: the `rig` entry point. It only loads the parts in `home/dot_local/share/rig/` (found next to rig, so it runs from the repo too) and dispatches. The parts, each depending only on the layers above it:
+  - `lib/`: the building blocks. `sys` (helpers), `ui` (output, prompts, gum menus, doctor checks), `machine` (paths and this machine's selection), `ledger` (the undo record and its revert dispatcher), `units` (systemd units), `catalog`, `apply` (change the selection and apply), `modules` (the module registry and contract).
+  - `pkg/`: packages. `managers.sh` has one `pm_<manager>_*` set per package manager; `downloads.sh` one `dl_<name>_*` set per download; `sync.sh` holds sync, drift, search, update and cleanup.
+  - `modules/`: one feature each, with helpers in `modules/<name>/`. Core: srv, shell, ssh-agent, git (with the host table in `git/hosts.sh`), agents, runtimes, nvim, settings (kinds in `settings/kinds.sh`). Item modules, active while their item is selected: containers (Podman), tailscale.
+  - `commands/`: what you type. setup (the installer), items (add/remove/profile/info), doctor, update, reset, uninstall, misc. Commands loop over modules; they don't know any feature.
+- **The module contract** (`lib/modules.sh`). A module `<m>` may define `<m>_sync`, `<m>_doctor`, `<m>_update`, `<m>_reset`, `<m>_uninstall` and `<m>_cmd` (for `rig <m> ...`), plus `revert_<kind>` for each ledger kind it records. To add a feature:
+  1. write `modules/<name>.sh`;
+  2. give its catalog item `module: <name>` (or add it to `RIG_CORE_MODULES` if every machine needs it);
+  3. declare its files in the item (`files:`).
+
+  Nothing else changes: the setup script for item modules, doctor, update and uninstall all pick it up.
 - `install.sh`: the bootstrap one-liner for a new machine.
 - `docs/catalog/`: guides for catalog items (`rig info <item>`).
-- `home/dot_local/bin/executable_dev`: `dev` (tmux workspaces); templates in `home/dot_config/dev/templates/`.
-- `home/dot_local/bin/executable_srv`: `srv` (mount servers over SSH with rclone: nfsmount on macOS, FUSE mount on Linux). Hosts are machine-local (`~/.config/srv/hosts`), added by hand or imported from a hosts file (simple list or Ansible inventory); mount state lives in a runtime folder so it disappears with the mounts.
+- `home/dot_local/bin/executable_dev`: `dev` (tmux workspaces): settings and `main`; its parts in `home/dot_local/share/dev/` (projects, agent, build, workspace, picker, worktrees, help). Workspace templates in `home/dot_config/dev/templates/`.
+- `home/dot_local/bin/executable_srv`: `srv` (mount servers over SSH with rclone: nfsmount on macOS, FUSE mount on Linux): settings and `main`; its parts in `home/dot_local/share/srv/` (hosts, mounts, edit, status, picker, connect, import, doctor). Hosts are machine-local (`~/.config/srv/hosts`), added by hand or imported from a hosts file (simple list or Ansible inventory); mount state lives in a runtime folder so it disappears with the mounts.
 - `home/dot_config/`: zsh, tmux, nvim, git, lazygit, rig's rendered data.
 
 ## Rules
 - **New software is a catalog item** (category, description, platforms), not a hard-coded package. Only rig's own dependencies go in core.
 - **Every package earns its place.** Prefer what's already chosen; don't add tools that duplicate one.
-- **Everything rig changes must be undoable.** New system changes get a ledger entry in `~/.local/state/rig/system.log` (kind, key, previous value) and a matching revert in `system_revert_all` in `rig`. New files chezmoi takes over are backed up by `run_before_05-backup.sh`.
+- **Everything rig changes must be undoable.** A system change is recorded first with `ledger_record kind key previous` (in `~/.local/state/rig/system.log`), and the module that makes it defines `revert_<kind>`, which `rig uninstall` calls. systemd units go through `unit_enable_user`/`unit_enable_system` (`lib/units.sh`), which record themselves. New files chezmoi takes over are backed up by `run_before_05-backup.sh`.
+- **Logic in code, choices in data.** A new package manager, download, setting kind or git host is functions (and a data entry), never another `case` in shared code.
 - Symlink mode makes edits live on the owner's machine: a plain file that starts using a *new* file breaks until `chezmoi apply` creates it. Add the new file and apply in the same step (or `chezmoi apply --exclude=scripts`).
 - Templates only in small fragments (theme, machine data); main configs stay plain so symlink mode keeps them live.
 - No emails, hostnames, IPs or anything private in the repo; identities and server lists are machine-local.
@@ -42,4 +56,6 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 **Guard rails:** don't reopen settled decisions without a fired `revisit_if` trigger or new evidence; don't add packages that only duplicate a chosen one; prefer the smallest change that keeps things current.
 
 ## Checks
+`scripts/shell-files.sh` lists every shell file; the hook and CI shellcheck exactly that list.
+
 `.githooks/pre-commit` (enable once per clone: `git config core.hooksPath .githooks`) runs shellcheck, zsh syntax, `scripts/check-keys.sh`, `scripts/build-tutor-json.py --check`, `scripts/check-stack.py` and a scan for private data, skipping a check when its tool isn't installed.

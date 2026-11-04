@@ -7,8 +7,8 @@ run() { local name=$1; shift; if ! out=$("$@" 2>&1); then echo "pre-commit: $nam
 have() { command -v "$1" >/dev/null 2>&1; }
 
 if have shellcheck; then
-  run shellcheck shellcheck -S warning install.sh tests/run.sh home/dot_local/bin/executable_rig \
-    home/dot_local/bin/executable_dev home/dot_local/bin/executable_srv home/dot_local/share/rig/*.sh
+  mapfile -t shfiles < <(scripts/shell-files.sh)
+  run shellcheck shellcheck -S warning "${shfiles[@]}"
 fi
 if have zsh; then
   for f in home/dot_zshenv home/dot_config/zsh/dot_zshrc home/dot_config/zsh/dot_zprofile home/dot_config/zsh/*.zsh; do

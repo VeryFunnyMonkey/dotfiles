@@ -13,6 +13,7 @@ catalog:
     description: "mod+hjkl windows, mod+1..9 desktops, mod+space launcher, mod+enter terminal (KDE shortcuts; AeroSpace on macOS)"
     desktops: [kde, macos]
     packages_darwin: [aerospace, maccy]
+    files_darwin: [.config/aerospace]
     note: "needs KDE Plasma or macOS (Hyprland comes later)"
     settings:
       - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Left", value: "Meta+H,Meta+Alt+Left,Switch to Window to the Left"}

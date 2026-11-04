@@ -3,13 +3,23 @@
 Library/**
 {{- end }}
 
-{{- /* files that belong to a catalog item: only when it's selected */ -}}
+{{- /* Files that belong to a catalog item (its files: and files_<platform>:)
+       are left out unless the item is selected (and, for files_<platform>,
+       this is that platform). Declared in .chezmoidata/catalog/. */ -}}
+{{- $d := includeTemplate "detect" . | fromJson }}
 {{- $en := includeTemplate "enabled" . | fromJson }}
-{{- if not (has "ghostty" $en.selected) }}
-.config/ghostty
-.config/ghostty/**
-{{- end }}
-{{- if not (and (has "wm" $en.selected) (eq .chezmoi.os "darwin")) }}
-.config/aerospace
-.config/aerospace/**
+{{- range $id := keys .catalog | sortAlpha }}
+{{-   $it := index $.catalog $id }}
+{{-   $on := has $id $en.selected }}
+{{-   range $key := keys $it | sortAlpha }}
+{{-     $plat := "" }}{{- $isfiles := false }}
+{{-     if eq $key "files" }}{{ $isfiles = true }}
+{{-     else if hasPrefix "files_" $key }}{{ $isfiles = true }}{{ $plat = trimPrefix "files_" $key }}{{ end }}
+{{-     if and $isfiles (or (not $on) (and $plat (ne $plat $d.platform))) }}
+{{-       range $f := index $it $key }}
+{{ $f }}
+{{ $f }}/**
+{{-       end }}
+{{-     end }}
+{{-   end }}
 {{- end }}

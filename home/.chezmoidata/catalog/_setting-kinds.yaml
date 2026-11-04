@@ -1,0 +1,13 @@
+# The kinds of OS setting a catalog item can apply (its settings: list), and
+# how each becomes rig's "item kind id value extra" lines (settings-tsv). The
+# code that reads and writes each kind is in share/rig/modules/settings/kinds.sh.
+#   when      where the kind applies: desktop, platform, or not_platform
+#   id        the setting's fields that identify it, joined with "|"
+#   each      (instead of id) one line per entry of this list field
+#   value     the field holding the value (default: value)
+#   extra     a field passed along (e.g. the macOS defaults type)
+setting_kinds:
+  kde: {when: {desktop: kde}, id: [file, group, key]}
+  defaults: {when: {platform: darwin}, id: [domain, key], extra: type}
+  mime: {when: {not_platform: darwin}, each: types, value: desktop}
+  line: {when: {not_platform: darwin}, id: [path]}

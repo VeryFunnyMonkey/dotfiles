@@ -4,6 +4,7 @@ catalog:
     name: Ghostty
     description: "fast native terminal; one config for Linux and macOS"
     packages: [ghostty]
+    files: [.config/ghostty]
     platforms: [arch, darwin]
     display: true
     note: "not packaged for this distro yet; on WSL use Windows Terminal"
