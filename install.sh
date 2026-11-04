@@ -12,6 +12,8 @@ set -eu
 REPO=${RIG_REPO:-VeryFunnyMonkey}
 BIN="$HOME/.local/bin"
 mkdir -p "$BIN"
+# A fresh macOS account has no ~/.config; chezmoi expects it there.
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"
 PATH="$BIN:$PATH"
 
 say() { printf '\033[34m==>\033[0m %s\n' "$*"; }

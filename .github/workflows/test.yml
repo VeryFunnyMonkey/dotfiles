@@ -114,6 +114,8 @@ jobs:
       - name: install (non-interactive)
         run: |
           echo "DOCK_BEFORE=$(defaults read com.apple.dock orientation 2>/dev/null || echo unset)" >> "$GITHUB_ENV"
+          # start like a new Mac account: no ~/.config (GitHub's runners have one)
+          rm -rf "$HOME/.config"
           RIG_SOURCE="$GITHUB_WORKSPACE" sh install.sh --profile minimal --select zoxide,eza,mac-dock,mac-finder,wm --yes
       - name: checks
         run: |
