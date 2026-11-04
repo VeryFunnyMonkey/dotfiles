@@ -83,6 +83,21 @@ cmd_shot() {
   esac
 }
 
+# The getting-started page (~/.config/hypr/welcome.txt): once on the first
+# login (--once), any time without it. --print just prints it.
+WELCOME="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/welcome.txt"
+WELCOMED="${XDG_STATE_HOME:-$HOME/.local/state}/rig/hyprland-welcomed"
+cmd_welcome() {
+  [[ -r $WELCOME ]] || exit 0
+  case ${1:-} in
+    --once) if [[ -e $WELCOMED ]]; then exit 0; fi; mkdir -p "$(dirname "$WELCOMED")"; touch "$WELCOMED" ;;
+    --print) welcome_render; return 0 ;;
+  esac
+  cmd_run ghostty --class=rig.float --title=Welcome -e sh -c "\"$0\" welcome --print | less -R -P'q closes this'"
+}
+# Headings (lines that don't start with a space) in bold aqua, the rest as is.
+welcome_render() { sed -E $'s/^([^ ].*)$/\033[1;36m\\1\033[0m/' "$WELCOME"; }
+
 cmd_help() {
   cat <<'EOF'
 desk: actions for the Hyprland desktop (bound to keys; see mod+/)
@@ -95,6 +110,7 @@ desk: actions for the Hyprland desktop (bound to keys; see mod+/)
   desk keys                the keys and what they do
   desk nightlight [status] night light on/off
   desk shot area|edit|screen   screenshots
+  desk welcome             the getting-started page (shown once on the first login)
 EOF
 }
 
@@ -110,6 +126,7 @@ main() {
     keys) cmd_keys ;;
     nightlight) cmd_nightlight "$@" ;;
     shot) cmd_shot "$@" ;;
+    welcome) cmd_welcome "$@" ;;
     help|-h|--help) cmd_help ;;
     *) echo "desk: unknown command '$cmd' (desk help)" >&2; exit 1 ;;
   esac

@@ -29,6 +29,7 @@ check "waybar config is valid JSON" 'grep -v "^\s*//" ~/.config/waybar/config.js
 check "Helium from the AUR, through yay (installed by the bootstrap)" 'pacman -Q helium-browser-bin yay-bin >/dev/null && command -v helium-browser >/dev/null'
 check "links open in Helium" '[[ $(awk -F= "/^x-scheme-handler\/https=/ {print \$2}" ~/.config/mimeapps.list) == helium.desktop ]]'
 check "drift: rig's own yay isn't reported" '! rig drift 2>&1 | grep -q yay'
+check "the welcome page renders" 'desk welcome --print | grep -q "Welcome to Hyprland" && desk welcome --print | grep -q "rig info hyprland"'
 check "desk works" 'desk help | grep -q "desk power" && desk nightlight status | jq -e ".class == \"off\"" >/dev/null'
 check "login screen: greetd starting Hyprland through uwsm" 'grep -q "uwsm start hyprland.desktop" /etc/greetd/config.toml && grep -q "enable --now greetd.service" /tmp/systemctl.log'
 check "NetworkManager enabled for the bar's Wi-Fi" 'grep -q "enable --now NetworkManager.service" /tmp/systemctl.log'

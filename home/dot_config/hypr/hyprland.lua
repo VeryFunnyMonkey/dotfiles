@@ -27,6 +27,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(run("/usr/lib/hyprpolkitagent/hyprpolkitagent"))
     hl.exec_cmd(run("swayosd-server"))
     hl.exec_cmd(run("wl-paste --watch cliphist store"))
+    hl.exec_cmd("desk welcome --once")   -- the getting-started page, on the first login only
 end)
 -- mako starts on the first notification (D-Bus activation).
 
@@ -83,6 +84,7 @@ hl.animation({ leaf = "fade", enabled = true, speed = 2, bezier = "snap" })
 -------------------------------------------------------------------- rules ---
 -- The system TUIs (audio, Wi-Fi, Bluetooth) open as a centred floating terminal.
 hl.window_rule({ name = "rig-float", match = { class = "^rig\\.float$" }, float = true, size = "60% 60%", center = true })
+hl.window_rule({ name = "rig-welcome", match = { class = "^rig\\.float$", title = "^Welcome$" }, size = "75% 75%" })
 hl.window_rule({ name = "dialogs", match = { title = "^(Open|Save|Select|Choose).*" }, float = true, center = true })
 hl.window_rule({ name = "pip", match = { title = "^Picture.in.[Pp]icture$" }, float = true, pin = true })
 hl.window_rule({ name = "no-maximize-requests", match = { class = ".*" }, suppress_event = "maximize" })

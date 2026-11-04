@@ -14,6 +14,11 @@ the Nerd Font, the clipboard tools and yazi. Arch only, for now.
   up greetd with tuigreet, which starts Hyprland. Deselecting the item gives
   back the original login.
 
+## The first login
+A welcome page opens once: the main keys, the first things to set up, and
+where to find more. `desk welcome` shows it again; the text is
+`~/.config/hypr/welcome.txt`.
+
 ## Keys (mod = Super)
 `mod+/` shows all of them, with what each does.
 
