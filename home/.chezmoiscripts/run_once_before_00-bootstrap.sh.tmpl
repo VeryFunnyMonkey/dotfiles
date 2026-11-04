@@ -47,6 +47,10 @@ sudo_ dnf install -y -q "${PRE[@]}"
 install_brew
 {{- else if eq $platform "darwin" }}
 install_brew
+# rig needs bash 4 or newer; macOS ships 3.2
+eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
+note_pkgs brew "brew list --formula" bash
+brew list --formula bash >/dev/null 2>&1 || brew install -q bash
 {{- else }}
 echo "rig: unsupported platform ({{ .chezmoi.os }}); skipping package bootstrap" >&2
 {{- end }}

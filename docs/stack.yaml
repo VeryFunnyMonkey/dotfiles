@@ -28,6 +28,7 @@ components:
     revisit_if: "never really; only if srv changes method"
 
   # --- core packages ---------------------------------------------------------
+  - {name: bash, role: "runs rig (needs 4+; Homebrew's on macOS, which ships 3.2)", why: "rig is bash; the system one everywhere else", alternatives: [], revisit_if: "never really"}
   - {name: zsh, role: shell, why: "already used; fast with our own small plugin setup", alternatives: [fish (not POSIX-ish), bash], revisit_if: "never really"}
   - {name: tmux, role: terminal multiplexer, why: "workspaces, popups, works over SSH", alternatives: [zellij (heavier, different keys), Ghostty splits (local only)], revisit_if: "extended-keys or passthrough handling changes"}
   - {name: neovim, role: editor, why: "keyboard-first, fast, vim.pack built in since 0.12", alternatives: [Zed (GUI), Helix (no plugins)], revisit_if: "a 0.x release deprecates vim.pack APIs we use"}

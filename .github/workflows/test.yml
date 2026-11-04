@@ -13,7 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: tools
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck zsh
@@ -55,7 +55,9 @@ jobs:
           - {test: wm, image: "archlinux:latest"}
           - {test: podman, image: "archlinux:latest"}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: let containers use user namespaces (Ubuntu runners restrict them with AppArmor)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - run: tests/run.sh ${{ matrix.test }} ${{ matrix.image }}
 
   languages:
@@ -65,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: tests/run.sh languages archlinux:latest
 
   wsl:
@@ -84,7 +86,7 @@ jobs:
       - name: keep LF line endings
         shell: pwsh
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: Vampire/setup-wsl@v7
         with:
           distribution: Ubuntu-24.04
@@ -105,7 +107,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: install (non-interactive)
         run: |
           echo "DOCK_BEFORE=$(defaults read com.apple.dock orientation 2>/dev/null || echo unset)" >> "$GITHUB_ENV"

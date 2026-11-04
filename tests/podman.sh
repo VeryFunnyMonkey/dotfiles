@@ -18,7 +18,7 @@ podman system reset -f >/dev/null 2>&1
 mkdir -p "$XDG_RUNTIME_DIR/podman"
 podman system service --time=0 "unix://$XDG_RUNTIME_DIR/podman/podman.sock" >/tmp/svc.log 2>&1 &
 sleep 2
-check "rootless podman runs a container" '[[ $(podman run --rm docker.io/library/alpine echo hi 2>/dev/null) == hi ]]'
+check "rootless podman runs a container" '[[ $(podman run --rm docker.io/library/alpine echo hi 2>/tmp/run.err) == hi ]]' || tail -n 15 /tmp/run.err
 check "docker shim runs it too" '[[ $(docker run --rm docker.io/library/alpine echo via-docker 2>/dev/null) == via-docker ]]'
 mkdir -p ~/c && printf 'services:\n  hello:\n    image: docker.io/library/alpine\n    command: echo from-compose\n' > ~/c/compose.yml
 export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"

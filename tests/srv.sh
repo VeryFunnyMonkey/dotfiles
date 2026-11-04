@@ -5,7 +5,7 @@ check "install ok (rclone + fuse3 in core)" 'command -v rclone >/dev/null && com
 srv add srvbox debian@srvbox "~" > /tmp/add.log 2>&1
 check "srv add + ssh test" 'grep -q "ssh login works" /tmp/add.log'
 srv mount srvbox > /tmp/mount.log 2>&1
-check "srv mount" '[[ $? -eq 0 ]] && grep -q " $HOME/Servers/srvbox fuse" /proc/mounts'
+check "srv mount" '[[ $? -eq 0 ]] && grep -q " $HOME/Servers/srvbox fuse" /proc/mounts' || tail -n 20 ~/.local/state/srv/srvbox.log
 cat /tmp/mount.log
 echo "hello from this machine" > ~/Servers/srvbox/from-local.txt
 sleep 2

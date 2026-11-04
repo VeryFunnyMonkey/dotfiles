@@ -21,7 +21,7 @@ trap cleanup EXIT
 
 docker network create "$net" >/dev/null
 args=(--network "$net")
-[[ $needs == *fuse* ]] && args+=(--device /dev/fuse --cap-add SYS_ADMIN)
+[[ $needs == *fuse* ]] && args+=(--device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor=unconfined)
 [[ $needs == *privileged* ]] && args+=(--privileged)
 docker run -d --name "$c" "${args[@]}" "$image" sleep infinity >/dev/null
 case $image in

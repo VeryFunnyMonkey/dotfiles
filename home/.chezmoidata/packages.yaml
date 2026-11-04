@@ -13,6 +13,7 @@ packages:
   # Always installed: what rig and the configs rely on. Everything else is a
   # catalog item (catalog/*.yaml), picked with `rig setup`.
   core:
+    - bash     # rig needs 4+ (macOS ships 3.2)
     - zsh
     - tmux
     - neovim
@@ -30,7 +31,7 @@ packages:
     - fuse3    # srv on Linux (FUSE is in the kernel; macOS uses NFS instead)
 
   # On Debian/Ubuntu and Fedora these come from the distro, everything else from brew.
-  native: [zsh, git, openssh, curl, unzip, build-tools, clipboard, wslu, fuse3, podman, podman-docker, docker-compose]
+  native: [bash, zsh, git, openssh, curl, unzip, build-tools, clipboard, wslu, fuse3, podman, podman-docker, docker-compose]
 
   # Installed by rig itself on Debian/Ubuntu and Fedora (not packaged suitably there).
   download: [win32yank, tailscale]
