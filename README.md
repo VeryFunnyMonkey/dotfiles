@@ -101,6 +101,9 @@ rig git remove clienta
 | Homelab | Tailscale |
 | Git hosting | GitHub (gh) |
 | Coding agents | Claude Code, Copilot CLI, Codex CLI, Gemini CLI, OpenCode |
+| OS settings | Ghostty as default terminal, open text files in Neovim (Linux); Dock left/hidden/instant, Finder tweaks, fast key repeat (macOS) |
+
+**OS settings** are applied with the previous value of each one recorded first; deselecting the item (or `rig uninstall`) puts the old values back, including removing a setting that wasn't set before. `rig settings list` shows what's applied.
 
 Neovim picks up the language servers, formatters and parsers of the selected languages. Items that need Node, Go or Rust pull in that **runtime** (fnm + Node LTS, Go, rustup), and deselecting the last item that needs it offers to delete it. Item guides: [docs/catalog](docs/catalog). The catalog itself: `home/.chezmoidata/catalog/`.
 
@@ -170,11 +173,15 @@ While anything is mounted, the prompt shows ` ⇅ ops-server` (or ` ⇅ 3`) and 
 
 - **zsh** (`~/.config/zsh`, via `ZDOTDIR`): emacs keys, shared history in `~/.local/state/zsh`, fzf (Ctrl-R / Ctrl-T / Alt-C), zoxide (`z`), autosuggestions, syntax highlighting, a git-aware prompt. Machine-local additions: `~/.config/zsh/local.zsh`.
 - **tmux** (`C-Space` prefix): `\` / `-` split, `C-h/j/k/l` moves across tmux panes *and* nvim splits, `prefix f` workspace picker, `prefix m` server picker, `prefix g` lazygit, `prefix r` reload, `v`/`y` copy (OSC52, works over SSH).
+- **Ghostty** (when selected): gruvbox, the Nerd Font, OSC52 clipboard, nothing that clashes with tmux; over SSH it brings its terminfo along, so servers understand it. Option is Alt on macOS.
 - **Neovim** 0.12 with `vim.pack`: gruvbox, mini.nvim, fzf-lua, treesitter, blink.cmp, Mason + LSP, conform (format on save), grug-far. Press `<leader>` (Space) and wait for a menu; `<leader>fk` searches every key by description.
 - **git**: delta for diffs, sensible defaults. No identity in the repo: it's machine-local (`~/.config/git/identities.gitconfig`).
 - **Theme:** gruvbox dark everywhere; colours in `home/.chezmoidata/theme.yaml`.
 
 ## Neovim keys
+
+New to this setup (or back after a while)? **`:Tutor dotfiles`** is a short hands-on course on these keys, the editing extras, git review and the terminal around Neovim. `<Space>` shows what you can press next; `<Space>fk` searches every key.
+
 
 | Keys | Group |
 |---|---|

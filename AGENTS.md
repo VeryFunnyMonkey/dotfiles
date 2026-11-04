@@ -23,7 +23,8 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 - No emails, hostnames, IPs or anything private in the repo; identities and server lists are machine-local.
 - Scripts run with `set -euo pipefail`: write `if [[ ... ]]; then ...; fi`, not `[[ ... ]] && ...`, at the end of functions and loops (a false condition there makes the function fail).
 - Check with `chezmoi diff` before `chezmoi apply`. Test risky changes in a container, not on the owner's machine.
-- Keymap changes update the README cheatsheet (and later the tutor and mini.clue descriptions) in the same commit.
+- Keymap changes update the README cheatsheet, the tutor (`home/dot_config/nvim/tutor/dotfiles.tutor`) and the keymap's `desc` in the same commit. `scripts/check-keys.sh` fails if the tutor or README mention a key that doesn't exist. After editing the tutor's text, run `scripts/build-tutor-json.py` (exercise line numbers).
+- OS settings are catalog items with `settings:`; `rig settings` records each previous value before changing it, so they stay undoable.
 
 ## Commits
 - No `Co-Authored-By` or any other attribution lines. Never push: the owner reviews and pushes.

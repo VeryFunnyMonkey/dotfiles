@@ -47,3 +47,24 @@ au("FileType", {
     vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = args.buf, silent = true, desc = "Close" })
   end,
 })
+
+-- First run on this machine: point at the course and the key search, once.
+au("VimEnter", {
+  group = group,
+  desc = "Welcome hint (once per machine)",
+  callback = function()
+    if #vim.api.nvim_list_uis() == 0 then return end
+    local marker = vim.fn.stdpath("state") .. "/dotfiles-welcome-shown"
+    if vim.uv.fs_stat(marker) then return end
+    vim.fn.mkdir(vim.fn.stdpath("state"), "p")
+    vim.fn.writefile({}, marker)
+    vim.defer_fn(function()
+      vim.notify(
+        "New here? :Tutor dotfiles walks through this setup.\n"
+          .. "<Space> shows what you can press next; <Space>fk searches every key.",
+        vim.log.levels.INFO,
+        { title = "dotfiles" }
+      )
+    end, 500)
+  end,
+})

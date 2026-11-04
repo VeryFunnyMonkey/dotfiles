@@ -1,0 +1,9 @@
+{
+  "expect": {
+    "70": "print(\"name\")",
+    "75": "print(\"done\")",
+    "79": "remove these brackets",
+    "86": "call(first)",
+    "90": "call(new)"
+  }
+}

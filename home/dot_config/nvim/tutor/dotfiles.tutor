@@ -1,0 +1,157 @@
+# Your dotfiles: a Neovim (and terminal) course
+
+This course is about *your* setup: the keys, plugins and tools these dotfiles
+add. For the core motions (hjkl, words, delete, change, undo), run the
+built-in course first: `:Tutor`{vim}
+
+Like `:Tutor`, this one teaches by doing. Lines marked ✗ want you to change
+them; the mark turns into ✓ when you've got it. Nothing here is saved, so
+experiment freely: `u`{normal} undoes.
+
+Scroll with `j`{normal} and `k`{normal}. Arrow keys are switched off in normal mode on purpose.
+
+# Chapter 1: Getting around
+
+## 1.1 The leader key and the key hints
+
+The leader key is `<Space>`{normal}. Most of your own keys start with it.
+
+Press `<Space>`{normal} and wait a moment: a menu of everything you can press next
+appears (that's mini.clue). The groups:
+
+    <leader>f   find      files, grep, buffers, recent, help, keymaps
+    <leader>c   code      definition, references, rename, actions, format
+    <leader>g   git       lazygit, changed files, diff overlay
+    <leader>s   search    replace across the project
+    <leader>u   ui        wrap, inline diagnostics, relative numbers
+
+The same hints appear after `g`, `[`, `]`, `z`, `<C-w>` and `"`.
+
+## 1.2 Finding any key
+
+Forgot a key? `<leader>fk` searches every key by what it does. Type "rename"
+or "diff" and press Enter to run it.
+
+## 1.3 Windows and panes
+
+`<C-h>`, `<C-j>`, `<C-k>`, `<C-l>` move between Neovim splits, *and* carry on into
+tmux panes when you reach the edge. Try `:vsplit`{vim} and move with them.
+
+`<Esc>` also clears search highlighting.
+
+# Chapter 2: Finding things
+
+    <leader><space>   recent and open files
+    <leader>ff        files in this project
+    <leader>fg        grep the project (live)
+    <leader>fw        grep the word under the cursor
+    <leader>fb        open buffers
+    <leader>fr        recent files
+    <leader>f/        lines in this buffer
+    <leader>f.        reopen the last picker where you left it
+    <leader>e         file explorer at this file (`<leader>E` at the project root)
+
+Inside a picker: type to filter, `<C-j>`/`<C-k>` to move, Enter to open.
+
+## 2.1 Replace across the project
+
+`<leader>sr` opens a search-and-replace panel for the whole project with a live
+preview; `<leader>sw` starts it with the word under the cursor.
+
+# Chapter 3: Editing faster
+
+These come from mini.nvim. Try each on the ✗ lines.
+
+## 3.1 Surround: add, change, delete
+
+`sa` adds a surround: `saiw"` wraps the word under the cursor in quotes.
+Put the cursor on `name` and type `saiw"`:
+
+print(name)
+
+`sr` replaces one: on the line below, put the cursor inside the quotes and
+type `sr'"` to change single quotes to double quotes:
+
+print('done')
+
+`sd` deletes one: put the cursor inside the brackets and type `sd[`:
+
+[remove these brackets]
+
+## 3.2 Text objects: arguments
+
+`a` is an argument. With the cursor on `second`, type `daa` to delete it
+(the comma goes with it):
+
+call(first, second)
+
+`ci(` changes what's inside brackets. Cursor inside, then `ci(` and type `new` then `<Esc>`:
+
+call(old, args)
+
+## 3.3 Comments
+
+`gcc` comments a line, `gc` with a motion comments a block (`gcip` = paragraph).
+Try it in a code file, where Neovim knows the comment style.
+
+# Chapter 4: Code
+
+When a language is selected in `rig setup` (python, web, ops, go, rust),
+Neovim gets its language server, formatter and syntax.
+
+    K             what is this? (docs on hover)
+    <leader>cd    go to definition         gri   implementation
+    <leader>cr    references               grr   references (built in)
+    <leader>cn    rename                   grn   rename (built in)
+    <leader>ca    code action              gra   code action (built in)
+    <leader>cs    symbols in this file     gO    symbols (built in)
+    <leader>cx    diagnostics in this file
+    [d  ]d        previous / next diagnostic
+    <leader>cl    the diagnostic on this line
+
+Completion pops up as you type: `<C-n>`/`<C-p>` move, `<C-y>` or Enter accepts,
+`<C-e>` closes it.
+
+Files format when you save (YAML and Markdown only when you ask: `<leader>cf`).
+`<leader>uf` turns format-on-save off for a while.
+
+# Chapter 5: Git and reviewing changes
+
+    <leader>gg    lazygit, full screen (in tmux also: prefix g)
+    <leader>gs    jump between changed files
+    <leader>go    show the diff right in the buffer
+    [h  ]h        previous / next change; `gh` applies a change, `gH` resets it
+
+The left margin marks changed lines. When another program edits a file you
+have open (an agent, git, a formatter), Neovim reloads it.
+
+Reviewing an agent's work: open lazygit (`<leader>gg`), go through the files,
+`space` stages a good change, `d` discards a bad one, `c` commits.
+
+# Chapter 6: The terminal around Neovim
+
+The prefix in tmux is `<C-Space>`.
+
+    prefix \  /  prefix -    split side by side / top and bottom
+    prefix z                 zoom a pane (again to unzoom)
+    prefix f                 workspaces: pick a project (also Alt-p in the shell)
+    prefix m                 servers: mount one at ~/Servers/<host> (also Alt-m)
+    prefix g                 lazygit
+    prefix r                 reload tmux's config
+
+In the shell:
+
+    dev                 open this project's workspace: your agent + nvim
+    dev wt <branch>     a worktree and window for parallel work
+    srv dev <host>      mount a server and open a workspace on its files
+    rig setup           change what's installed: languages, agents, settings
+    rig doctor          check the machine
+    rig update          update everything
+
+A window whose program needs you (an agent finished, say) lights up in tmux's
+status bar.
+
+# Done
+
+That's the tour. `<leader>fk` is the one key to remember: it finds the rest.
+Come back any time with `:Tutor dotfiles`{vim}.
