@@ -42,6 +42,7 @@ catalog:
       - bluez-utils
       - bluetui
       - jq
+      - xdg-utils
       # files, fonts, the look of other apps
       - thunar
       - gvfs

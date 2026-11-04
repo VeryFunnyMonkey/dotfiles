@@ -119,6 +119,7 @@ end
 
 -- apps
 bind(key("RETURN"), hl.dsp.exec_cmd(run(terminal)), "terminal")
+bind(key("SHIFT + RETURN"), hl.dsp.exec_cmd("desk browser"), "browser")
 bind(key("SPACE"), hl.dsp.exec_cmd("desk launch"), "launcher")
 bind(key("V"), hl.dsp.exec_cmd("desk clipboard"), "clipboard history")
 bind(key("E"), hl.dsp.exec_cmd(run(terminal .. " -e yazi")), "files (yazi)")

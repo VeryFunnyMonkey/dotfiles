@@ -1,4 +1,4 @@
-# The Hyprland item: packages and what it includes, its configs (gruvbox from
+# The Hyprland item (with the Helium browser as the default): packages and what it includes, its configs (gruvbox from
 # theme.yaml, valid for this Hyprland), desk, the login screen on a machine
 # without one (greetd, with a fake systemctl: containers have no systemd),
 # and that deselecting gives the original login back.
@@ -16,7 +16,7 @@ SH
 sudo chmod 755 /usr/local/bin/systemctl && sudo mkdir -p /run/systemd/system && sudo touch /tmp/systemctl.log && sudo chmod 666 /tmp/systemctl.log
 pkgs | sort > /tmp/pkgs-before.txt
 
-install_rig --profile minimal --select hyprland --yes
+install_rig --profile minimal --select hyprland,helium,browser-default --yes
 check "install ok" '[[ $? -eq 0 ]]' || tail -30 /tmp/install.log
 check "Hyprland and its tools installed" 'pacman -Q hyprland uwsm waybar fuzzel mako hyprlock hypridle hyprsunset swayosd cliphist satty wiremix bluetui thunar >/dev/null'
 check "it includes Ghostty, the font, clipboard tools and yazi" 'pacman -Q ghostty ttf-jetbrains-mono-nerd wl-clipboard yazi >/dev/null'
@@ -26,6 +26,9 @@ check "colours rendered from theme.yaml" 'grep -q "bg = \"#282828\"" ~/.config/h
 v=$(XDG_RUNTIME_DIR=/tmp Hyprland --verify-config 2>&1 | sed -n '/Config parsing result/,$p')
 check "Hyprland accepts the config (--verify-config)" '[[ $v == *"config ok"* ]]' || echo "$v" | tail -8
 check "waybar config is valid JSON" 'grep -v "^\s*//" ~/.config/waybar/config.jsonc | jq -e . >/dev/null'
+check "Helium from the AUR (rig built paru for it)" 'pacman -Q helium-browser-bin paru-bin >/dev/null && command -v helium-browser >/dev/null'
+check "links open in Helium" '[[ $(awk -F= "/^x-scheme-handler\/https=/ {print \$2}" ~/.config/mimeapps.list) == helium.desktop ]]'
+check "drift: rig's own paru isn't reported" '! rig drift 2>&1 | grep -q paru'
 check "desk works" 'desk help | grep -q "desk power" && desk nightlight status | jq -e ".class == \"off\"" >/dev/null'
 check "login screen: greetd starting Hyprland through uwsm" 'grep -q "uwsm start hyprland.desktop" /etc/greetd/config.toml && grep -q "enable --now greetd.service" /tmp/systemctl.log'
 check "NetworkManager enabled for the bar's Wi-Fi" 'grep -q "enable --now NetworkManager.service" /tmp/systemctl.log'

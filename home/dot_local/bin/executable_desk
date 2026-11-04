@@ -21,6 +21,14 @@ cmd_launch() {
   exec fuzzel
 }
 
+# The default browser (xdg-settings: what "Helium as default browser" sets).
+cmd_browser() {
+  local app; app=$(xdg-settings get default-web-browser 2>/dev/null || true)
+  if [[ -n $app ]] && have gtk-launch; then exec gtk-launch "${app%.desktop}" "$@"; fi
+  if [[ -n $app ]]; then cmd_run xdg-open "${1:-about:blank}"; fi
+  notify "No default browser" "Select Helium in rig setup"; exit 1
+}
+
 # A terminal program in a centred floating window (window rule: rig.float).
 cmd_float() { cmd_run ghostty --class=rig.float -e "$@"; }
 
@@ -80,6 +88,7 @@ cmd_help() {
 desk: actions for the Hyprland desktop (bound to keys; see mod+/)
   desk run <cmd...>        start an app (in a uwsm scope when there is one)
   desk launch              the app launcher
+  desk browser [url]       the default browser
   desk float <cmd...>      a terminal program in a floating window
   desk clipboard           clipboard history
   desk power               lock, log out, suspend, reboot, shut down
@@ -94,6 +103,7 @@ main() {
   case $cmd in
     run) cmd_run "$@" ;;
     launch) cmd_launch ;;
+    browser) cmd_browser "$@" ;;
     float) cmd_float "$@" ;;
     clipboard) cmd_clipboard ;;
     power) cmd_power ;;

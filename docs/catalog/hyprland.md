@@ -24,6 +24,7 @@ the Nerd Font, the clipboard tools and yazi. Arch only, for now.
 | `mod+ctrl+h/j/k/l` | resize |
 | `mod+1..9` / `mod+shift+1..9` | workspace / send the window there |
 | `mod+return` | terminal (Ghostty, in tmux) |
+| `mod+shift+return` | browser (the default one: Helium with "Helium as default browser") |
 | `mod+space` | launcher |
 | `mod+v` | clipboard history |
 | `mod+e` / `mod+shift+e` | files: yazi / Thunar |

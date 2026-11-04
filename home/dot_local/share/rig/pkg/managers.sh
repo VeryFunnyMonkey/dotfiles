@@ -27,6 +27,7 @@ pkg_remove_cmd() { # manager names...
 }
 pkg_explicit() { # every manager in use here
   if declare -F "pm_${RIG_NATIVE:-}_explicit" >/dev/null; then "pm_${RIG_NATIVE}_explicit"; fi
+  if [[ ${RIG_NATIVE:-} == pacman ]]; then pm_aur_explicit; fi
   if [[ ${RIG_NATIVE:-} != brew ]] && have brew; then pm_brew_explicit; fi
 }
 
@@ -41,7 +42,29 @@ pm_pacman_install() {
 pm_pacman_remove() { sudo_ pacman -Rns --noconfirm "$@"; }
 pm_pacman_search() { local h; h=$(pacman_helper); if [[ $h == pacman ]]; then pacman -Ss "$@"; else "$h" -Ss "$@"; fi; }
 pm_pacman_upgrade() { local h; h=$(pacman_helper); if [[ $h == pacman ]]; then sudo_ pacman -Syu --noconfirm; else "$h" -Syu --noconfirm; fi; }
-pm_pacman_explicit() { pacman -Qqe | sed 's/^/pacman\t/'; }
+pm_pacman_explicit() { pacman -Qqen | sed 's/^/pacman\t/'; }   # repo packages (the AUR ones: pm_aur_explicit)
+
+# ------------------------------------------------------------- aur ----------
+# AUR packages, built by paru or yay. With neither, rig builds paru-bin once
+# (recorded like any package it installs, so uninstall removes it again).
+aur_helper() {
+  if have paru; then echo paru; return 0; fi
+  if have yay; then echo yay; return 0; fi
+  info "installing paru (builds AUR packages)" >&2
+  local tmp; tmp=$(mktemp -d)
+  ledger_pkg_record pacman paru-bin paru installed
+  # build, then install only paru itself (makepkg may also build a -debug package)
+  git clone -q --depth 1 https://aur.archlinux.org/paru-bin.git "$tmp/paru-bin" >&2 &&
+    (cd "$tmp/paru-bin" && makepkg -s --noconfirm --needed >&2 &&
+      sudo_ pacman -U --noconfirm --needed "$(find . -maxdepth 1 -name 'paru-bin-[0-9]*.pkg.tar.*' | head -n1)" >&2) ||
+    { rm -rf "$tmp"; die "couldn't build paru"; }
+  rm -rf "$tmp"
+  echo paru
+}
+pm_aur_present() { pm_pacman_present "$1"; }
+pm_aur_install() { local h; h=$(aur_helper); "$h" -S --needed --noconfirm "$@"; }
+pm_aur_remove() { pm_pacman_remove "$@"; }
+pm_aur_explicit() { pacman -Qqem | sed 's/^/aur\t/'; }
 
 # ------------------------------------------------------------- apt ----------
 pm_apt_present() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }

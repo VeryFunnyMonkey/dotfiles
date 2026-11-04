@@ -93,14 +93,14 @@ rig git remove clienta
 | Category | Items |
 |---|---|
 | CLI tools | zoxide, eza, bat, delta, lazygit, jq, tealdeer |
-| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools, keyboard-driven desktop (KDE shortcuts / AeroSpace), **Hyprland desktop** (Arch: a complete keyboard-first gruvbox desktop; `rig info hyprland` has its keys) |
+| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools, keyboard-driven desktop (KDE shortcuts / AeroSpace), **Hyprland desktop** (Arch: a complete keyboard-first gruvbox desktop; `rig info hyprland` has its keys), **Helium browser** (Arch via the AUR, macOS) |
 | TUI apps | yazi, btop |
 | Containers | Podman (rootless, `docker` and `docker compose` work, `DOCKER_HOST` set; podman machine on macOS), lazydocker |
 | Languages | python (pyright, ruff, uv), web (ts_ls, prettierd), ops (Ansible, YAML schemas, OpenTofu, Docker, shell), go, rust |
 | Homelab | Tailscale |
 | Git | host CLIs: gh (GitHub), glab (GitLab), tea (Gitea, Forgejo, Codeberg); in the Git section with your accounts |
 | Coding agents | Claude Code, Copilot CLI, Codex CLI, Gemini CLI, OpenCode |
-| OS settings | Ghostty as default terminal, open text files in Neovim (Linux); Dock left/hidden/instant, Finder tweaks, fast key repeat (macOS) |
+| OS settings | Ghostty as default terminal, Helium as default browser, open text files in Neovim (Linux); Dock left/hidden/instant, Finder tweaks, fast key repeat (macOS) |
 
 **OS settings** are applied with the previous value of each one recorded first; deselecting the item (or `rig uninstall`) puts the old values back, including removing a setting that wasn't set before. `rig settings list` shows what's applied.
 

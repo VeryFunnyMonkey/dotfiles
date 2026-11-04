@@ -23,7 +23,7 @@ cmd_sync() {
   done < <(pkg_declared)
   if ((${#todo[@]} == 0)); then ok "all declared packages are installed"; return 0; fi
   local mgr names
-  for mgr in pacman apt dnf brew download; do
+  for mgr in pacman aur apt dnf brew download; do
     [[ -n ${todo[$mgr]:-} ]] || continue
     names=$(printf '%s' "${todo[$mgr]}" | tr '\n' ' ')
     info "installing with $mgr: $names"
@@ -59,7 +59,11 @@ cmd_drift() {
   pkg_explicit | sort -u >"$tmp/now"
   pkg_declared_names | sort -u >"$tmp/declared"
   if ((all)) || [[ ! -f $RIG_STATE/baseline ]]; then : >"$tmp/base"; else sort -u "$RIG_STATE/baseline" >"$tmp/base"; fi
-  comm -23 "$tmp/now" "$tmp/declared" | comm -23 - "$tmp/base" >"$tmp/extra"
+  # rig's own installs (an AUR helper, say) aren't drift either
+  awk -F'\t' '$4=="installed" {print $1 "\t" $2}' "$RIG_STATE/packages.log" | sed 's/^aur\t/pacman\t/' | sort -u >"$tmp/rigs"
+  sed 's/^aur\t/pacman\t/' "$tmp/now" | sort -u >"$tmp/now.n"; mv "$tmp/now.n" "$tmp/now"
+  sed 's/^aur\t/pacman\t/' "$tmp/declared" | sort -u >"$tmp/declared.n"; mv "$tmp/declared.n" "$tmp/declared"
+  comm -23 "$tmp/now" "$tmp/declared" | comm -23 - "$tmp/base" | comm -23 - "$tmp/rigs" >"$tmp/extra"
   pkg_missing >"$tmp/missing"
   if [[ -s $tmp/extra ]]; then
     info "installed but not declared$( ((all)) || printf ' (since rig was set up; --all for everything)')"

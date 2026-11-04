@@ -46,12 +46,17 @@ packages:
   download: [nerd-font, tailscale]
   download_everywhere: [win32yank]
 
+  # On Arch, from the AUR (through paru or yay; rig installs paru if neither is there).
+  aur: [helium]
+
   # Packages that exist only for some managers (skipped elsewhere).
   only:
     wslu: [apt]
 
   # Per-manager names, where they differ from the logical name. "-" = not needed there.
   names:
+    aur:
+      helium: helium-browser-bin
     pacman:
       build-tools: base-devel
       delta: git-delta
@@ -79,4 +84,5 @@ packages:
       ghostty: "--cask ghostty"
       aerospace: "--cask nikitabobko/tap/aerospace"
       maccy: "--cask maccy"
+      helium: "--cask helium-browser"
       tailscale: "--cask tailscale"
