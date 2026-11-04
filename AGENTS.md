@@ -7,7 +7,7 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 - `home/.chezmoi.toml.tmpl`: chezmoi's config for the machine. It asks nothing: `rig setup` writes profile/selected/extra_packages/agent_default; detection (`.chezmoitemplates/detect`) adds wsl/display/desktop.
 - `home/.chezmoidata/`: `catalog/*.yaml` (every selectable item, by category: packages, platforms, needs, nvim), `profiles/*.yaml` (saved selections), `packages.yaml` (core + per-OS names), `runtimes.yaml`, `theme.yaml`. `.chezmoitemplates/enabled` works out what applies on this machine (selected, skipped, runtimes, agents).
 - `home/.chezmoiscripts/`: setup steps (bootstrap, backup ledger, packages, shell, ssh agent, nvim).
-- `home/dot_local/bin/executable_rig`: the `rig` command; its libraries in `home/dot_local/share/rig/` (found next to rig, so it runs from the repo too): `setup.sh` (installer, add/remove, profiles), `git.sh` (git accounts), `runtimes.sh` (runtimes, Tailscale), `agents.sh` (coding agents).
+- `home/dot_local/bin/executable_rig`: the `rig` command; its libraries in `home/dot_local/share/rig/` (found next to rig, so it runs from the repo too): `setup.sh` (installer, add/remove, profiles), `git.sh` (git accounts), `runtimes.sh` (runtimes, Tailscale), `agents.sh` (coding agents), `settings.sh` (OS settings with recorded originals), `containers.sh` (Podman setup).
 - `install.sh`: the bootstrap one-liner for a new machine.
 - `docs/catalog/`: guides for catalog items (`rig info <item>`).
 - `home/dot_local/bin/executable_dev`: `dev` (tmux workspaces); templates in `home/dot_config/dev/templates/`.

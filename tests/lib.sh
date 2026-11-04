@@ -3,7 +3,8 @@ set -uo pipefail
 cd ~
 export PATH=$HOME/.local/bin:$PATH TERM=xterm-256color
 pass=0 fail=0
-check() { if eval "$2"; then echo "PASS $1"; ((pass++)); else echo "FAIL $1"; ((fail++)); fi; }
+# check <name> <condition>: returns the condition's result, so `check ... || { details; }` works
+check() { if eval "$2"; then echo "PASS $1"; pass=$((pass + 1)); return 0; else echo "FAIL $1"; fail=$((fail + 1)); return 1; fi; }
 done_tests() { echo "=== $pass passed, $fail failed"; ((fail == 0)); }
 install_rig() { # install.sh args...
   RIG_SOURCE=~/dotfiles sh ~/dotfiles/install.sh "$@" > /tmp/install.log 2>&1

@@ -55,7 +55,10 @@ components:
   - {name: wm, role: keyboard-driven desktop (KDE shortcuts, AeroSpace + Maccy), why: "one keymap across KDE and macOS without fragile tiling scripts", alternatives: [Krohnkite (breaks on Plasma updates), yabai (needs SIP off), Raycast (closed)], revisit_if: "KDE renames kglobalshortcutsrc actions; AeroSpace reaches 1.0 or needs SIP changes; Hyprland box gets set up"}
   - {name: yazi, role: terminal file manager, why: fast, previews, alternatives: [lf, ranger], revisit_if: never really}
   - {name: btop, role: system monitor, why: extra, alternatives: [htop], revisit_if: never}
-  - {name: lazydocker, role: docker TUI, why: extra, alternatives: [], revisit_if: never}
+  - {name: podman, role: containers on client machines (rootless, Docker-compatible), why: "rootless by default (no root-equivalent docker group, safer for agent sandboxes), no daemon, packaged everywhere, no licences; podman machine on macOS", alternatives: [Docker Engine (root daemon + docker group), Docker Desktop (licence in larger companies), Colima, OrbStack (closed), Apple container (no compose yet)], revisit_if: "Apple's container tool supports compose and the docker API; a needed tool keeps failing on the Docker socket emulation; the servers move to Podman"}
+  - {name: podman-docker, role: the docker command running podman (Linux), why: muscle memory and scripts, alternatives: [alias], revisit_if: never}
+  - {name: docker-compose, role: compose provider for podman compose / docker compose, why: "the reference compose implementation, talks to podman's socket", alternatives: [podman-compose], revisit_if: "podman compose gains a built-in provider"}
+  - {name: lazydocker, role: container TUI, why: "works with Podman's socket via DOCKER_HOST", alternatives: [], revisit_if: never}
   - {name: python, role: language item (pyright, ruff, uv), why: "standard, fast; Mason installs pyright with npm so it needs node", alternatives: [basedpyright], revisit_if: "basedpyright or ty clearly better; pyright drops npm"}
   - {name: web, role: language item (ts_ls, prettierd), why: standard, alternatives: [vtsls, biome], revisit_if: "vtsls or biome become the norm"}
   - {name: ops, role: language item (Ansible, YAML, OpenTofu, Docker, shell), why: "matches the homelab repo", alternatives: [], revisit_if: "tofu-ls or ansible-language-server change hands"}

@@ -5,6 +5,7 @@
 #   # packages: <distro packages>   installed before the test (as root)
 #   # needs: fuse                    the container gets /dev/fuse
 #   # needs: server                  a second container "srvbox" running sshd
+#   # needs: privileged              a privileged container (containers inside it)
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd); repo=$(dirname "$here")
 name=${1:?usage: tests/run.sh <test> [image]}; image=${2:-archlinux:latest}
@@ -12,12 +13,16 @@ test="$here/$name.sh"; [[ -f $test ]] || { echo "no test $test" >&2; exit 2; }
 extra=$(sed -n 's/^# packages: //p' "$test")
 needs=$(sed -n 's/^# needs: //p' "$test" | tr '\n' ' ')
 c="rigtest-$name-$$"; net="rignet-$$"
-cleanup() { docker rm -f "$c" srvbox-$$ >/dev/null 2>&1 || true; docker network rm "$net" >/dev/null 2>&1 || true; }
+cleanup() {
+  if [[ ${KEEP:-0} == 1 ]]; then echo "(KEEP=1: container $c left running)"; return; fi
+  docker rm -f "$c" srvbox-$$ >/dev/null 2>&1 || true; docker network rm "$net" >/dev/null 2>&1 || true
+}
 trap cleanup EXIT
 
 docker network create "$net" >/dev/null
 args=(--network "$net")
 [[ $needs == *fuse* ]] && args+=(--device /dev/fuse --cap-add SYS_ADMIN)
+[[ $needs == *privileged* ]] && args+=(--privileged)
 docker run -d --name "$c" "${args[@]}" "$image" sleep infinity >/dev/null
 case $image in
   archlinux*) docker exec "$c" bash -c "pacman -Syu --noconfirm --needed sudo git curl util-linux openssh $extra >/tmp/pkg.log 2>&1" ;;

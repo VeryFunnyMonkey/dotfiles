@@ -1,4 +1,3 @@
 catalog:
   yazi: {category: tui, name: yazi, description: "file manager in the terminal (y: cd to where you quit)", packages: [yazi]}
   btop: {category: tui, name: btop, description: "system monitor: CPU, memory, disks, processes", packages: [btop]}
-  lazydocker: {category: tui, name: lazydocker, description: "Docker containers, logs and images in a TUI", packages: [lazydocker]}

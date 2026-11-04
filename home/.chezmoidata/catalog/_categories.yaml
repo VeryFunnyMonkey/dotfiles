@@ -19,5 +19,6 @@ categories:
   - {id: languages, name: "Languages"}
   - {id: homelab, name: "Homelab"}
   - {id: git, name: "Git hosting"}
+  - {id: containers, name: "Containers"}
   - {id: agents, name: "Coding agents"}
   - {id: settings, name: "OS settings"}

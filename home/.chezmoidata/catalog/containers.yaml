@@ -1,0 +1,15 @@
+# Containers on client machines: Podman, rootless, made to look like Docker.
+# (The servers stay on Docker: Pterodactyl, Nextcloud AIO, Portainer and the
+# Traefik/cAdvisor socket integrations need it.)
+catalog:
+  podman:
+    category: containers
+    name: Podman (Docker-compatible)
+    description: "rootless containers, no daemon; `docker` and `docker compose` work, and DOCKER_HOST points at Podman's socket"
+    packages: [podman, podman-docker, docker-compose]
+    note: "macOS runs it in a small VM (podman machine), created on first setup"
+  lazydocker:
+    category: containers
+    name: lazydocker
+    description: "containers, logs and images in a TUI (works with Podman's socket)"
+    packages: [lazydocker]

@@ -32,3 +32,10 @@ if (( $+commands[yazi] )); then
     rm -f -- "$tmp"
   }
 fi
+
+# Podman (the containers item): DOCKER_HOST points at its Docker-compatible
+# socket, and on macOS `docker` runs podman (Linux gets a real shim package).
+if [[ -r ${XDG_STATE_HOME:-$HOME/.local/state}/rig/docker-host ]] && (( $+commands[podman] )); then
+  export DOCKER_HOST="$(<${XDG_STATE_HOME:-$HOME/.local/state}/rig/docker-host)"
+  (( $+commands[docker] )) || alias docker=podman
+fi

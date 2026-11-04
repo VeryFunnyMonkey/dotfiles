@@ -309,6 +309,15 @@ cmd_doctor() {
     ok "mounted: ${mnt:-none}"
   fi
 
+  if [[ " $RIG_SELECTED " == *" podman "* ]]; then
+    info "containers"
+    if have podman && podman info >/dev/null 2>&1; then ok "podman works ($(podman --version | awk '{print $3}'))"
+    else bad "podman isn't working (podman info; on macOS: podman machine start)"; ((fails++)) || true; fi
+    local dh; dh=$(cat "$RIG_STATE/docker-host" 2>/dev/null || true)
+    if [[ -n $dh && -S ${dh#unix://} ]]; then ok "Docker-compatible socket: $dh"
+    else bad "Docker-compatible socket missing (rig containers sync)"; ((fails++)) || true; fi
+  fi
+
   info "runtimes"
   ok "${RIG_RUNTIMES:-none needed}"
   if [[ " $RIG_SELECTED " == *" tailscale "* ]] && have tailscale; then
@@ -542,6 +551,13 @@ system_revert_all() {
       ssh-key-created) : ;; # handled by --identities (keys are archived, never deleted)
       runtime-dir|agent) : ;; # handled by --runtimes / --agents
       chezmoi-installed) : ;; # removed at the very end of uninstall
+      # usermod refuses while the user has processes (always, here), so remove
+      # exactly the line rig added
+      subids) sudo_ sed -i "/^$key:100000:65536\$/d" /etc/subuid /etc/subgid && ok "removed rootless sub-ID ranges for $key" ;;
+      podman-machine)
+        if have podman && podman machine inspect >/dev/null 2>&1 && confirm "Delete the podman machine (its images and volumes)?"; then
+          podman machine rm -f >/dev/null 2>&1 && ok "deleted the podman machine"
+        fi ;;
       system-unit) if [[ $prev != enabled ]]; then sudo_ systemctl disable --now "$key" 2>/dev/null || true; ok "disabled $key"; fi ;;
       ssh-include)
         if [[ $prev == created ]]; then
@@ -600,7 +616,7 @@ ${B}rig${N}: this machine's setup
 EOF
 }
 
-for _lib in git runtimes agents setup settings; do
+for _lib in git runtimes agents setup settings containers; do
   # shellcheck source=/dev/null
   if [[ -r $RIG_LIB/$_lib.sh ]]; then source "$RIG_LIB/$_lib.sh"; fi
 done
@@ -623,6 +639,7 @@ main() {
     profile|profiles) cmd_profile_cmd "$@" ;;
     info) cmd_info "$@" ;;
     settings) cmd_settings "$@" ;;
+    containers) cmd_containers "$@" ;;
     reset) cmd_reset "$@" ;;
     git) cmd_git "$@" ;;
     runtimes) cmd_runtimes "$@" ;;
