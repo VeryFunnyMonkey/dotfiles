@@ -112,7 +112,7 @@ Tick them in `rig setup` (Coding agents), or `rig add codex`. When several are s
 
 ## dev: workspaces
 
-`dev` builds tmux sessions for projects. Run it in a repo: your agent on the left, nvim on the right. Run it anywhere else (or press `Alt-p`, or `prefix f` in tmux) for a picker of running sessions, workspaces and frequent folders.
+`dev` builds tmux sessions for projects. Run it in a repo: your agent on the left, nvim on the right. Run it anywhere else (or press `Alt-p`, or `prefix f` in tmux) for the project picker: your git repos (the ones you've been in, most used first, plus everything under `~/Projects`; repos nested inside another repo are left out), with `● open` for a running session and `★ workspace` for a project with a workspace file. The preview says what Enter will do.
 
 ```sh
 dev agent set claude    # once per machine: what the agent pane runs (dev agent unset: plain shell)

@@ -170,55 +170,95 @@ cmd_forget() {
 }
 
 # ------------------------------------------------------------- picker ---------
+# One line per project: what fzf shows, then (hidden) kind, session name, path.
+#   kind: run = a tmux session is running, ws = has a workspace file, dir = a repo
+# Projects are git repos: the ones zoxide knows (folders you've been in) and
+# the ones under ~/Projects, plus anything with a running session or workspace.
+picker_row() { # kind name path [tabs]
+  local kind=$1 name=$2 path=$3 plain='' color='' label shown
+  case $kind in
+    run) plain="● open, $4 tab$([[ $4 == 1 ]] || echo s)"; color=32 ;;
+    ws)  plain="★ workspace"; color=34 ;;
+  esac
+  label=${path##*/}; [[ $kind == run ]] && label=$name
+  if ((${#label} > 24)); then label="${label:0:23}…"; fi
+  shown=${path/#"$HOME"/\~}
+  if ((${#shown} > 40)); then shown="…${shown: -39}"; fi
+  # pad the plain text, then colour it, so the columns line up
+  # pad by hand: printf counts bytes, and the symbol is one character but 3 bytes
+  local text=${plain#* } state=''
+  if [[ -n $plain ]]; then state=$'\033['"${color}m${plain%% *} ${text}"$'\033[0m'; fi
+  local width=0; [[ -n $plain ]] && width=$((2 + ${#text}))
+  state+=$(printf '%*s' $((16 - width)) '')
+  printf '%-24s  %s  \033[2m%s\033[0m\t%s\t%s\t%s\n' "$label" "$state" "$shown" "$kind" "$name" "$path"
+}
+# a repo inside another repo (a vendored library, a reference copy) isn't a project
+nested_repo() { local d=${1%/*}; while [[ $d == "$HOME"/* ]]; do [[ -e $d/.git ]] && return 0; d=${d%/*}; done; return 1; }
 picker_items() {
   prune_registry
-  local s p seen=$'\n'
-  # running sessions (not the throwaway ones each Ghostty window opens)
-  local w
-  while IFS=$'\t' read -r s p w; do
+  local s p w n seen=$'\n'
+  # open sessions (not the throwaway ones each Ghostty window opens)
+  # \x1f between fields: with tabs, read would merge the empty @rig_window field away
+  while IFS=$'\x1f' read -r s p w n; do
     if [[ $w == 1 ]]; then continue; fi
-    printf '●\t%s\t%s\n' "$s" "$p"; seen+="$p"$'\n'
-  done < <(tmux list-sessions -F '#{session_name}	#{session_path}	#{@rig_window}' 2>/dev/null || true)
-  # workspaces
+    picker_row run "$s" "$p" "$n"; seen+="$p"$'\n'
+  done < <(tmux list-sessions -F $'#{session_name}\x1f#{session_path}\x1f#{@rig_window}\x1f#{session_windows}' 2>/dev/null || true)
+  # projects with a workspace file
   if [[ -f $REGISTRY ]]; then
     while IFS= read -r p; do
       if [[ $seen == *$'\n'"$p"$'\n'* ]]; then continue; fi
-      printf '★\t%s\t%s\n' "$(session_name "$p")" "$p"; seen+="$p"$'\n'
+      picker_row ws "$(session_name "$p")" "$p"; seen+="$p"$'\n'
     done <"$REGISTRY"
   fi
-  # frequent folders without a workspace
-  if have zoxide; then
-    while IFS= read -r p; do
-      if [[ $seen == *$'\n'"$p"$'\n'* || $p == "$HOME" ]]; then continue; fi
-      printf '·\t%s\t%s\n' "$(session_name "$p")" "$p"
-    done < <(zoxide query -l 2>/dev/null | head -n 50)
-  fi
+  # other git repos: most-used first (zoxide), then the rest of ~/Projects
+  {
+    if have zoxide; then zoxide query -l 2>/dev/null | head -n 200; fi
+    find "$HOME/Projects" -mindepth 2 -maxdepth 4 -name .git -prune 2>/dev/null | sed 's#/\.git$##' | sort
+  } | while IFS= read -r p; do
+    [[ -e $p/.git && $seen != *$'\n'"$p"$'\n'* ]] || continue
+    if nested_repo "$p"; then continue; fi
+    case $p in */.wt/*|*.wt/*) continue ;; esac   # dev wt worktrees show under their repo
+    picker_row dir "$(session_name "$p")" "$p"; seen+="$p"$'\n'
+  done
 }
-cmd_preview() { # mark name path
-  local mark=$1 name=$2 path=$3 ws
-  if [[ $mark == ● ]]; then
-    printf 'running session %s\n\n' "$name"
+cmd_preview() { # kind name path
+  local kind=$1 name=$2 path=$3 ws
+  printf '\033[1m%s\033[0m  %s\n\n' "${path##*/}" "${path/#"$HOME"/\~}"
+  if [[ $kind == run ]]; then
+    printf 'Open now. Enter switches to it. Its tabs:\n\n'
     tmux list-windows -t "=$name" -F '  #{window_index}: #{window_name}  (#{window_panes} panes)' 2>/dev/null
+    printf '\nctrl-x closes it.\n'
   elif ws=$(workspace_file "$path"); then
-    printf '%s\n\n' "${ws/#$HOME/~}"
+    printf 'Enter opens it with its workspace file (%s):\n\n' "${ws/#"$HOME"/\~}"
     if have bat; then bat --style=plain --color=always --language=ini "$ws"; else cat "$ws"; fi
+    printf '\nctrl-e edits that file.\n'
   else
-    printf '%s\n\nno workspace: opens the default (agent + nvim)\nctrl-n creates one\n' "${path/#$HOME/~}"
+    printf 'Not open. Enter opens it in tmux:\n  left:  %s\n  right: nvim\n\n' "$(left_pane)"
+    printf 'ctrl-n sets up a workspace file instead: your own tabs and panes\nfor this project (dev init).\n'
+  fi
+  if [[ -d $path/.git || -f $path/.git ]]; then
+    printf '\n\033[2m%s\033[0m\n' "$(git -C "$path" log -1 --format='last commit %cr: %s' 2>/dev/null)"
   fi
 }
+left_pane() { local a; a=$(agent_cmd 2>/dev/null || true); if [[ -n $a ]]; then printf 'your agent (%s)' "$a"; else printf 'a shell (no agent set: dev agent set <cmd>)'; fi; }
 cmd_ls() {
   have fzf || die "fzf isn't installed"
-  local out key line mark name path
-  out=$(picker_items | fzf --ansi --delimiter='\t' --with-nth=1,2,3 --no-sort \
-        --prompt='workspace> ' --header='enter open · ctrl-e edit · ctrl-x close session · ctrl-n new workspace' \
-        --preview="$0 _preview {1} {2} {3}" --preview-window=right,50% \
+  local out key line kind name path
+  # options spelled out, so it looks the same in a tmux popup as in a shell
+  out=$(picker_items | fzf --ansi --delimiter='\t' --with-nth=1 --no-sort \
+        --height=100% --layout=reverse --border=none --info=hidden --no-scrollbar \
+        --prompt='project> ' \
+        --header=$'Pick a project to work on (type to filter)\nenter open · ctrl-x close · ctrl-e/ctrl-n workspace file · esc' \
+        --header-first \
+        --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,40%,border-left,wrap,<36(down,40%,border-top,wrap)' --gutter=' ' \
+        --color='bg+:#3c3836,bg:-1,hl:#83a598,fg:#ebdbb2,header:#a89984,info:#fabd2f,pointer:#8ec07c,prompt:#fabd2f,hl+:#83a598,border:#504945' \
         --expect=ctrl-e,ctrl-x,ctrl-n) || return 0
   key=$(head -n1 <<<"$out"); line=$(sed -n 2p <<<"$out")
   [[ -n $line ]] || return 0
-  IFS=$'\t' read -r mark name path <<<"$line"
+  IFS=$'\t' read -r _ kind name path <<<"$line"
   case $key in
     ctrl-e) (cd "$path" && cmd_edit) ;;
-    ctrl-x) tmux kill-session -t "=$name" 2>/dev/null && ok "closed $name" ;;
+    ctrl-x) if [[ $kind == run ]]; then tmux kill-session -t "=$name" 2>/dev/null && ok "closed $name"; fi ;;
     ctrl-n) (cd "$path" && cmd_init) ;;
     *) [[ -d $path ]] || die "$path doesn't exist"; open_project "$(project_root "$path")" ;;
   esac

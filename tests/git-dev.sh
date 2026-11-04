@@ -96,7 +96,7 @@ check "init --local writes to the local store" '[[ -f ~/.config/dev/projects/pro
 printf '[only]\nshell\n' > ~/proj3/.dev
 tmux kill-session -t proj3; (cd ~/proj3 && DEV_NO_ATTACH=1 dev)
 check "./.dev wins over the local store" '[[ $(tmux list-windows -t proj3 -F "#{window_name}") == only ]]'
-check "picker lists sessions and workspaces" '[[ $(dev _items | grep -c "^●") -ge 3 ]]'
+check "picker lists the open sessions" '[[ $(dev _items | cut -f2 | grep -cx run) -ge 3 ]]'
 
 # worktrees
 (cd ~/proj1 && echo x > f && git add f && git -c user.name=T -c user.email=t@example.invalid commit -qm init --no-gpg-sign && DEV_NO_ATTACH=1 dev wt feat-x) >/dev/null 2>&1
