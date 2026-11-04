@@ -155,6 +155,14 @@ gum_choose() {
   if ((rc)); then printf '\033[1A\033[2K' >/dev/tty; fi
   return $rc
 }
+# A menu's rows change as you pick (they show the current choices), so the row
+# to come back to is found by its label: the text before ":" or the padding.
+row_key() { local k=${1%%:*}; printf '%s' "${k%%  *}"; }
+cursor_on() { # previous-choice rows... -> --selected=<the row with the same label>, if any
+  local want r; want=$(row_key "$1"); shift
+  [[ -n $want ]] || return 0
+  for r in "$@"; do if [[ $(row_key "$r") == "$want" ]]; then printf -- '--selected=%s' "$r"; return 0; fi; done
+}
 G_HEAD() { gum style --foreground 109 --bold "$@"; }
 
 menu_category() { # category-id category-name selected -> prints new selection
@@ -214,8 +222,9 @@ write_profile() { # name desc selected file
 menu_git() {
   local accounts=1
   if ! declare -F identities >/dev/null || [[ ! -r $MACHINE_ENV ]]; then accounts=0; fi
+  local pick=''
   while :; do
-    local rows=() pick def clis
+    local rows=() def clis
     clis=$(git_clis "$sel")
     if ((accounts)); then
       def=$(default_identity); def=${def:-none}
@@ -224,7 +233,8 @@ menu_git() {
     rows+=("Host CLIs: $clis" "Back")
     local head="Git: accounts (set up after the first install: rig git add)"
     if ((accounts)); then head="Git: accounts $(identities | tr '\n' ' ')"; fi
-    pick=$(gum_choose --header "$head" "${rows[@]}" </dev/tty) || return
+    local at; at=$(cursor_on "$pick" "${rows[@]}")
+    pick=$(gum_choose --header "$head" ${at:+"$at"} "${rows[@]}" </dev/tty) || return
     case $pick in
       "Add an account") RIG_SETUP_MENU=1 git_add || true ;;
       "Remove an account")
@@ -289,6 +299,7 @@ cmd_setup() {
     if [[ -n $p ]]; then profile=$p; sel=$(profile_ids "$p"); fi
   fi
   local detected; detected=$(cz_tmpl '{{ $d := includeTemplate "detect" . | fromJson }}{{ $d.platform }}{{ if $d.wsl }} (WSL){{ end }} · {{ $d.desktop | default "no desktop" }} · display: {{ $d.display }}')
+  local choice=''
   while :; do
     local rows=() cid cname mod=''
     [[ -n $profile && $sel != "$(profile_ids "$profile")" ]] && mod=' (modified)'
@@ -301,8 +312,8 @@ cmd_setup() {
     done < <(categories)
     rows+=("$(printf '%-20s %s' Git "$(git_row) · CLIs: $(git_clis "$sel")")")
     rows+=("Save as profile…" "Review & install" "Quit")
-    local choice
-    choice=$(gum_choose --height 20 --header "rig setup · $detected" "${rows[@]}" </dev/tty) || choice=Quit
+    local at; at=$(cursor_on "$choice" "${rows[@]}")
+    choice=$(gum_choose --height 20 --header "rig setup · $detected" ${at:+"$at"} "${rows[@]}" </dev/tty) || choice=Quit
     case $choice in
       Profile*) local p; p=$(menu_profile); if [[ -n $p ]]; then profile=$p; sel=$(profile_ids "$p"); fi ;;
       Git*) menu_git ;;
