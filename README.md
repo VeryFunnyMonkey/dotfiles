@@ -23,9 +23,8 @@ It installs chezmoi, prepares the package manager, clones this repo and starts *
    TUI apps             none
    Languages            Python, Web
    Homelab              Tailscale
-   Git hosting          GitHub (gh)
    Coding agents        Claude Code
-   Git                  personal (default: personal)
+   Git                  personal (default: personal) · CLIs: GitHub CLI (gh)
    Save as profile…
    Review & install
 ```
@@ -86,9 +85,9 @@ rig git default personal   # or none
 rig git remove clienta
 ```
 
-- **Hosts:** GitHub is automatic: `gh` logs you in through the browser and uploads the key for login and signing. GitLab, Azure DevOps, Bitbucket and other servers: the key is copied to your clipboard and the settings page opens. "No hosting" gives a local identity only.
+- **Hosts:** GitHub, GitLab (gitlab.com or your own) and Gitea/Forgejo/Codeberg are automatic: rig logs in with the host's CLI (`gh` and `glab` through the browser, `tea` with an access token you paste) and uploads the key for login and signing. Bitbucket, Azure DevOps (RSA key, no signing) and other servers: the key is copied to your clipboard and the settings page opens. If a CLI step fails, rig falls back to that. "No hosting" gives a local identity only.
 - **Which account a repo uses:** repos inside an account's folder (`~/Projects` for the first, `~/Projects/<name>` for others), or cloned through its alias (`git@github.com-<name>:...`). Everything else uses the **default account**, picked in `rig setup` (Git) or with `rig git default <account|none>`. With **none**, git refuses to commit until a repo matches an account, so nothing goes out under the wrong one.
-- **GitHub on this machine:** adding a GitHub account installs `gh` if needed; removing the last one offers to remove it.
+- **Host CLIs:** adding an account selects its host's CLI (`gh`, `glab`, `tea`) and installs it; removing the last account on that host offers to deselect it. They're toggled in `rig setup` under Git too.
 
 ## The catalog
 
@@ -100,7 +99,7 @@ rig git remove clienta
 | Containers | Podman (rootless, `docker` and `docker compose` work, `DOCKER_HOST` set; podman machine on macOS), lazydocker |
 | Languages | python (pyright, ruff, uv), web (ts_ls, prettierd), ops (Ansible, YAML schemas, OpenTofu, Docker, shell), go, rust |
 | Homelab | Tailscale |
-| Git hosting | GitHub (gh) |
+| Git | host CLIs: gh (GitHub), glab (GitLab), tea (Gitea, Forgejo, Codeberg); in the Git section with your accounts |
 | Coding agents | Claude Code, Copilot CLI, Codex CLI, Gemini CLI, OpenCode |
 | OS settings | Ghostty as default terminal, open text files in Neovim (Linux); Dock left/hidden/instant, Finder tweaks, fast key repeat (macOS) |
 

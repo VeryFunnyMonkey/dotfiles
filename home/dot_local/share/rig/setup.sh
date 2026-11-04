@@ -201,17 +201,23 @@ write_profile() { # name desc selected file
   printf 'profiles:\n  %s:\n    description: "%s"\n    select: [%s]\n' "$1" "${2//\"/\'}" "$list" >"$4"
 }
 
+# The Git section: accounts, the default account, and the host CLIs (gh,
+# glab, tea). Adding an account selects its host's CLI by itself.
 menu_git() {
-  if ! declare -F identities >/dev/null || [[ ! -r $MACHINE_ENV ]]; then
-    gum style --faint "Git accounts are set up after the first install (rig git add)." ; sleep 2; return
-  fi
+  local accounts=1
+  if ! declare -F identities >/dev/null || [[ ! -r $MACHINE_ENV ]]; then accounts=0; fi
   while :; do
-    local def; def=$(default_identity); def=${def:-none}
-    local pick
-    pick=$(gum choose --header "Git: accounts $(identities | tr '\n' ' ')" \
-      "Add an account" "Remove an account" "Default account: $def" "Test accounts" "Back" </dev/tty) || return
+    local rows=() pick def clis
+    clis=$(git_clis "$sel")
+    if ((accounts)); then
+      def=$(default_identity); def=${def:-none}
+      rows+=("Add an account" "Remove an account" "Default account: $def" "Test accounts")
+    fi
+    rows+=("Host CLIs: $clis" "Back")
+    local head="Git: accounts $(if ((accounts)); then identities | tr '\n' ' '; else echo '(set up after the first install: rig git add)'; fi)"
+    pick=$(gum choose --header "$head" "${rows[@]}" </dev/tty) || return
     case $pick in
-      "Add an account") git_add || true ;;
+      "Add an account") RIG_SETUP_MENU=1 git_add || true ;;
       "Remove an account")
         local n ids; mapfile -t ids < <(identities)
         ((${#ids[@]})) || continue
@@ -222,9 +228,15 @@ menu_git() {
         n=$(gum choose --header "Default account (none: commits need a matching account)" "${ids[@]}" none </dev/tty) || continue
         git_set_default "$n" ;;
       "Test accounts") git_doctor || true; gum input --placeholder "enter to continue" </dev/tty >/dev/null || true ;;
+      Host*) sel=$(menu_category git "Git host CLIs (adding an account on a host selects its CLI)" "$sel") ;;
       *) return ;;
     esac
   done
+}
+git_clis() { # selected -> names of the selected host CLIs
+  local in='' y
+  for y in $1; do [[ $(item_field "$y" 1) == git && $(item_status "$y") == ok ]] && in+=" $y"; done
+  names_of "$in"
 }
 
 cmd_setup() {
@@ -273,11 +285,12 @@ cmd_setup() {
     rows+=("$(printf '%-20s %s' Profile "${profile:-none}$mod")")
     rows+=("$(printf '%-20s %s' Machine "$detected")")
     while IFS=$'\t' read -r cid cname; do
+      [[ $cid == git ]] && continue  # shown in the Git row
       local in='' y
       for y in $sel; do [[ $(item_field "$y" 1) == "$cid" && $(item_status "$y") == ok ]] && in+=" $y"; done
       rows+=("$(printf '%-20s %s' "$cname" "$(names_of "$in")")")
     done < <(categories)
-    rows+=("$(printf '%-20s %s' Git "$(git_row)")")
+    rows+=("$(printf '%-20s %s' Git "$(git_row) · CLIs: $(git_clis "$sel")")")
     rows+=("Save as profile…" "Review & install" "Quit")
     local choice
     choice=$(gum choose --height 20 --header "rig setup · $detected" "${rows[@]}" </dev/tty) || choice=Quit
@@ -295,6 +308,7 @@ cmd_setup() {
         return 0 ;;
       *)
         while IFS=$'\t' read -r cid cname; do
+          [[ $cid == git ]] && continue
           if [[ $choice == "$cname "* ]]; then sel=$(menu_category "$cid" "$cname" "$sel"); fi
         done < <(categories) ;;
     esac

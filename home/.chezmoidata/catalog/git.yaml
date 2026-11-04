@@ -1,6 +1,19 @@
+# Host CLIs. rig git add selects the one for an account's host and uses it to
+# log in and upload the key; deselect them freely, rig git falls back to
+# copying the key for you to paste.
 catalog:
   github:
     category: git
-    name: GitHub (gh)
-    description: "GitHub CLI: rig git add uses it to log in and upload keys; PRs and CI from the terminal"
+    name: GitHub CLI (gh)
+    description: "logs in and uploads keys for GitHub accounts; PRs, issues and CI from the terminal"
     packages: [gh]
+  gitlab:
+    category: git
+    name: GitLab CLI (glab)
+    description: "logs in and uploads keys for GitLab accounts (gitlab.com or your own); MRs and pipelines from the terminal"
+    packages: [glab]
+  gitea:
+    category: git
+    name: Gitea CLI (tea)
+    description: "logs in and uploads keys for Gitea, Forgejo and Codeberg accounts; PRs and issues from the terminal"
+    packages: [tea]

@@ -4,8 +4,9 @@
 # packages: tmux
 tty_feed() { # input-file command...  (runs the command on a pty, typing one line per second)
   local in=$1; shift
-  { sleep 2; while IFS= read -r l; do printf '%s\n' "$l"; sleep 1; done <"$in"; sleep 3; } |
-    timeout 120 script -qec "$*" /dev/null >/tmp/feed.out 2>&1
+  # a line "@sleep N" waits N seconds instead of typing (while something installs)
+  { sleep 2; while IFS= read -r l; do if [[ $l == @sleep\ * ]]; then sleep "${l#@sleep }"; continue; fi; printf '%s\n' "$l"; sleep 1; done <"$in"; sleep 3; } |
+    timeout 400 script -qec "$*" /dev/null >/tmp/feed.out 2>&1
 }
 
 install_rig --profile minimal --select github --yes
@@ -13,16 +14,37 @@ check "install ok, gh selected" '[[ $? -eq 0 ]] && command -v gh >/dev/null'
 check "git setup skipped without a terminal" 'grep -q "set up git accounts later" /tmp/install.log'
 
 # --- git: a local-only personal account with a signing key
-printf 'Test User\nt@example.invalid\n6\n\ny\ny\n\n\n\n' > /tmp/in1
+printf 'Test User\nt@example.invalid\n7\n\ny\ny\n\n\n\n' > /tmp/in1
 tty_feed /tmp/in1 rig git add personal
 check "personal account written" '[[ -f ~/.config/git/identities/personal.gitconfig ]]'
 check "key created" '[[ -f ~/.ssh/id_ed25519_personal ]]'
 # --- git: a second account on another server
-printf 'Test User\ns@example.invalid\n5\ngit.example.invalid\n\n1\n\n\n\n\n' > /tmp/in2
+printf 'Test User\ns@example.invalid\n6\ngit.example.invalid\n\n1\n\n\n\n\n' > /tmp/in2
 tty_feed /tmp/in2 rig git add second
 check "second account written" '[[ -f ~/.config/git/identities/second.gitconfig ]]'
 check "ssh alias generated" 'grep -q "Host git.example.invalid-second" ~/.ssh/config.d/rig-git'
 check "ssh Include added" '[[ $(head -n1 ~/.ssh/config) == "Include config.d/*" ]]'
+
+# --- git: a GitLab account; a stub glab stands in for the real one (no network here)
+mkdir -p ~/.local/bin
+cat > ~/.local/bin/glab <<'EOF'
+#!/bin/sh
+echo "glab $*" >> /tmp/glab.log
+case "$1 $2" in "auth status") echo "  ✓ Logged in to gitlab.example.invalid as tester" ;; esac
+EOF
+chmod +x ~/.local/bin/glab
+printf 'Test User\nl@example.invalid\n2\ngitlab.example.invalid\n\n1\n\n\n\ny\n' > /tmp/in3
+tty_feed /tmp/in3 rig git add lab
+check "gitlab: key uploaded with glab for login and signing" 'grep -q "ssh-key add $HOME/.ssh/id_ed25519_lab.pub --title .* --usage-type auth_and_signing" /tmp/glab.log'
+check "gitlab: account user recorded" 'grep -q "^cli_user=tester$" ~/.config/git/identities/lab.meta'
+rm ~/.local/bin/glab
+
+# --- git: a Codeberg-style account selects and installs tea; its login fails here, so rig falls back
+printf 'Test User\ng@example.invalid\n3\ngit.example.invalid\n\n1\n\n\n\n@sleep 90\ntok\n@sleep 5\n\n' > /tmp/in4
+tty_feed /tmp/in4 rig git add forge
+check "gitea: tea item selected and installed" 'grep -q "\"gitea\"" ~/.config/chezmoi/chezmoi.toml && command -v tea >/dev/null'
+check "gitea: falls back to pasting the key" 'grep -q "add it by hand instead" /tmp/feed.out && grep -q "git.example.invalid/user/settings/keys" /tmp/feed.out' || tail -20 /tmp/feed.out
+check "gitea: account written" '[[ -f ~/.config/git/identities/forge.gitconfig ]]'
 
 mkdir -p ~/Projects/x ~/Projects/second/y /tmp/z /tmp/elsewhere
 for d in ~/Projects/x ~/Projects/second/y /tmp/z /tmp/elsewhere; do git -C $d init -q; done
