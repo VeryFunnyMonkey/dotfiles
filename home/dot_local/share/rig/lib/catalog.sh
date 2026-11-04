@@ -5,6 +5,19 @@
 CATALOG=''   # category \t id \t name \t description \t status
 PROFILES=''  # name \t description \t ids
 
+# Render a template as if the selection were already this (the installer's
+# choices before they're saved): availability and includes follow it.
+selection_json() { local x out=''; for x in $1; do out+="${out:+,}\"$x\""; done; printf '{"selected":[%s]}' "$out"; }
+cz_tmpl_with() { chezmoi execute-template --source "$(src_dir)" --override-data "$(selection_json "$1")" "$2"; }
+catalog_refresh() { CATALOG=$(cz_tmpl_with "$1" '{{ includeTemplate "catalog-tsv" . }}' | sed '/^$/d'); }
+# Items a selection brings in through includes: (not chosen themselves).
+included_by() { # selection -> ids
+  local all x out=''
+  all=$(cz_tmpl_with "$1" '{{ (includeTemplate "enabled" . | fromJson).selected | join " " }}')
+  for x in $all; do in_list "$x" "$1" || out+="${out:+ }$x"; done
+  printf '%s' "$out"
+}
+
 load_catalog() {
   [[ -n $CATALOG ]] || CATALOG=$(cz_tmpl '{{ includeTemplate "catalog-tsv" . }}' | sed '/^$/d')
   [[ -n $PROFILES ]] || PROFILES=$(cz_tmpl '{{ includeTemplate "profiles-tsv" . }}' | sed '/^$/d')

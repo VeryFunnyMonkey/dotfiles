@@ -47,6 +47,8 @@ review() { # old new -> prints the change; returns 1 if nothing changed
   if [[ -n $add ]]; then say "  ${G}+ add:${N}    $(names_of "$add")"; fi
   if [[ -n $del ]]; then say "  ${R}- remove:${N} $(names_of "$del")"; fi
   if [[ -z $add && -z $del ]]; then say "  no item changes"; fi
+  local inc; inc=$(included_by "$new")
+  if [[ -n $inc ]]; then say "  ${G}+ included:${N} $(names_of "$inc") ${DIM}(with the items above)${N}"; fi
   for x in $skip; do say "  ${DIM}skipped here: $(item_name "$x"): $(item_status "$x")${N}"; done
   say "  ${DIM}core (always): zsh, tmux, neovim, git, fzf, ripgrep, fd, gum, build tools${N}"
 }
