@@ -281,6 +281,9 @@ cmd_preview() { # kind name path
 }
 left_pane() { local a; a=$(agent_cmd 2>/dev/null || true); if [[ -n $a ]]; then printf 'your agent (%s)' "$a"; else printf 'a shell (no agent set: dev agent set <cmd>)'; fi; }
 PICK_COLORS='bg+:#3c3836,bg:-1,hl:#83a598,fg:#ebdbb2,header:#a89984,info:#fabd2f,pointer:#8ec07c,prompt:#fabd2f,hl+:#83a598,border:#504945'
+# The preview fits the space: beside the list when wide, below it when tall
+# enough, hidden when small (ctrl-/ toggles it). Re-checked on every resize.
+PREVIEW_FIT='if [ "$FZF_COLUMNS" -ge 100 ]; then echo "change-preview-window:right,45%,border-left,wrap,noinfo"; elif [ "$FZF_LINES" -ge 24 ]; then echo "change-preview-window:down,40%,border-top,wrap,noinfo"; else echo "change-preview-window:hidden"; fi'
 # options spelled out, so it looks the same in a tmux popup as in a shell
 pick() { fzf --height=100% --layout=reverse --border=none --info=hidden --no-scrollbar --gutter=' ' --color="$PICK_COLORS" "$@"; }
 
@@ -300,9 +303,10 @@ cmd_ls() {
     # ranked by match; equal matches keep list order (projects, then shallow folders)
     out=$(picker_items | pick --ansi --delimiter='\t' --with-nth=1 --tiebreak=index \
           --prompt='project> ' --print-query --bind 'enter:accept-or-print-query' \
-          --header=$'Projects first, then every folder under ~ (type to filter, or type a path)\nenter open · ctrl-x close · ctrl-e/ctrl-n workspace file · esc' \
+          --header=$'Projects, then every folder in ~ (or type a path)\nenter open · ^x close · ^e/^n workspace · ^/ preview' \
           --header-first \
-          --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo,<44(down,35%,border-top,wrap,noinfo)' \
+          --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo' \
+          --bind "start,resize:transform:$PREVIEW_FIT" --bind 'ctrl-/:toggle-preview' \
           --expect=ctrl-e,ctrl-x,ctrl-n) || return 0
     query=$(sed -n 1p <<<"$out"); key=$(sed -n 2p <<<"$out"); line=$(sed -n 3p <<<"$out")
     # a typed path wins over whatever it happened to match
