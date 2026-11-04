@@ -9,23 +9,34 @@
 APPLIED() { printf '%s/applied-settings' "$RIG_STATE"; }
 UNSET='<unset>'
 
+# Values can contain tabs (KDE separates two shortcuts with one), but rig's
+# lists are tab-separated: inside rig a tab is written as a literal \t.
+tab_enc() { printf '%s' "${1//$'\t'/\\t}"; }
+tab_dec() { printf '%s' "${1//\\t/$'\t'}"; }
+
+kde_groups() { local g; IFS='/' read -ra g <<<"$1"; local x; for x in "${g[@]}"; do printf -- '--group\n%s\n' "$x"; done; }
+
 setting_read() { # kind id type
-  local kind=$1 id=$2 v=''
+  local kind=$1 id=$2 v='' f g k d
   case $kind in
-    kde) IFS='|' read -r f g k <<<"$id"; v=$(kreadconfig6 --file "$f" --group "$g" --key "$k" 2>/dev/null || true) ;;
+    kde) IFS='|' read -r f g k <<<"$id"; local -a ga; mapfile -t ga < <(kde_groups "$g")
+         v=$(tab_enc "$(kreadconfig6 --file "$f" "${ga[@]}" --key "$k" 2>/dev/null || true)") ;;
     defaults) IFS='|' read -r d k <<<"$id"; v=$(defaults read "$d" "$k" 2>/dev/null || true) ;;
-    mime) v=$(xdg-mime query default "$id" 2>/dev/null || true) ;;
+    # the explicit default in mimeapps.list (what xdg-mime default writes), not
+    # xdg-mime's resolved answer, which falls back to any app that can open it
+    mime) v=$(awk -F= -v t="$id" '/^\[/ {sec=$0} sec=="[Default Applications]" && $1==t {print $2; exit}' \
+            "${XDG_CONFIG_HOME:-$HOME/.config}/mimeapps.list" 2>/dev/null || true) ;;
     line) if grep -qxF "$4" "$HOME/$id" 2>/dev/null; then v=present; fi ;;
   esac
   printf '%s' "${v:-$UNSET}"
 }
 
 setting_write() { # kind id value type
-  local kind=$1 id=$2 val=$3 type=${4:-}
+  local kind=$1 id=$2 val=$3 type=${4:-} f g k d
   case $kind in
-    kde) IFS='|' read -r f g k <<<"$id"
-         if [[ $val == "$UNSET" ]]; then kwriteconfig6 --file "$f" --group "$g" --key "$k" --delete
-         else kwriteconfig6 --file "$f" --group "$g" --key "$k" "$val"; fi ;;
+    kde) IFS='|' read -r f g k <<<"$id"; local -a ga; mapfile -t ga < <(kde_groups "$g")
+         if [[ $val == "$UNSET" ]]; then kwriteconfig6 --file "$f" "${ga[@]}" --key "$k" --delete
+         else kwriteconfig6 --file "$f" "${ga[@]}" --key "$k" "$(tab_dec "$val")"; fi ;;
     defaults) IFS='|' read -r d k <<<"$id"
          if [[ $val == "$UNSET" ]]; then defaults delete "$d" "$k" 2>/dev/null || true
          else defaults write "$d" "$k" "-$type" "$val"; fi ;;
