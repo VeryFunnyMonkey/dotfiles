@@ -18,13 +18,15 @@
 {{-         if eq $d.desktop "kde" }}
 {{ $id }}	kde	{{ $s.file }}|{{ $s.group }}|{{ $s.key }}	{{ $s.value }}	
 {{-         end -}}
-{{-       else if eq $s.kind "defaults" }}
+{{-       else if eq $s.kind "defaults" -}}
+{{-         if eq $d.platform "darwin" }}
 {{ $id }}	defaults	{{ $s.domain }}|{{ $s.key }}	{{ $s.value }}	{{ $s.type }}
-{{-       else if eq $s.kind "mime" -}}
+{{-         end -}}
+{{-       else if and (eq $s.kind "mime") (ne $d.platform "darwin") -}}
 {{-         range $t := $s.types }}
 {{ $id }}	mime	{{ $t }}	{{ $s.desktop }}	
 {{-         end -}}
-{{-       else if eq $s.kind "line" }}
+{{-       else if and (eq $s.kind "line") (ne $d.platform "darwin") }}
 {{ $id }}	line	{{ $s.path }}	{{ $s.value }}	
 {{-       end -}}
 {{-     end -}}

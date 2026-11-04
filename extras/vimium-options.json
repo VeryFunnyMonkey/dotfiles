@@ -1,0 +1,11 @@
+{
+  "settingsVersion": "2.1.2",
+  "keyMappings": "# hjkl scroll, f link hints, J/K previous/next tab, o open, T search tabs (Vimium defaults)\nmap H goBack\nmap L goForward",
+  "searchEngines": "g: https://www.google.com/search?q=%s Google\ngh: https://github.com/search?q=%s GitHub",
+  "exclusionRules": [
+    { "pattern": "https?://docs.google.com/*", "passKeys": "" },
+    { "pattern": "https?://mail.google.com/*", "passKeys": "" }
+  ],
+  "smoothScroll": true,
+  "scrollStepSize": 60
+}

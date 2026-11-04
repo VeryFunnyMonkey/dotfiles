@@ -9,3 +9,7 @@ Library/**
 .config/ghostty
 .config/ghostty/**
 {{- end }}
+{{- if not (and (has "wm" $en.selected) (eq .chezmoi.os "darwin")) }}
+.config/aerospace
+.config/aerospace/**
+{{- end }}

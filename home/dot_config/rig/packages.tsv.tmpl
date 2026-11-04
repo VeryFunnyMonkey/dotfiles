@@ -15,7 +15,8 @@
 {{- $pairs := list -}}
 {{- range $pkg := $p.core -}}{{- $pairs = append $pairs (list $pkg "core") -}}{{- end -}}
 {{- range $id := $en.selected -}}
-{{-   range $pkg := (dig "packages" list (index $.catalog $id)) -}}
+{{-   $it := index $.catalog $id -}}
+{{-   range $pkg := concat (dig "packages" list $it) (dig (printf "packages_%s" $d.platform) list $it) -}}
 {{-     if and (eq $pkg "clipboard") $d.wsl -}}
 {{-       $pairs = append $pairs (list "win32yank" (printf "item:%s" $id)) -}}
 {{-       $pairs = append $pairs (list "wslu" (printf "item:%s" $id)) -}}

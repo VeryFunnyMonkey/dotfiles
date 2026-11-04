@@ -1,0 +1,63 @@
+# The keyboard-driven desktop: one keymap, mod = the key second from the space
+# bar (Meta on Linux, Option on macOS):
+#   mod+h/j/k/l focus · mod+shift+h/l halves, +j bottom, +k maximise · mod+1..9
+#   desktop · mod+shift+1..9 send window · mod+space launcher · mod+enter terminal
+#   mod+v clipboard history · mod+q close · mod+shift+f fullscreen
+# KDE: written into kglobalshortcutsrc (previous values restored when deselected;
+# Lock screen moves from Meta+L to Meta+Escape; Meta+1..9 stop opening taskbar
+# apps; Meta+Q stops opening the activity switcher). macOS: AeroSpace + Maccy.
+catalog:
+  wm:
+    category: terminal
+    name: Keyboard-driven desktop
+    description: "mod+hjkl windows, mod+1..9 desktops, mod+space launcher, mod+enter terminal (KDE shortcuts; AeroSpace on macOS)"
+    desktops: [kde, macos]
+    packages_darwin: [aerospace, maccy]
+    note: "needs KDE Plasma or macOS (Hyprland comes later)"
+    settings:
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Left", value: "Meta+H,Meta+Alt+Left,Switch to Window to the Left"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Down", value: "Meta+J,Meta+Alt+Down,Switch to Window Below"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Up", value: "Meta+K,Meta+Alt+Up,Switch to Window Above"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Right", value: "Meta+L,Meta+Alt+Right,Switch to Window to the Right"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window Quick Tile Left", value: "Meta+Shift+H,Meta+Left,Quick Tile Window to the Left"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window Quick Tile Bottom", value: "Meta+Shift+J,Meta+Down,Quick Tile Window to the Bottom"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window Maximize", value: "Meta+Shift+K,Meta+PgUp,Maximise Window"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window Quick Tile Right", value: "Meta+Shift+L,Meta+Right,Quick Tile Window to the Right"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window Fullscreen", value: "Meta+Shift+F,none,Make Window Fullscreen"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window Close", value: "Meta+Q,Alt+F4,Close Window"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 1", value: "Meta+1,Ctrl+F1,Switch to Desktop 1"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 1", value: "Meta+Shift+1,none,Window to Desktop 1"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 2", value: "Meta+2,Ctrl+F2,Switch to Desktop 2"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 2", value: "Meta+Shift+2,none,Window to Desktop 2"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 3", value: "Meta+3,Ctrl+F3,Switch to Desktop 3"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 3", value: "Meta+Shift+3,none,Window to Desktop 3"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 4", value: "Meta+4,Ctrl+F4,Switch to Desktop 4"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 4", value: "Meta+Shift+4,none,Window to Desktop 4"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 5", value: "Meta+5,Ctrl+F5,Switch to Desktop 5"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 5", value: "Meta+Shift+5,none,Window to Desktop 5"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 6", value: "Meta+6,Ctrl+F6,Switch to Desktop 6"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 6", value: "Meta+Shift+6,none,Window to Desktop 6"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 7", value: "Meta+7,Ctrl+F7,Switch to Desktop 7"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 7", value: "Meta+Shift+7,none,Window to Desktop 7"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 8", value: "Meta+8,Ctrl+F8,Switch to Desktop 8"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 8", value: "Meta+Shift+8,none,Window to Desktop 8"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch to Desktop 9", value: "Meta+9,Ctrl+F9,Switch to Desktop 9"}
+      - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Window to Desktop 9", value: "Meta+Shift+9,none,Window to Desktop 9"}
+      - {kind: kde, file: kglobalshortcutsrc, group: ksmserver, key: "Lock Session", value: 'Screensaver\tMeta+Escape,Screensaver\tMeta+L,Lock Session'}  # \t = KDE's separator, kept literal
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "manage activities", value: "none,Meta+Q,Show Activity Switcher"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 1", value: "none,Meta+1,Activate Task Manager Entry 1"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 2", value: "none,Meta+2,Activate Task Manager Entry 2"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 3", value: "none,Meta+3,Activate Task Manager Entry 3"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 4", value: "none,Meta+4,Activate Task Manager Entry 4"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 5", value: "none,Meta+5,Activate Task Manager Entry 5"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 6", value: "none,Meta+6,Activate Task Manager Entry 6"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 7", value: "none,Meta+7,Activate Task Manager Entry 7"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 8", value: "none,Meta+8,Activate Task Manager Entry 8"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "activate task manager entry 9", value: "none,Meta+9,Activate Task Manager Entry 9"}
+      - {kind: kde, file: kglobalshortcutsrc, group: plasmashell, key: "show-on-mouse-pos", value: "Meta+V,Meta+V,Show Clipboard Items at Mouse Position"}
+      - {kind: kde, file: kglobalshortcutsrc, group: "services/org.kde.krunner.desktop", key: _launch, value: "Meta+Space"}
+      - {kind: kde, file: kglobalshortcutsrc, group: "services/com.mitchellh.ghostty.desktop", key: _launch, value: "Meta+Return"}
+      - {kind: kde, file: kwinrc, group: Desktops, key: Number, value: "9"}
+      - {kind: kde, file: kwinrc, group: Desktops, key: Rows, value: "1"}
+      # macOS: Maccy (clipboard history) on Option+V
+      - {kind: defaults, domain: org.p0deje.Maccy, key: KeyboardShortcuts_popup, type: string, value: '{"carbonModifiers":2048,"carbonKeyCode":9}'}

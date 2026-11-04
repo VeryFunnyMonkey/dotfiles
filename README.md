@@ -95,7 +95,7 @@ rig git remove clienta
 | Category | Items |
 |---|---|
 | CLI tools | zoxide, eza, bat, delta, lazygit, jq, tealdeer |
-| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools |
+| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools, keyboard-driven desktop (KDE shortcuts / AeroSpace) |
 | TUI apps | yazi, btop, lazydocker |
 | Languages | python (pyright, ruff, uv), web (ts_ls, prettierd), ops (Ansible, YAML schemas, OpenTofu, Docker, shell), go, rust |
 | Homelab | Tailscale |

@@ -1,7 +1,8 @@
 # Installer sections, in menu order. Items live in catalog/<category>.yaml.
 # Item fields:
 #   name, description        shown in the installer
-#   packages                 logical package names (resolved per OS by packages.yaml)
+#   packages                 logical package names (resolved per OS by packages.yaml);
+#                            packages_<platform> (e.g. packages_darwin) only there
 #   platforms                where it exists: arch fedora debian darwin wsl (default: all)
 #   desktops                 only on these desktops: kde hyprland gnome macos (default: any)
 #   display                  true = needs a display (not on headless machines)
