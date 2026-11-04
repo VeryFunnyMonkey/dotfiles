@@ -12,7 +12,9 @@ local function rgb(hex) return "rgb(" .. hex:gsub("^#", "") .. ")" end
 local function run(cmd) return "desk run " .. cmd end
 
 local terminal = "ghostty"
-local mod = "SUPER"
+-- mod is Super; HYPR_MOD overrides it (e.g. ALT when running Hyprland nested
+-- in another desktop that keeps the Super shortcuts for itself)
+local mod = os.getenv("HYPR_MOD") or "SUPER"
 
 ----------------------------------------------------------------- monitors ---
 -- Every monitor at its preferred mode; set yours in local.lua.
