@@ -32,8 +32,9 @@ pkg_explicit() { # every manager in use here
 }
 
 # ------------------------------------------------------------- pacman -------
-# AUR helper if there is one (it also installs repo packages).
-pacman_helper() { if have paru; then echo paru; elif have yay; then echo yay; else echo pacman; fi; }
+# The AUR helper if there is one (it also installs and upgrades repo packages,
+# so rig update updates AUR packages too): yay, else paru, else plain pacman.
+pacman_helper() { if have yay; then echo yay; elif have paru; then echo paru; else echo pacman; fi; }
 pm_pacman_present() { pacman -Q "$1" >/dev/null 2>&1 || pacman -Qg "$1" >/dev/null 2>&1; }
 pm_pacman_install() {
   local h; h=$(pacman_helper)
@@ -45,21 +46,11 @@ pm_pacman_upgrade() { local h; h=$(pacman_helper); if [[ $h == pacman ]]; then s
 pm_pacman_explicit() { pacman -Qqen | sed 's/^/pacman\t/'; }   # repo packages (the AUR ones: pm_aur_explicit)
 
 # ------------------------------------------------------------- aur ----------
-# AUR packages, built by paru or yay. With neither, rig builds paru-bin once
-# (recorded like any package it installs, so uninstall removes it again).
+# AUR packages, built by the AUR helper. On Arch the bootstrap installs yay
+# (yay-bin) unless yay or paru is already there.
 aur_helper() {
-  if have paru; then echo paru; return 0; fi
-  if have yay; then echo yay; return 0; fi
-  info "installing paru (builds AUR packages)" >&2
-  local tmp; tmp=$(mktemp -d)
-  ledger_pkg_record pacman paru-bin paru installed
-  # build, then install only paru itself (makepkg may also build a -debug package)
-  git clone -q --depth 1 https://aur.archlinux.org/paru-bin.git "$tmp/paru-bin" >&2 &&
-    (cd "$tmp/paru-bin" && makepkg -s --noconfirm --needed >&2 &&
-      sudo_ pacman -U --noconfirm --needed "$(find . -maxdepth 1 -name 'paru-bin-[0-9]*.pkg.tar.*' | head -n1)" >&2) ||
-    { rm -rf "$tmp"; die "couldn't build paru"; }
-  rm -rf "$tmp"
-  echo paru
+  if have yay; then echo yay; elif have paru; then echo paru
+  else die "no AUR helper (yay); run: chezmoi state delete-bucket --bucket=scriptState && chezmoi apply"; fi
 }
 pm_aur_present() { pm_pacman_present "$1"; }
 pm_aur_install() { local h; h=$(aur_helper); "$h" -S --needed --noconfirm "$@"; }

@@ -26,9 +26,9 @@ check "colours rendered from theme.yaml" 'grep -q "bg = \"#282828\"" ~/.config/h
 v=$(XDG_RUNTIME_DIR=/tmp Hyprland --verify-config 2>&1 | sed -n '/Config parsing result/,$p')
 check "Hyprland accepts the config (--verify-config)" '[[ $v == *"config ok"* ]]' || echo "$v" | tail -8
 check "waybar config is valid JSON" 'grep -v "^\s*//" ~/.config/waybar/config.jsonc | jq -e . >/dev/null'
-check "Helium from the AUR (rig built paru for it)" 'pacman -Q helium-browser-bin paru-bin >/dev/null && command -v helium-browser >/dev/null'
+check "Helium from the AUR, through yay (installed by the bootstrap)" 'pacman -Q helium-browser-bin yay-bin >/dev/null && command -v helium-browser >/dev/null'
 check "links open in Helium" '[[ $(awk -F= "/^x-scheme-handler\/https=/ {print \$2}" ~/.config/mimeapps.list) == helium.desktop ]]'
-check "drift: rig's own paru isn't reported" '! rig drift 2>&1 | grep -q paru'
+check "drift: rig's own yay isn't reported" '! rig drift 2>&1 | grep -q yay'
 check "desk works" 'desk help | grep -q "desk power" && desk nightlight status | jq -e ".class == \"off\"" >/dev/null'
 check "login screen: greetd starting Hyprland through uwsm" 'grep -q "uwsm start hyprland.desktop" /etc/greetd/config.toml && grep -q "enable --now greetd.service" /tmp/systemctl.log'
 check "NetworkManager enabled for the bar's Wi-Fi" 'grep -q "enable --now NetworkManager.service" /tmp/systemctl.log'

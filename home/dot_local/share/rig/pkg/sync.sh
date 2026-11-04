@@ -94,6 +94,9 @@ pkg_update() {
 
 pkg_doctor() {
   info "packages"
+  if [[ ${RIG_NATIVE:-} == pacman ]]; then
+    if [[ $(pacman_helper) != pacman ]]; then check_ok "AUR helper: $(pacman_helper)"; else check_bad "no AUR helper (yay); the bootstrap installs it"; fi
+  fi
   local missing; missing=$(pkg_missing)
   if [[ -z $missing ]]; then check_ok "all declared packages installed"
   else while IFS=$'\t' read -r m rest; do check_bad "missing: $rest ($m)"; done <<<"$missing"; fi
@@ -123,6 +126,8 @@ pkg_cleanup() { # the package list from before
 # rig uninstall --packages: the ones rig installed (never ones already there)
 pkg_uninstall_all() {
   awk -F'\t' '$4=="installed" {print $1 "\t" $2}' "$RIG_STATE/packages.log" | pkg_remove_set
+  # the AUR helper's cache and settings, when rig installed the helper
+  if [[ $(ledger_pkg_status pacman yay-bin) == installed ]]; then rm -rf "$CACHE_HOME/yay" "$CONFIG_HOME/yay"; fi
 }
 
 # Remove "manager<TAB>name" lines. Each manager's packages go in one

@@ -162,7 +162,7 @@ While anything is mounted, the prompt shows ` ⇅ ops-server` (or ` ⇅ 3`) and 
 
 `home/.chezmoidata/packages.yaml` declares the core and the per-OS names. Where packages come from:
 
-- **Arch:** pacman (yay/paru when present)
+- **Arch:** pacman, and yay for the AUR (the bootstrap installs it unless yay or paru is there; `rig update` runs `yay -Syu`)
 - **macOS:** Homebrew
 - **Debian/Ubuntu, Fedora:** the distro for the base system only; **Homebrew on Linux** for developer tools, which the distros ship too old or not at all
 
