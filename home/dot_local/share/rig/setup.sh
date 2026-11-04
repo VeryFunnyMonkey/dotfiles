@@ -66,7 +66,11 @@ profile_exists() { [[ -n $(awk -F'\t' -v n="$1" '$1==n {print 1}' <<<"$PROFILES"
 in_list() { [[ " $2 " == *" $1 "* ]]; }
 list_add() { if in_list "$1" "$2"; then printf '%s' "$2"; else printf '%s' "${2:+$2 }$1"; fi; }
 list_del() { local out='' x; for x in $2; do [[ $x == "$1" ]] || out+="${out:+ }$x"; done; printf '%s' "$out"; }
-names_of() { local x out=''; for x in $1; do out+="${out:+, }$(item_name "$x")"; done; printf '%s' "${out:-none}"; }
+names_of() { # ids [separator]
+  local x out='' sep=${2:-, }; for x in $1; do out+="${out:+$sep}$(item_name "$x")"; done; printf '%s' "${out:-none}"; }
+# Menu rows can't contain commas: gum reads --selected (where the cursor
+# returns to) as a comma-separated list. Items are joined with " · " instead.
+menu_rows() { local r; for r in "$@"; do printf '%s\n' "${r//,/;}"; done; }
 
 # ------------------------------------------------------------- apply ----------
 # Write the new state, apply, then clean up what was deselected.
@@ -233,6 +237,7 @@ menu_git() {
     rows+=("Host CLIs: $clis" "Back")
     local head="Git: accounts (set up after the first install: rig git add)"
     if ((accounts)); then head="Git: accounts $(identities | tr '\n' ' ')"; fi
+    mapfile -t rows < <(menu_rows "${rows[@]}")
     local at; at=$(cursor_on "$pick" "${rows[@]}")
     pick=$(gum_choose --header "$head" ${at:+"$at"} "${rows[@]}" </dev/tty) || return
     case $pick in
@@ -255,7 +260,7 @@ menu_git() {
 git_clis() { # selected -> names of the selected host CLIs
   local in='' y
   for y in $1; do [[ $(item_field "$y" 1) == git && $(item_status "$y") == ok ]] && in+=" $y"; done
-  names_of "$in"
+  names_of "$in" " · "
 }
 
 cmd_setup() {
@@ -308,10 +313,11 @@ cmd_setup() {
       [[ $cid == git ]] && continue  # shown in the Git row
       local in='' y
       for y in $sel; do [[ $(item_field "$y" 1) == "$cid" && $(item_status "$y") == ok ]] && in+=" $y"; done
-      rows+=("$(printf '%-20s %s' "$cname" "$(names_of "$in")")")
+      rows+=("$(printf '%-20s %s' "$cname" "$(names_of "$in" " · ")")")
     done < <(categories)
     rows+=("$(printf '%-20s %s' Git "$(git_row) · CLIs: $(git_clis "$sel")")")
     rows+=("Save as profile…" "Review & install" "Quit")
+    mapfile -t rows < <(menu_rows "${rows[@]}")
     local at; at=$(cursor_on "$choice" "${rows[@]}")
     choice=$(gum_choose --height 20 --header "rig setup · $detected" ${at:+"$at"} "${rows[@]}" </dev/tty) || choice=Quit
     case $choice in

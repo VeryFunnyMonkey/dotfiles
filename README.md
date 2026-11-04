@@ -17,10 +17,10 @@ It installs chezmoi, prepares the package manager, clones this repo and starts *
 ```
  rig setup · arch · kde · display: wayland
    Profile              desktop
-   CLI tools            zoxide, eza, bat, delta, lazygit
-   Terminal & desktop   Ghostty, JetBrainsMono Nerd Font, Clipboard tools
+   CLI tools            zoxide · eza · bat · delta · lazygit
+   Terminal & desktop   Ghostty · JetBrainsMono Nerd Font · Clipboard tools
    TUI apps             none
-   Languages            Python, Web
+   Languages            Python · Web
    Homelab              Tailscale
    Coding agents        Claude Code
    Git                  personal (default: personal) · CLIs: GitHub CLI (gh)
