@@ -17,7 +17,6 @@ It installs chezmoi, prepares the package manager, clones this repo and starts *
 ```
  rig setup · arch · kde · display: wayland
    Profile              desktop
-   Machine              arch · kde · display: wayland
    CLI tools            zoxide, eza, bat, delta, lazygit
    Terminal & desktop   Ghostty, JetBrainsMono Nerd Font, Clipboard tools
    TUI apps             none

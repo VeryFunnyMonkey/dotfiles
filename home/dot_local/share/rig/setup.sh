@@ -283,7 +283,6 @@ cmd_setup() {
     local rows=() cid cname mod=''
     [[ -n $profile && $sel != "$(profile_ids "$profile")" ]] && mod=' (modified)'
     rows+=("$(printf '%-20s %s' Profile "${profile:-none}$mod")")
-    rows+=("$(printf '%-20s %s' Machine "$detected")")
     while IFS=$'\t' read -r cid cname; do
       [[ $cid == git ]] && continue  # shown in the Git row
       local in='' y
@@ -296,7 +295,6 @@ cmd_setup() {
     choice=$(gum choose --height 20 --header "rig setup · $detected" "${rows[@]}" </dev/tty) || choice=Quit
     case $choice in
       Profile*) local p; p=$(menu_profile); if [[ -n $p ]]; then profile=$p; sel=$(profile_ids "$p"); fi ;;
-      Machine*) gum style --border rounded --padding "0 1" "Detected: $detected" "Nothing to choose here: rig adapts installs and options to this machine." </dev/tty; sleep 2 ;;
       Git*) menu_git ;;
       "Save as profile…") save_profile "$sel" ;;
       "Review & install")
