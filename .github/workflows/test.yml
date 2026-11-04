@@ -56,8 +56,11 @@ jobs:
           - {test: podman, image: "archlinux:latest"}
     steps:
       - uses: actions/checkout@v5
-      - name: let containers use user namespaces (Ubuntu runners restrict them with AppArmor)
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - name: let containers use user namespaces and pasta (Ubuntu runners restrict them with AppArmor)
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          # the host's pasta profile also confines pasta inside containers (Podman networking)
+          for f in /etc/apparmor.d/usr.bin.passt /etc/apparmor.d/passt; do [ -f "$f" ] && sudo apparmor_parser -R "$f" || true; done
       - run: tests/run.sh ${{ matrix.test }} ${{ matrix.image }}
 
   languages:

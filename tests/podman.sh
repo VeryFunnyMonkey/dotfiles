@@ -5,9 +5,6 @@ sudo sed -i "/^$(id -un):/d" /etc/subuid /etc/subgid      # start without sub-ID
 # the runtime folder where a real login puts it (the host's AppArmor profile for
 # pasta, Podman's networking, only allows this one)
 export XDG_RUNTIME_DIR=/run/user/$(id -u); sudo mkdir -p "$XDG_RUNTIME_DIR"; sudo chown "$(id -u):$(id -g)" "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
-# no journald in a container: container logs and events go to files
-mkdir -p ~/.config/containers
-printf '[containers]\nlog_driver = "k8s-file"\n[engine]\nevents_logger = "file"\n' > ~/.config/containers/containers.conf
 pkgs | sort > /tmp/pkgs-before.txt
 install_rig --profile minimal --select podman,lazydocker --yes
 check "install ok" '[[ $? -eq 0 ]]'
@@ -19,6 +16,9 @@ sudo chmod u+s "$(command -v newuidmap)" "$(command -v newgidmap)"
 # ... and Podman's overlay storage can't sit on Docker's overlay: use vfs here
 export STORAGE_DRIVER=vfs
 podman system reset -f >/dev/null 2>&1
+# (after the reset, which deletes it) no journald in a container: container logs and events go to files
+mkdir -p ~/.config/containers
+printf '[containers]\nlog_driver = "k8s-file"\n[engine]\nevents_logger = "file"\n' > ~/.config/containers/containers.conf
 # no systemd in a container: run the Docker-compatible service by hand
 mkdir -p "$XDG_RUNTIME_DIR/podman"
 podman system service --time=0 "unix://$XDG_RUNTIME_DIR/podman/podman.sock" >/tmp/svc.log 2>&1 &
