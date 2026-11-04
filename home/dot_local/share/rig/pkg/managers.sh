@@ -80,7 +80,7 @@ pm_brew_present() {
     brew list --cask "$c" >/dev/null 2>&1 && return 0
     # installed another way (the App Store, a download): the cask's app is there,
     # so rig doesn't install over it (and, as "already there", never removes it)
-    app=$(brew info --cask "$c" 2>/dev/null | brew_cask_app)
+    app=$(brew info --cask --json=v2 "$c" 2>/dev/null | brew_cask_app)
     [[ -n $app ]] && { [[ -d /Applications/$app ]] || [[ -d $HOME/Applications/$app ]]; }
   else brew list --formula "$1" >/dev/null 2>&1; fi
 }
@@ -96,13 +96,15 @@ pm_brew_install() {
   return $rc
 }
 
-# The app a cask puts in Applications, from `brew info --cask`: its app
-# artifact, or for casks that run an installer (.pkg) instead, its name + .app.
+# The app a cask puts in Applications, from `brew info --cask --json=v2` (the
+# text output varies): its app artifact, or for casks that run an installer
+# (.pkg) instead, its name + .app.
 brew_cask_app() {
-  awk '/^==> / {sec=$0; next}
-       sec ~ /^==> Artifacts/ && /\.app( |$)/ && !app {sub(/ \(App\).*/, ""); app=$0}
-       sec ~ /^==> Name/ && !name && NF {name=$0}
-       END {if (app) print app; else if (name) print name ".app"}'
+  local j app name
+  j=$(tr -d '\n' | tr -s ' ')
+  app=$(printf '%s' "$j" | grep -o '"app": *\[ *"[^"]*"' | head -n1 | sed 's/.*"\([^"]*\)"$/\1/')
+  name=$(printf '%s' "$j" | grep -o '"name": *\[ *"[^"]*"' | head -n1 | sed 's/.*"\([^"]*\)"$/\1/')
+  if [[ -n $app ]]; then printf '%s\n' "$app"; elif [[ -n $name ]]; then printf '%s.app\n' "$name"; fi
 }
 pm_brew_remove() { brew uninstall "$@"; }
 pm_brew_search() { brew search "$@"; }
