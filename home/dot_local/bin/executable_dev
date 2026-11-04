@@ -19,7 +19,6 @@ die()  { printf '%sdev:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 have tmux || die "tmux isn't installed"
 
-is_work() { grep -qs '^RIG_WORK=true' "${XDG_CONFIG_HOME:-$HOME/.config}/rig/machine.env"; }
 
 # ------------------------------------------------------------- projects -------
 project_root() { # dir -> git toplevel (or the dir itself)
@@ -148,7 +147,7 @@ cmd_init() {
   done
   root=$(project_root "$PWD")
   [[ -f $TEMPLATES/$tmpl ]] || die "no template '$tmpl' (have: $(ls "$TEMPLATES" 2>/dev/null | tr '\n' ' '))"
-  [[ -n $where ]] || { if is_work; then where=local; else where=repo; fi; }
+  [[ -n $where ]] || where=repo
   local file
   if [[ $where == local ]]; then mkdir -p "$LOCAL_STORE"; file="$LOCAL_STORE/$(session_name "$root")"
   else file="$root/.dev"; fi
