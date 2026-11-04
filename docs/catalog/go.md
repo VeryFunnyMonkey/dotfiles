@@ -1,5 +1,5 @@
-# lang-go (off by default)
+# go
 
 Go: **gopls** (with staticcheck) and goimports + gofumpt on save. Installs Go (the **go** runtime); `GOPATH` is `~/.local/share/go`, its `bin` on PATH.
 
-`rig module enable lang-go` when you start a Go project.
+`rig add go` when you start a Go project.

@@ -1,4 +1,4 @@
-# lang-ops
+# ops
 
 For infrastructure work (the Ansible repo, Compose stacks, OpenTofu):
 

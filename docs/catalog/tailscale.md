@@ -1,4 +1,4 @@
-# homelab
+# tailscale
 
 **Tailscale**, so this machine joins the homelab tailnet. The servers are on it already; the tailnet policy stops servers reaching personal devices.
 

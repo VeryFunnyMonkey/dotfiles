@@ -1,4 +1,4 @@
-# lang-web
+# web
 
 TypeScript/JavaScript, JSON, CSS, HTML and Markdown: **ts_ls** in Neovim and **prettierd** for formatting. Needs the **node** runtime (fnm + Node LTS), which it pulls in.
 

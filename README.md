@@ -4,27 +4,39 @@ My setup for client machines (Arch, macOS, Debian/Ubuntu including WSL, Fedora):
 
 Managed with [chezmoi](https://chezmoi.io) in **symlink mode**: most files in `~` are symlinks into this repo, so edits take effect immediately. The source lives in `home/` (`.chezmoiroot`).
 
-> **Status:** Phases 1–3 (core, git accounts, `dev` workspaces, modules, agents). Ghostty, OS settings, the tutor, the `wm` module and CI come next.
+> **Status:** the installer, core, git accounts, `dev` workspaces, languages and agents are done. Ghostty's config, OS settings, the tutor, the keyboard-desktop item and CI come next.
 
 ## Set up a new machine
 
 ```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply VeryFunnyMonkey
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/VeryFunnyMonkey/dotfiles/main/install.sh)"
 ```
 
-The first question is a **preset**:
+It installs chezmoi, prepares the package manager, clones this repo and starts **the installer**, `rig setup`:
 
-| Preset | For |
-|---|---|
-| `personal-desktop` | a desktop/laptop with a GUI (this Arch/KDE PC) |
-| `work` | a work laptop (on WSL this is detected automatically) |
-| `tui` | a keyboard-driven Hyprland box |
-| `headless` | no display: a VM or a box you SSH into |
-| `custom` | asks each question |
+```
+ rig setup · arch · kde · display: wayland
+   Profile              desktop
+   Machine              arch · kde · display: wayland
+   CLI tools            zoxide, eza, bat, delta, lazygit
+   Terminal & desktop   Ghostty, JetBrainsMono Nerd Font, Clipboard tools
+   TUI apps             none
+   Languages            Python, Web
+   Homelab              Tailscale
+   Git hosting          GitHub (gh)
+   Coding agents        Claude Code
+   Git                  personal (default: personal)
+   Save as profile…
+   Review & install
+```
 
-Then it installs packages, sets zsh as your login shell, enables the SSH agent, sets up Neovim (plugins, parsers, language tools) and offers to set up your git accounts. It also asks whether you use GitHub on this machine (personal presets say yes), which decides whether `gh` is installed. Anything it's about to replace (an old `~/.zshrc`, `~/.gitconfig` etc.) is backed up first.
+Start from a **profile**, tick software per category, check the review (what gets added and removed), install. Only items that make sense on this machine are shown (no Ghostty on WSL, no clipboard tools on macOS...), and a profile listing something that doesn't apply here just skips it with the reason.
 
-Already have the repo checked out? `chezmoi init --source ~/Projects/dotfiles --apply`.
+**Profiles** are saved selections, in `home/.chezmoidata/profiles/`: `desktop`, `tui`, `headless`, `minimal`, plus any you save (**Save as profile…**, or `rig profile save <name>`); commit them to use them on other machines. None of the built-ins turn on languages or agents.
+
+Run `rig setup` again any time to change things. Without menus: `rig setup --profile desktop --select python,web --yes`.
+
+Always installed (core): zsh, tmux, Neovim, git, fzf, ripgrep, fd, gum and build tools. Then setup sets zsh as your login shell, enables the SSH agent, sets up Neovim and offers to set up your git accounts. Anything it's about to replace (an old `~/.zshrc`, `~/.gitconfig` etc.) is backed up first.
 
 ## rig
 
@@ -32,17 +44,18 @@ Already have the repo checked out? `chezmoi init --source ~/Projects/dotfiles --
 |---|---|
 | `rig doctor` | check this machine: dotfiles applied, packages, shell, SSH agent, Neovim |
 | `rig update` | update everything: dotfiles, system packages, brew, flatpak, Neovim plugins and tools |
-| `rig install <pkg> [--group g]` | install a package **and** declare it in `packages.yaml` |
-| `rig remove <pkg>` | undeclare it, and uninstall it if rig installed it |
+| `rig setup` | the installer (menus; `--profile`, `--select`, `--deselect`, `--yes` without them) |
+| `rig add <item\|pkg>` | select a catalog item, or add an extra package for this machine |
+| `rig remove <item\|pkg>` | deselect it; offers to uninstall what rig installed for it |
+| `rig profile list\|show\|use\|save` | saved selections |
+| `rig info <item>` | what an item brings |
 | `rig search <query>` | search the package managers |
 | `rig drift [--all]` | installed-but-undeclared, and declared-but-missing |
 | `rig sync` | install whatever is declared but missing |
 | `rig git add\|list\|which\|remove\|clone\|doctor` | git accounts (below) |
-| `rig module list\|info\|enable\|disable [--purge]` | opt-in modules (below) |
-| `rig agents list\|add\|remove\|default` | coding agents (below) |
+| `rig agents list\|default <name>` | coding agents, and which one `dev` starts |
 | `rig edit [file]` | edit the dotfiles, then apply |
 | `rig diff` / `rig apply` | `chezmoi diff` / `chezmoi apply` |
-| `rig profile` | re-answer the machine questions |
 | `rig reset nvim\|mason\|zsh\|chezmoi\|all` | rebuild a part that misbehaves (your files and history stay) |
 | `rig uninstall [flags] [--run]` | put the machine back as it was; a dry run unless `--run` |
 
@@ -69,48 +82,31 @@ rig git list           # accounts and their folders
 rig git which          # which account this repo uses
 rig git clone clienta git@github.com:org/repo   # clone through that account, into its folder
 rig git doctor         # test each account's connection
+rig git default personal   # or none
 rig git remove clienta
 ```
 
 - **Hosts:** GitHub is automatic: `gh` logs you in through the browser and uploads the key for login and signing. GitLab, Azure DevOps, Bitbucket and other servers: the key is copied to your clipboard and the settings page opens. "No hosting" gives a local identity only.
-- **Which account a repo uses:** repos inside an account's folder (`~/Projects` for personal, `~/Work/<name>` for others), or cloned through its alias (`git@github.com-<name>:...`). On personal machines the default account covers everything else; on work machines there is no default, so git refuses to commit until a repo matches an account. Wrong-client commits can't happen.
+- **Which account a repo uses:** repos inside an account's folder (`~/Projects` for the first, `~/Projects/<name>` for others), or cloned through its alias (`git@github.com-<name>:...`). Everything else uses the **default account**, picked in `rig setup` (Git) or with `rig git default <account|none>`. With **none**, git refuses to commit until a repo matches an account, so nothing goes out under the wrong one.
 - **GitHub on this machine:** adding a GitHub account installs `gh` if needed; removing the last one offers to remove it.
 
-## Modules
+## The catalog
 
-Opt-in pieces a machine may or may not want. The preset picks them at setup; change them any time:
+| Category | Items |
+|---|---|
+| CLI tools | zoxide, eza, bat, delta, lazygit, jq, tealdeer |
+| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools |
+| TUI apps | yazi, btop, lazydocker |
+| Languages | python (pyright, ruff, uv), web (ts_ls, prettierd), ops (Ansible, YAML schemas, OpenTofu, Docker, shell), go, rust |
+| Homelab | Tailscale |
+| Git hosting | GitHub (gh) |
+| Coding agents | Claude Code, Copilot CLI, Codex CLI, Gemini CLI, OpenCode |
 
-| Module | What it brings | Default |
-|---|---|---|
-| `lang-python` | pyright, ruff (lint/format/imports), uv | personal, work, tui |
-| `lang-web` | ts_ls, prettierd (TS/JS/JSON/CSS/HTML/Markdown) | personal, work, tui |
-| `lang-ops` | Ansible, YAML with Compose/Actions schemas, OpenTofu, Docker, shell (shellcheck, shfmt) | personal, work, tui |
-| `lang-go` | gopls, goimports, gofumpt; Go toolchain | off |
-| `lang-rust` | rust-analyzer (clippy), rustfmt; rustup | off |
-| `homelab` | Tailscale (joins the tailnet) | personal, tui, headless |
-| `wm` | keyboard-driven desktop (coming) | off |
-
-```sh
-rig module list
-rig module enable lang-go
-rig module disable lang-rust --purge   # --purge also deletes toolchains rig installed
-rig module info lang-ops
-```
-
-Neovim picks up the language servers, formatters and parsers of whatever is enabled. Modules that need Node, Go or Rust pull in that **runtime** (fnm + Node LTS, Go, rustup); it's removed with `--purge` once nothing needs it. Guides: [docs/modules](docs/modules).
+Neovim picks up the language servers, formatters and parsers of the selected languages. Items that need Node, Go or Rust pull in that **runtime** (fnm + Node LTS, Go, rustup), and deselecting the last item that needs it offers to delete it. Item guides: [docs/catalog](docs/catalog). The catalog itself: `home/.chezmoidata/catalog/`.
 
 ## Coding agents
 
-Setup asks which to install (none, one or several): **Claude Code**, **GitHub Copilot CLI**, **OpenAI Codex CLI**, **Gemini CLI**, **OpenCode**. The first one (or the one you pick) is what `dev` starts.
-
-```sh
-rig agents list
-rig agents add codex
-rig agents remove gemini
-rig agents default claude
-```
-
-rig installs them through each vendor's official route and updates them with `rig update`. Logins, API keys and agent settings are yours: sign in on first run (e.g. Copilot with a work account).
+Tick them in `rig setup` (Coding agents), or `rig add codex`. When several are selected, setup asks which one `dev` starts (`rig agents default <name>` changes it). rig installs them through each vendor's official route and updates them with `rig update`; deselecting one uninstalls it if rig installed it. Logins, API keys and agent settings are yours.
 
 ## dev: workspaces
 
@@ -125,7 +121,7 @@ dev --agent codex       # a different agent this time; --no-agent for a plain sh
 dev wt feature-x        # a worktree + window for parallel work; dev wt ls, dev wt rm feature-x
 ```
 
-A workspace file (`.dev`, or kept on the machine with `dev init --local`, the default on work machines so client repos never get one):
+A workspace file (`.dev` in the repo, or kept on this machine with `dev init --local`, for repos you'd rather not add it to):
 
 ```ini
 [code] main-vertical
@@ -141,13 +137,13 @@ Each `[name]` is a window, with an optional tmux layout after it. Each line is a
 
 ## Packages
 
-`home/.chezmoidata/packages.yaml` declares everything. Where packages come from:
+`home/.chezmoidata/packages.yaml` declares the core and the per-OS names. Where packages come from:
 
 - **Arch:** pacman (yay/paru when present)
 - **macOS:** Homebrew
 - **Debian/Ubuntu, Fedora:** the distro for the base system only; **Homebrew on Linux** for developer tools, which the distros ship too old or not at all
 
-`rig install` / `rig remove` edit the file for you; commit it afterwards.
+`packages.yaml` holds the core list and how names map per OS; everything else comes from the catalog. A package just for this machine: `rig add <pkg>` (kept in this machine's config).
 
 ## What's in it
 

@@ -4,15 +4,17 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 
 ## Layout
 - `home/` is the chezmoi source (`.chezmoiroot`); chezmoi runs in **symlink mode**, so plain files in `~` are symlinks into the repo. Templates (`*.tmpl`) and executables are copies: after editing them, `chezmoi apply`.
-- `home/.chezmoi.toml.tmpl`: the machine profile (preset, work, session, WSL, modules).
-- `home/.chezmoidata/`: `packages.yaml` (the declared packages), `theme.yaml` (gruvbox), `modules/*.yaml` (module manifests: packages, needs, nvim servers/formatters/parsers), `runtimes.yaml`, `agents.yaml`. `home/.chezmoitemplates/enabled` works out a machine's modules, runtimes and agents.
+- `home/.chezmoi.toml.tmpl`: chezmoi's config for the machine. It asks nothing: `rig setup` writes profile/selected/extra_packages/agent_default; detection (`.chezmoitemplates/detect`) adds wsl/display/desktop.
+- `home/.chezmoidata/`: `catalog/*.yaml` (every selectable item, by category: packages, platforms, needs, nvim), `profiles/*.yaml` (saved selections), `packages.yaml` (core + per-OS names), `runtimes.yaml`, `theme.yaml`. `.chezmoitemplates/enabled` works out what applies on this machine (selected, skipped, runtimes, agents).
 - `home/.chezmoiscripts/`: setup steps (bootstrap, backup ledger, packages, shell, ssh agent, nvim).
-- `home/dot_local/bin/executable_rig`: the `rig` command; its libraries in `home/dot_local/share/rig/`: `git.sh` (git accounts), `modules.sh` (modules, runtimes, homelab), `agents.sh` (coding agents).
-- `docs/modules/`: one guide per module (`rig module info <name>`).
+- `home/dot_local/bin/executable_rig`: the `rig` command; its libraries in `home/dot_local/share/rig/` (found next to rig, so it runs from the repo too): `setup.sh` (installer, add/remove, profiles), `git.sh` (git accounts), `runtimes.sh` (runtimes, Tailscale), `agents.sh` (coding agents).
+- `install.sh`: the bootstrap one-liner for a new machine.
+- `docs/catalog/`: guides for catalog items (`rig info <item>`).
 - `home/dot_local/bin/executable_dev`: `dev` (tmux workspaces); templates in `home/dot_config/dev/templates/`.
 - `home/dot_config/`: zsh, tmux, nvim, git, lazygit, rig's rendered data.
 
 ## Rules
+- **New software is a catalog item** (category, description, platforms), not a hard-coded package. Only rig's own dependencies go in core.
 - **Every package earns its place.** Prefer what's already chosen; don't add tools that duplicate one.
 - **Everything rig changes must be undoable.** New system changes get a ledger entry in `~/.local/state/rig/system.log` (kind, key, previous value) and a matching revert in `system_revert_all` in `rig`. New files chezmoi takes over are backed up by `run_before_05-backup.sh`.
 - Symlink mode makes edits live on the owner's machine: a plain file that starts using a *new* file breaks until `chezmoi apply` creates it. Add the new file and apply in the same step (or `chezmoi apply --exclude=scripts`).
