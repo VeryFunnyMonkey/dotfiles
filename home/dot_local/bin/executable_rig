@@ -97,10 +97,22 @@ pkg_install_cmd() { # manager names... (names may contain spaces: several packag
       else "$h" -S --needed --noconfirm "${names[@]}"; fi ;;
     apt) sudo_ env DEBIAN_FRONTEND=noninteractive apt-get install -y "${names[@]}" ;;
     dnf) sudo_ dnf install -y "${names[@]}" ;;
-    brew) brew install "${names[@]}" ;;
+    brew) brew_install "${names[@]}" ;;
     download) download_install "${names[@]}" ;;
   esac
 }
+# brew's --cask applies to the whole command: formulas and casks go separately
+brew_install() {
+  local f=() c=() rc=0
+  while (($#)); do
+    if [[ $1 == --cask ]]; then c+=("$2"); shift 2; else f+=("$1"); shift; fi
+  done
+  if ((${#f[@]})); then brew install "${f[@]}" || rc=1; fi
+  if ((${#c[@]})); then brew install --cask "${c[@]}" || rc=1; fi
+  return $rc
+}
+# tac isn't on macOS; tail -r is BSD's
+tac_() { if have tac; then tac "$@"; else tail -r "$@"; fi; }
 
 pkg_remove_cmd() {
   local m=$1; shift
@@ -478,7 +490,7 @@ cmd_uninstall() {
 
   if ((packages)); then
     info "uninstalling packages rig added"
-    tac "$RIG_STATE/packages.log" | awk -F'\t' '$4=="installed"' | while IFS=$'\t' read -r m n _ _ _; do
+    tac_ "$RIG_STATE/packages.log" | awk -F'\t' '$4=="installed"' | while IFS=$'\t' read -r m n _ _ _; do
       pkg_present "$m" "$n" && { pkg_remove_cmd "$m" "$n" || warn "couldn't remove $n"; }
     done
   fi
@@ -535,7 +547,7 @@ backup_restore_all() {
       *) mkdir -p "$(dirname "$dst")"; rm -rf "$dst"; cp -aP "$src" "$dst" ;;
     esac
     ok "restored ~/$rel"
-  done < <(tac "$RIG_STATE/backup.manifest")
+  done < <(tac_ "$RIG_STATE/backup.manifest")
 }
 
 # system.log: kind \t key \t previous \t date
@@ -569,7 +581,7 @@ system_revert_all() {
         rm -f "$HOME/.ssh/config.d/00-rig"; rmdir "$HOME/.ssh/config.d" 2>/dev/null || true ;;
       *) warn "unknown system change '$kind $key'; skipped" ;;
     esac
-  done < <(tac "$RIG_STATE/system.log")
+  done < <(tac_ "$RIG_STATE/system.log")
 }
 
 chezmoi_forget() {

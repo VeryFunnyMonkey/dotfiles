@@ -136,6 +136,6 @@ settings_revert_all() {
   while IFS=$'\t' read -r k i p t it; do
     [[ -n $k ]] || continue
     setting_revert "$k" "$i" "$p" "$t" && ok "restored $k $i"
-  done < <(tac "$(APPLIED)")
+  done < <(tac_ "$(APPLIED)")
   : >"$(APPLIED)"
 }

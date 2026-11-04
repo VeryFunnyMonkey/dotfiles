@@ -72,6 +72,7 @@ rclone_pid() { pgrep -f "rclone (nfs)?mount .* $1( |$)" 2>/dev/null | head -n1 |
 ssh_ready() { # name
   local -a a; mapfile -t a < <(ssh_args "$(host_target "$1")")
   ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new "${a[@]}" true 2>/dev/null && return 0
+  { : </dev/tty; } 2>/dev/null || return 1   # no terminal to ask in
   printf '  %s: unlocking your key / accepting the host key (once)\n' "$1"
   ssh -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new "${a[@]}" true </dev/tty || return 1
 }
