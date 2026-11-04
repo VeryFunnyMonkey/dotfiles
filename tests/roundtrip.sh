@@ -29,7 +29,7 @@ check "doctor: nvim healthy" '[[ $doc == *"checkhealth: no errors"* ]]'
 check "uninstall ok" '[[ $? -eq 0 ]]'
 find . -path ./dotfiles -prune -o -print | sort | grep -v '^./rig-uninstall-' > /tmp/after.txt
 pkgs | sort > /tmp/pkgs-after.txt
-check "packages identical to before" '[[ "$(cat /tmp/pkgs-before.txt)" == "$(cat /tmp/pkgs-after.txt)" ]]' || comm -3 /tmp/pkgs-before.txt /tmp/pkgs-after.txt | head
+check "packages identical to before" '[[ "$(cat /tmp/pkgs-before.txt)" == "$(cat /tmp/pkgs-after.txt)" ]]' || diff /tmp/pkgs-before.txt /tmp/pkgs-after.txt | cat -A | head -20
 check "/etc/shells identical" '[[ "$(cat /tmp/etc-shells-before)" == "$(cat /etc/shells)" ]]'
 check "login shell restored" '[[ $(getent passwd $(id -un) | cut -d: -f7) == "$shell_before" ]]'
 check "original files byte-for-byte" 'sha256sum -c /tmp/sums-before >/dev/null'
