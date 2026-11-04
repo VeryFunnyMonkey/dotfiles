@@ -1,0 +1,35 @@
+{{- /* The OS settings for this machine's selected items, one per line:
+       item TAB kind TAB id TAB value TAB extra
+       kde:      id = file|group|key
+       defaults: id = domain|key, extra = type
+       mime:     id = mime type, value = desktop file
+       line:     id = path (relative to ~), value = the line
+     Restarts: "item TAB restart TAB app" */ -}}
+{{- $d := includeTemplate "detect" . | fromJson -}}
+{{- $en := includeTemplate "enabled" . | fromJson -}}
+{{- range $id := $en.selected -}}
+{{-   $it := index $.catalog $id -}}
+{{-   $req := dig "requires" list $it -}}
+{{-   $ok := true -}}
+{{-   range $r := $req -}}{{- if not (has $r $en.selected) -}}{{- $ok = false -}}{{- end -}}{{- end -}}
+{{-   if $ok -}}
+{{-     range $s := (dig "settings" list $it) -}}
+{{-       if eq $s.kind "kde" -}}
+{{-         if eq $d.desktop "kde" }}
+{{ $id }}	kde	{{ $s.file }}|{{ $s.group }}|{{ $s.key }}	{{ $s.value }}	
+{{-         end -}}
+{{-       else if eq $s.kind "defaults" }}
+{{ $id }}	defaults	{{ $s.domain }}|{{ $s.key }}	{{ $s.value }}	{{ $s.type }}
+{{-       else if eq $s.kind "mime" -}}
+{{-         range $t := $s.types }}
+{{ $id }}	mime	{{ $t }}	{{ $s.desktop }}	
+{{-         end -}}
+{{-       else if eq $s.kind "line" }}
+{{ $id }}	line	{{ $s.path }}	{{ $s.value }}	
+{{-       end -}}
+{{-     end -}}
+{{-     range $r := (dig "restart" list $it) }}
+{{ $id }}	restart	{{ $r }}		
+{{-     end -}}
+{{-   end -}}
+{{- end }}

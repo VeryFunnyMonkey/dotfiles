@@ -1,0 +1,61 @@
+# OS settings: each item is a small group of tweaks. rig applies them, records
+# the previous value of each, and puts it back when you deselect the item (or
+# uninstall). Setting kinds:
+#   kde      kwriteconfig6: file, group, key, value          (KDE only)
+#   defaults macOS defaults: domain, key, type, value; restart: an app to restart
+#   mime     xdg-mime default: desktop file for each type     (Linux desktops)
+#   line     a line in a file (e.g. ~/.config/xdg-terminals.list)
+catalog:
+  terminal-default:
+    category: settings
+    name: Ghostty as default terminal
+    description: "'Open terminal here', Dolphin's F4 and terminal apps use Ghostty"
+    platforms: [arch, fedora, debian]
+    display: true
+    requires: [ghostty]
+    settings:
+      - {kind: kde, file: kdeglobals, group: General, key: TerminalApplication, value: ghostty}
+      - {kind: kde, file: kdeglobals, group: General, key: TerminalService, value: com.mitchellh.ghostty.desktop}
+      - {kind: line, path: ".config/xdg-terminals.list", value: com.mitchellh.ghostty.desktop}
+    note: "macOS has no default-terminal setting: keep Ghostty in the Dock"
+  text-in-nvim:
+    category: settings
+    name: Open text files in Neovim
+    description: "text, Markdown, JSON, YAML and code files open in nvim (in your terminal)"
+    platforms: [arch, fedora, debian]
+    display: true
+    settings:
+      - {kind: mime, desktop: nvim.desktop, types: [text/plain, text/markdown, text/x-markdown, application/json, application/x-yaml, text/x-python, text/x-shellscript, application/x-shellscript, text/x-lua, application/toml]}
+    note: "on macOS, file handlers are set per app in Finder (Get Info, Open with)"
+  mac-dock:
+    category: settings
+    name: Dock on the left, hidden, instant
+    description: "Dock moves left, hides itself, and appears with no delay or animation"
+    platforms: [darwin]
+    settings:
+      - {kind: defaults, domain: com.apple.dock, key: orientation, type: string, value: left}
+      - {kind: defaults, domain: com.apple.dock, key: autohide, type: bool, value: "true"}
+      - {kind: defaults, domain: com.apple.dock, key: autohide-delay, type: float, value: "0"}
+      - {kind: defaults, domain: com.apple.dock, key: autohide-time-modifier, type: float, value: "0"}
+      - {kind: defaults, domain: com.apple.dock, key: show-recents, type: bool, value: "false"}
+    restart: [Dock]
+  mac-finder:
+    category: settings
+    name: Finder for people who use a terminal
+    description: "show all file extensions, the path bar and hidden files; list view by default"
+    platforms: [darwin]
+    settings:
+      - {kind: defaults, domain: NSGlobalDomain, key: AppleShowAllExtensions, type: bool, value: "true"}
+      - {kind: defaults, domain: com.apple.finder, key: ShowPathbar, type: bool, value: "true"}
+      - {kind: defaults, domain: com.apple.finder, key: AppleShowAllFiles, type: bool, value: "true"}
+      - {kind: defaults, domain: com.apple.finder, key: FXPreferredViewStyle, type: string, value: Nlsv}
+    restart: [Finder]
+  mac-keys:
+    category: settings
+    name: Fast key repeat
+    description: "holding a key repeats it quickly (hjkl in nvim) instead of showing accents; takes effect after logging out"
+    platforms: [darwin]
+    settings:
+      - {kind: defaults, domain: NSGlobalDomain, key: ApplePressAndHoldEnabled, type: bool, value: "false"}
+      - {kind: defaults, domain: NSGlobalDomain, key: KeyRepeat, type: int, value: "2"}
+      - {kind: defaults, domain: NSGlobalDomain, key: InitialKeyRepeat, type: int, value: "15"}

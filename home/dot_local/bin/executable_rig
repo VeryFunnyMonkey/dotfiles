@@ -442,6 +442,11 @@ cmd_uninstall() {
     git_uninstall_identities "$HOME/rig-uninstall-keys-$(date +%Y%m%d-%H%M%S)"
   fi
 
+  if declare -F settings_revert_all >/dev/null; then
+    info "restoring OS settings"
+    settings_revert_all
+  fi
+
   info "reverting system changes"
   system_revert_all
 
@@ -557,6 +562,7 @@ ${B}rig${N}: this machine's setup
   ${B}rig remove${N} <item|pkg>      deselect it (uninstalls what rig installed for it)
   ${B}rig profile${N} list|show|use|save   saved selections (the presets)
   ${B}rig info${N} <item>            what an item brings (its guide)
+  ${B}rig settings${N} [list|sync --dry-run]   the OS settings your selected items apply
   ${B}rig sync${N}                   install whatever is selected but missing
   ${B}rig search${N} <query>         search the package managers
   ${B}rig drift${N} [--all]          installed-but-undeclared, declared-but-missing
@@ -573,7 +579,7 @@ ${B}rig${N}: this machine's setup
 EOF
 }
 
-for _lib in git runtimes agents setup; do
+for _lib in git runtimes agents setup settings; do
   # shellcheck source=/dev/null
   if [[ -r $RIG_LIB/$_lib.sh ]]; then source "$RIG_LIB/$_lib.sh"; fi
 done
@@ -595,6 +601,7 @@ main() {
     apply) chezmoi apply "$@" ;;
     profile|profiles) cmd_profile_cmd "$@" ;;
     info) cmd_info "$@" ;;
+    settings) cmd_settings "$@" ;;
     reset) cmd_reset "$@" ;;
     git) cmd_git "$@" ;;
     runtimes) cmd_runtimes "$@" ;;

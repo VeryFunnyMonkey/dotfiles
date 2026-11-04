@@ -8,6 +8,9 @@
 #   needs                    runtimes: node go rust (runtimes.yaml)
 #   nvim                     servers, system_servers, mason, formatters, parsers
 #   note                     shown in the review when the item is skipped here
+#   requires                 other items this one only makes sense with
+#   settings                 OS settings it applies (see catalog/settings.yaml); rig
+#                            records each previous value and restores it on deselect
 categories:
   - {id: cli, name: "CLI tools"}
   - {id: terminal, name: "Terminal & desktop"}
@@ -16,3 +19,4 @@ categories:
   - {id: homelab, name: "Homelab"}
   - {id: git, name: "Git hosting"}
   - {id: agents, name: "Coding agents"}
+  - {id: settings, name: "OS settings"}
