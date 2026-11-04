@@ -303,6 +303,12 @@ cmd_doctor() {
     bad "no git accounts yet (rig git add)"; ((fails++)) || true
   fi
 
+  info "servers (srv)"
+  if have srv; then
+    local mnt; mnt=$(srv _status 2>/dev/null || true)
+    ok "mounted: ${mnt:-none}"
+  fi
+
   info "runtimes"
   ok "${RIG_RUNTIMES:-none needed}"
   if [[ " $RIG_SELECTED " == *" tailscale "* ]] && have tailscale; then
@@ -399,7 +405,7 @@ cmd_uninstall() {
   say "  1. remove $(wc -l <<<"$managed" | tr -d ' ') managed files and put back $(backup_count) original(s) from the first apply"
   say "  2. revert $(wc -l <"$RIG_STATE/system.log" | tr -d ' ') system change(s):"
   sed 's/^/       /' "$RIG_STATE/system.log"
-  say "  3. delete rig's data: zsh plugins, nvim plugins/parsers/Mason, chezmoi config and state"
+  say "  3. unmount servers (srv), then delete rig's data: zsh plugins, nvim plugins/parsers/Mason, srv's hosts, chezmoi config and state"
   if ((packages)); then
     say "  4. uninstall packages rig installed (not ones that were already there):"
     awk -F'\t' '$4=="installed" {print "       " $1 ": " $2}' "$RIG_STATE/packages.log"
@@ -418,6 +424,11 @@ cmd_uninstall() {
     printf '%s\n' "$RIG_STATE" "$RIG_CONFIG" "${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi"
   } | sed "s#^$HOME/##" | while IFS= read -r p; do [[ -e $HOME/$p || -L $HOME/$p ]] && printf '%s\n' "$p"; done \
     | tar -czf "$archive" -C "$HOME" -T - 2>/dev/null || warn "archive incomplete"
+
+  if have srv || [[ -x $HOME/.local/bin/srv ]]; then
+    info "unmounting servers"
+    "$HOME/.local/bin/srv" umount --all --force >/dev/null 2>&1 || true
+  fi
 
   info "removing managed files"
   while IFS= read -r f; do [[ -n $f ]] && { [[ -e $f || -L $f ]] && rm -f "$f"; }; done <<<"$managed"
@@ -458,6 +469,7 @@ cmd_uninstall() {
 
   info "deleting rig's data (keeping your shell history and nvim history/undo)"
   local cache="${XDG_CACHE_HOME:-$HOME/.cache}" state="${XDG_STATE_HOME:-$HOME/.local/state}"
+  rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/srv" "$cache/srv" "$state/srv"
   rm -rf "$data/zsh/plugins" "$data/nvim/site/pack/core" "$data/nvim/site/parser" \
     "$data/nvim/site/parser-info" "$data/nvim/site/queries" "$data/nvim/mason" \
     "$cache/zsh/zcompdump"* "$cache/nvim/mason-registry-update" "$cache/tree-sitter" \

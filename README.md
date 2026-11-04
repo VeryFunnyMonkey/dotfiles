@@ -135,6 +135,27 @@ shell
 
 Each `[name]` is a window, with an optional tmux layout after it. Each line is a pane's command: `agent` is your agent, `shell` a plain shell, anything else is typed into the pane (you're back at a prompt when it stops).
 
+## srv: your servers as folders
+
+`srv` mounts a server's home folder at `~/Servers/<host>`, over SSH: open its files in nvim, point an agent at it, unmount when done.
+
+```sh
+srv                      # picker (also prefix m in tmux, Alt-m): enter mounts/unmounts
+srv mount ops-server     # mount the home folder (srv mount ops-server /opt/stacks for another path)
+srv dev ops-server       # mount it and open a dev workspace there: your agent + nvim on the server's files
+srv ssh ops-server       # a shell there (srv ssh ops-server -- <command> for one command)
+srv umount ops-server    # or --all; --force for a stuck mount
+srv add                  # add a host: name, user@host[:port], folder
+srv import-homelab       # the servers from ~/Projects/ansible's inventory
+```
+
+While anything is mounted, the prompt shows ` ⇅ ops-server` (or ` ⇅ 3`) and so does the tmux status bar.
+
+- **How:** rclone over SSH, using your normal ssh (keys, the agent, `~/.ssh/config`, known_hosts). macOS mounts with `rclone nfsmount` (its own NFS client: no macFUSE, nothing to change in System Settings or Recovery); Linux with `rclone mount` (FUSE, built into the kernel, no root). Mounts last until you unmount, log out or reboot.
+- **Homelab:** with Tailscale selected, setup offers to import every server from the ansible inventory (right users, pve by its LAN address). The list lives on the machine only (`~/.config/srv/hosts`), never in this repo; re-importing only touches the imported entries.
+- **With agents:** `srv dev <host>` runs your agent with the server's home as its folder, so it edits the server's files directly. It works as the login user, so root-owned files (`/etc`, system config) can't be changed through the mount; commands still run over ssh (`srv ssh <host> -- <cmd>`, which the agent can use too). `git` and big searches over a mount are slow: run those on the server.
+- **macOS:** not yet verified on a real Mac.
+
 ## Packages
 
 `home/.chezmoidata/packages.yaml` declares the core and the per-OS names. Where packages come from:
@@ -148,7 +169,7 @@ Each `[name]` is a window, with an optional tmux layout after it. Each line is a
 ## What's in it
 
 - **zsh** (`~/.config/zsh`, via `ZDOTDIR`): emacs keys, shared history in `~/.local/state/zsh`, fzf (Ctrl-R / Ctrl-T / Alt-C), zoxide (`z`), autosuggestions, syntax highlighting, a git-aware prompt. Machine-local additions: `~/.config/zsh/local.zsh`.
-- **tmux** (`C-Space` prefix): `\` / `-` split, `C-h/j/k/l` moves across tmux panes *and* nvim splits, `prefix f` workspace picker, `prefix g` lazygit, `prefix r` reload, `v`/`y` copy (OSC52, works over SSH).
+- **tmux** (`C-Space` prefix): `\` / `-` split, `C-h/j/k/l` moves across tmux panes *and* nvim splits, `prefix f` workspace picker, `prefix m` server picker, `prefix g` lazygit, `prefix r` reload, `v`/`y` copy (OSC52, works over SSH).
 - **Neovim** 0.12 with `vim.pack`: gruvbox, mini.nvim, fzf-lua, treesitter, blink.cmp, Mason + LSP, conform (format on save), grug-far. Press `<leader>` (Space) and wait for a menu; `<leader>fk` searches every key by description.
 - **git**: delta for diffs, sensible defaults. No identity in the repo: it's machine-local (`~/.config/git/identities.gitconfig`).
 - **Theme:** gruvbox dark everywhere; colours in `home/.chezmoidata/theme.yaml`.

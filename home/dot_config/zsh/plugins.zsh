@@ -32,6 +32,13 @@ if (( $+commands[dev] )); then
   bindkey '^[p' _dev_picker
 fi
 
+# Alt-m: the srv server picker (prefix m does the same inside tmux)
+if (( $+commands[srv] )); then
+  _srv_picker() { zle -I; srv </dev/tty; zle reset-prompt; }
+  zle -N _srv_picker
+  bindkey '^[m' _srv_picker
+fi
+
 # zsh plugins; syntax highlighting must be last
 [[ -r $_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] &&
   source "$_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"

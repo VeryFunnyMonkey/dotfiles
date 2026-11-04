@@ -11,6 +11,7 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 - `install.sh`: the bootstrap one-liner for a new machine.
 - `docs/catalog/`: guides for catalog items (`rig info <item>`).
 - `home/dot_local/bin/executable_dev`: `dev` (tmux workspaces); templates in `home/dot_config/dev/templates/`.
+- `home/dot_local/bin/executable_srv`: `srv` (mount servers over SSH with rclone: nfsmount on macOS, FUSE mount on Linux). Hosts are machine-local (`~/.config/srv/hosts`); mount state lives in a runtime folder so it disappears with the mounts.
 - `home/dot_config/`: zsh, tmux, nvim, git, lazygit, rig's rendered data.
 
 ## Rules
