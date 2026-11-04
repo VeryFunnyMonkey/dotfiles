@@ -25,6 +25,7 @@ doc=$(rig doctor 2>&1)
 check "doctor: packages" '[[ $doc == *"all declared packages installed"* ]]'
 check "doctor: nvim healthy" '[[ $doc == *"checkhealth: no errors"* ]]'
 # an install that was cut short: a parser with no version file (seen on a Mac)
+for b in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew; do [[ -x $b ]] && eval "$("$b" shellenv)"; done   # nvim from brew (Ubuntu)
 rm -f ~/.local/share/nvim/site/parser-info/query.revision
 nvim --headless "+lua require('config.bootstrap').update()" +qa > /tmp/nvim-update.log 2>&1
 check "nvim update repairs a parser with no version" '[[ -f ~/.local/share/nvim/site/parser-info/query.revision ]] && ! grep -q E5108 /tmp/nvim-update.log' || tail -15 /tmp/nvim-update.log
