@@ -33,7 +33,7 @@ install_brew() {
 
 {{- if eq $platform "arch" }}
 note_pkgs pacman "pacman -Q" git curl base-devel
-have git && have curl && pacman -Qg base-devel >/dev/null 2>&1 || sudo_ pacman -S --needed --noconfirm git curl base-devel
+have git && have curl && pacman -Q base-devel >/dev/null 2>&1 || sudo_ pacman -S --needed --noconfirm git curl base-devel
 # The AUR helper (rig installs AUR items and updates with it): yay, unless yay
 # or paru is already here. Built as yay-bin; only the main package is installed
 # (makepkg may also build a -debug one).
