@@ -249,27 +249,62 @@ cmd_preview() { # kind name path
   fi
 }
 left_pane() { local a; a=$(agent_cmd 2>/dev/null || true); if [[ -n $a ]]; then printf 'your agent (%s)' "$a"; else printf 'a shell (no agent set: dev agent set <cmd>)'; fi; }
+PICK_COLORS='bg+:#3c3836,bg:-1,hl:#83a598,fg:#ebdbb2,header:#a89984,info:#fabd2f,pointer:#8ec07c,prompt:#fabd2f,hl+:#83a598,border:#504945'
+# options spelled out, so it looks the same in a tmux popup as in a shell
+pick() { fzf --height=100% --layout=reverse --border=none --info=hidden --no-scrollbar --gutter=' ' --color="$PICK_COLORS" "$@"; }
+
+# A typed path (~/x, /x, ./x) that's a folder: open exactly that folder.
+typed_dir() { # query -> absolute folder, or nothing
+  local q=$1
+  # shellcheck disable=SC2088  # a literal ~ the user typed, expanded by hand
+  case $q in "~"|"~/"*) q=$HOME${q#\~} ;; /*|./*|../*) ;; *) return 1 ;; esac
+  [[ -d $q ]] && (cd "$q" && pwd -P)
+}
+
+# ctrl-o: browse every folder under your home (not only projects)
+browse_dirs() {
+  local finder
+  if have fd; then finder=(fd --type d --hidden --follow --exclude .git --exclude node_modules --exclude .cache --base-directory "$HOME" .)
+  elif have fdfind; then finder=(fdfind --type d --hidden --follow --exclude .git --exclude node_modules --exclude .cache --base-directory "$HOME" .)
+  else finder=(find . -mindepth 1 -maxdepth 5 -type d -not -path '*/.git*' -printf '%P\n'); fi
+  local sel
+  # fd is cut off when you pick before it's done listing: that's not a failure
+  sel=$( { cd "$HOME" && "${finder[@]}" 2>/dev/null || true; } | pick --prompt='folder> ' \
+        --header=$'Open any folder (type to filter, paths are under ~)\nenter open · esc back' --header-first \
+        --preview="ls -A --color=always $(printf %q "$HOME")/{} 2>/dev/null | head -n 60" \
+        --preview-window='right,40%,border-left,<40(down,35%,border-top)') || true
+  [[ -n $sel ]] || return 1
+  printf '%s\n' "$HOME/${sel%/}"
+}
+
 cmd_ls() {
   have fzf || die "fzf isn't installed"
-  local out key line kind name path
-  # options spelled out, so it looks the same in a tmux popup as in a shell
-  out=$(picker_items | fzf --ansi --delimiter='\t' --with-nth=1 --no-sort \
-        --height=100% --layout=reverse --border=none --info=hidden --no-scrollbar \
-        --prompt='project> ' \
-        --header=$'Pick a project to work on (type to filter)\nenter open · ctrl-x close · ctrl-e/ctrl-n workspace file · esc' \
-        --header-first \
-        --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo,<44(down,35%,border-top,wrap,noinfo)' --gutter=' ' \
-        --color='bg+:#3c3836,bg:-1,hl:#83a598,fg:#ebdbb2,header:#a89984,info:#fabd2f,pointer:#8ec07c,prompt:#fabd2f,hl+:#83a598,border:#504945' \
-        --expect=ctrl-e,ctrl-x,ctrl-n) || return 0
-  key=$(head -n1 <<<"$out"); line=$(sed -n 2p <<<"$out")
-  [[ -n $line ]] || return 0
-  IFS=$'\t' read -r _ kind name path <<<"$line"
-  case $key in
-    ctrl-e) (cd "$path" && cmd_edit) ;;
-    ctrl-x) if [[ $kind == run ]]; then tmux kill-session -t "=$name" 2>/dev/null && ok "closed $name"; fi ;;
-    ctrl-n) (cd "$path" && cmd_init) ;;
-    *) [[ -d $path ]] || die "$path doesn't exist"; open_project "$(project_root "$path")" ;;
-  esac
+  local out query key line kind name path dir
+  while :; do
+    # enter with nothing matching still returns what was typed (a path, maybe)
+    out=$(picker_items | pick --ansi --delimiter='\t' --with-nth=1 --no-sort \
+          --prompt='project> ' --print-query --bind 'enter:accept-or-print-query' \
+          --header=$'Pick a project (type to filter), or type a path like ~/Downloads\nenter open · ctrl-o any folder · ctrl-x close · ctrl-e/ctrl-n workspace file · esc' \
+          --header-first \
+          --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo,<44(down,35%,border-top,wrap,noinfo)' \
+          --expect=ctrl-e,ctrl-x,ctrl-n,ctrl-o) || return 0
+    query=$(sed -n 1p <<<"$out"); key=$(sed -n 2p <<<"$out"); line=$(sed -n 3p <<<"$out")
+    # a typed path wins over whatever it happened to match
+    if [[ -z $key ]] && dir=$(typed_dir "$query"); then open_project "$dir"; return; fi
+    if [[ $key == ctrl-o ]]; then
+      if dir=$(browse_dirs); then open_project "$dir"; return; fi
+      continue   # esc in the folder browser: back to the projects
+    fi
+    [[ -n $line ]] || return 0
+    IFS=$'\t' read -r _ kind name path <<<"$line"
+    case $key in
+      ctrl-e) (cd "$path" && cmd_edit) ;;
+      ctrl-x) if [[ $kind == run ]]; then tmux kill-session -t "=$name" 2>/dev/null && ok "closed $name"; fi ;;
+      ctrl-n) (cd "$path" && cmd_init) ;;
+      *) [[ -d $path ]] || die "$path doesn't exist"; open_project "$(project_root "$path")" ;;
+    esac
+    return
+  done
 }
 
 # ------------------------------------------------------------- worktrees ------
@@ -321,7 +356,8 @@ cmd_help() {
 ${B}dev${N}: tmux workspaces
 
   ${B}dev${N} [dir]               open this project's workspace (or the picker, outside a project)
-  ${B}dev ls${N}                  pick a workspace or running session (also: prefix f, Alt-p)
+  ${B}dev ls${N}                  pick a project or open session (also: prefix f, Alt-p);
+                          type a path or press ctrl-o to open any other folder
   ${B}dev init${N} [template] [--local|--repo]   create a workspace (.dev) here; templates: $(ls "$TEMPLATES" 2>/dev/null | tr '\n' ' ')
   ${B}dev edit${N}                edit this project's workspace
   ${B}dev agent${N} [set <cmd> | unset]   the agent the 'agent' pane runs
