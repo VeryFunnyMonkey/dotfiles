@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Checks before a commit. Each one is skipped if its tool isn't installed.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" || exit 1
+fail=0
+run() { local name=$1; shift; if ! out=$("$@" 2>&1); then echo "pre-commit: $name failed:"; echo "$out" | sed 's/^/  /'; fail=1; fi; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+if have shellcheck; then
+  run shellcheck shellcheck -S warning install.sh tests/run.sh home/dot_local/bin/executable_rig \
+    home/dot_local/bin/executable_dev home/dot_local/bin/executable_srv home/dot_local/share/rig/*.sh
+fi
+if have zsh; then
+  for f in home/dot_zshenv home/dot_config/zsh/dot_zshrc home/dot_config/zsh/dot_zprofile home/dot_config/zsh/*.zsh; do
+    run "zsh syntax ($f)" zsh -n "$f"
+  done
+fi
+if have python3; then
+  run "tutor exercises" python3 scripts/build-tutor-json.py --check
+  run "stack record" python3 scripts/check-stack.py
+fi
+if have nvim; then run "keys in docs" scripts/check-keys.sh; fi
+
+# nothing private in the repo: emails, private IPs, tailnet or LAN hostnames
+private=$(git diff --cached -U0 --diff-filter=AM -- . ':!.githooks/pre-commit' | grep '^+' | grep -v '^+++' |
+  grep -nE '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}|(^|[^0-9])(10|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]{1,3}\.[0-9]{1,3}|\.ts\.net\b' |
+  grep -vE '@example\.invalid|noreply@|git@github\.com|user@host|@localhost' || true)
+if [[ -n $private ]]; then
+  echo "pre-commit: this looks private (emails, private IPs, tailnet names); keep it machine-local:"
+  echo "$private" | sed 's/^/  /' | head -10
+  fail=1
+fi
+exit $fail

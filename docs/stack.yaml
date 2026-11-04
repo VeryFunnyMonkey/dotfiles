@@ -1,0 +1,92 @@
+# Every chosen component, why it was chosen, what lost, and when to look again.
+# The stack review (AGENTS.md) goes through this file; scripts/check-stack.py
+# fails if something in the catalog, core or the nvim plugin list has no entry.
+# last_reviewed is the date of the last full review.
+last_reviewed: 2026-11-04
+
+components:
+  # --- how the dotfiles work -------------------------------------------------
+  - name: chezmoi
+    role: dotfiles manager (symlink mode, templates, machine data)
+    why: one static binary, works anywhere incl. work laptops; templates and per-machine data without Nix's weight
+    alternatives: [Nix + home-manager (two package managers on Arch, steep), GNU Stow (whole files only)]
+    revisit_if: "the Mac moves to nix-darwin or a machine to NixOS; chezmoi changes symlink mode or data merging"
+  - name: gum
+    role: installer menus (rig setup)
+    why: multi-select with pre-ticked items, confirm and input screens in one small binary
+    alternatives: [fzf-only menus (no pre-ticked multi-select), dialog/whiptail (dated)]
+    revisit_if: "gum is unmaintained or its choose/--selected flags change"
+  - name: rclone
+    role: srv mounts (nfsmount on macOS, FUSE mount on Linux)
+    why: no macFUSE or system settings on macOS; through the normal ssh
+    alternatives: [sshfs + macFUSE (kernel extension), macFUSE FSKit backend (new, reported read/write problems in 2026)]
+    revisit_if: "macFUSE's FSKit backend matures (no-kext sshfs); rclone nfsmount needs sudo on macOS; FUSE-T becomes standard"
+  - name: fuse3
+    role: FUSE on Linux for srv
+    why: in the kernel, no root needed
+    alternatives: [rclone nfsmount on Linux (needs root)]
+    revisit_if: "never really; only if srv changes method"
+
+  # --- core packages ---------------------------------------------------------
+  - {name: zsh, role: shell, why: "already used; fast with our own small plugin setup", alternatives: [fish (not POSIX-ish), bash], revisit_if: "never really"}
+  - {name: tmux, role: terminal multiplexer, why: "workspaces, popups, works over SSH", alternatives: [zellij (heavier, different keys), Ghostty splits (local only)], revisit_if: "extended-keys or passthrough handling changes"}
+  - {name: neovim, role: editor, why: "keyboard-first, fast, vim.pack built in since 0.12", alternatives: [Zed (GUI), Helix (no plugins)], revisit_if: "a 0.x release deprecates vim.pack APIs we use"}
+  - {name: git, role: version control, why: required, alternatives: [], revisit_if: never}
+  - {name: openssh, role: ssh client + agent, why: required for git accounts and srv, alternatives: [], revisit_if: never}
+  - {name: curl, role: downloads, why: required by installers, alternatives: [], revisit_if: never}
+  - {name: unzip, role: archives, why: Mason and downloads need it, alternatives: [], revisit_if: never}
+  - {name: build-tools, role: C compiler + make, why: treesitter parsers compile locally, alternatives: [], revisit_if: "nvim-treesitter ships prebuilt parsers"}
+  - {name: tree-sitter-cli, role: parser builds, why: nvim-treesitter main branch needs it, alternatives: [], revisit_if: "nvim-treesitter stops needing it"}
+  - {name: fzf, role: fuzzy finder, why: "shell keys, pickers (dev, srv), fzf-lua", alternatives: [skim], revisit_if: never really}
+  - {name: ripgrep, role: search, why: "fast grep; fzf-lua and grug-far use it", alternatives: [], revisit_if: never}
+  - {name: fd, role: find files, why: "fast; fzf and pickers use it", alternatives: [], revisit_if: never}
+
+  # --- catalog items -----------------------------------------------------------
+  - {name: zoxide, role: cd to frequent folders, why: small and fast, alternatives: [autojump], revisit_if: never really}
+  - {name: eza, role: ls, why: "git status and icons; maintained successor of exa", alternatives: [lsd], revisit_if: "eza becomes unmaintained"}
+  - {name: bat, role: cat with highlighting, why: "fzf previews and man pages", alternatives: [], revisit_if: never}
+  - {name: delta, role: git diffs, why: "readable diffs in git and lazygit", alternatives: [difftastic (structural, slower)], revisit_if: "lazygit's diffRenderers config changes again"}
+  - {name: lazygit, role: git UI, why: "hunk staging for reviewing agents' work", alternatives: [neogit, fugitive, gitui], revisit_if: "config keys renamed (pagers -> diffRenderers happened in 0.66)"}
+  - {name: jq, role: JSON tool, why: extra, alternatives: [], revisit_if: never}
+  - {name: tealdeer, role: tldr pages, why: extra, alternatives: [tldr (node)], revisit_if: never}
+  - {name: ghostty, role: terminal, why: "fast, native on Linux and macOS, one config, modern keyboard protocol", alternatives: [Konsole (KDE only), iTerm2 (macOS only), kitty, WezTerm], revisit_if: "a 2.0 release, or the GTK/KDE integration changes; packaged for Debian/Fedora (then widen platforms)"}
+  - {name: nerd-font, role: font with icons, why: "nvim, eza and the prompt use the icons", alternatives: [], revisit_if: never}
+  - {name: clipboard, role: wl-clipboard / xclip / win32yank, why: system clipboard on Linux and WSL, alternatives: [], revisit_if: never}
+  - {name: wm, role: keyboard-driven desktop (KDE shortcuts, AeroSpace + Maccy), why: "one keymap across KDE and macOS without fragile tiling scripts", alternatives: [Krohnkite (breaks on Plasma updates), yabai (needs SIP off), Raycast (closed)], revisit_if: "KDE renames kglobalshortcutsrc actions; AeroSpace reaches 1.0 or needs SIP changes; Hyprland box gets set up"}
+  - {name: yazi, role: terminal file manager, why: fast, previews, alternatives: [lf, ranger], revisit_if: never really}
+  - {name: btop, role: system monitor, why: extra, alternatives: [htop], revisit_if: never}
+  - {name: lazydocker, role: docker TUI, why: extra, alternatives: [], revisit_if: never}
+  - {name: python, role: language item (pyright, ruff, uv), why: "standard, fast; Mason installs pyright with npm so it needs node", alternatives: [basedpyright], revisit_if: "basedpyright or ty clearly better; pyright drops npm"}
+  - {name: web, role: language item (ts_ls, prettierd), why: standard, alternatives: [vtsls, biome], revisit_if: "vtsls or biome become the norm"}
+  - {name: ops, role: language item (Ansible, YAML, OpenTofu, Docker, shell), why: "matches the homelab repo", alternatives: [], revisit_if: "tofu-ls or ansible-language-server change hands"}
+  - {name: go, role: language item (gopls, goimports, gofumpt), why: standard, alternatives: [], revisit_if: never really}
+  - {name: rust, role: language item (rust-analyzer via rustup), why: "matches the toolchain", alternatives: [], revisit_if: "rust-analyzer distribution changes"}
+  - {name: tailscale, role: homelab tailnet (+ srv host import), why: "the homelab already uses it", alternatives: [], revisit_if: never}
+  - {name: github, role: gh CLI, why: "rig git logs in and uploads keys with it", alternatives: [], revisit_if: "gh auth/ssh-key flags change"}
+  - {name: claude, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (native installer)"}
+  - {name: copilot, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (npm @github/copilot / brew copilot-cli)"}
+  - {name: codex, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (npm @openai/codex / brew cask codex)"}
+  - {name: gemini, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (npm @google/gemini-cli / brew gemini-cli)"}
+  - {name: opencode, role: coding agent, why: offered at setup, alternatives: [], revisit_if: "every review: install method (pacman / anomalyco tap / script)"}
+  - {name: terminal-default, role: OS setting, why: Ghostty everywhere, alternatives: [], revisit_if: "KDE changes TerminalApplication/TerminalService; xdg-terminal-exec spec changes"}
+  - {name: text-in-nvim, role: OS setting, why: open text in nvim, alternatives: [], revisit_if: never}
+  - {name: mac-dock, role: OS setting, why: requested, alternatives: [], revisit_if: "macOS renames the Dock defaults"}
+  - {name: mac-finder, role: OS setting, why: sensible for terminal users, alternatives: [], revisit_if: "macOS renames the Finder defaults"}
+  - {name: mac-keys, role: OS setting, why: fast key repeat for hjkl, alternatives: [], revisit_if: never}
+
+  # --- runtimes ----------------------------------------------------------------
+  - {name: fnm, role: Node versions (node runtime), why: "fast, .nvmrc on cd", alternatives: [nvm (slow), mise (does more than needed)], revisit_if: "mise becomes the obvious single tool for node/go/rust"}
+  - {name: rustup, role: Rust toolchains (rust runtime), why: "official; rust-analyzer matches the toolchain", alternatives: [distro rust], revisit_if: never}
+
+  # --- nvim plugins (lua/config/pack.lua) ---------------------------------------
+  - {name: gruvbox.nvim, role: theme, why: "the gruvbox Lua port", alternatives: [], revisit_if: "unmaintained"}
+  - {name: mini.nvim, role: "icons, files, pairs, ai, surround, diff, statusline, clue", why: "one plugin, many small modules", alternatives: [snacks.nvim, which-key], revisit_if: "org moves again (echasnovski -> nvim-mini happened in 2025)"}
+  - {name: fzf-lua, role: pickers, why: "fast, uses fzf", alternatives: [telescope, snacks.picker], revisit_if: never really}
+  - {name: nvim-treesitter, role: parsers (main branch), why: "highlighting and indent", alternatives: [], revisit_if: "main branch API changes; Neovim bundles more parsers"}
+  - {name: blink.cmp, role: completion (1.x), why: "fast, prebuilt fuzzy binary", alternatives: [nvim-cmp], revisit_if: "2.x released (blink.lib split): plan the upgrade"}
+  - {name: mason.nvim, role: installs language tools, why: standard, alternatives: [], revisit_if: "registry or API changes (bootstrap.lua uses it)"}
+  - {name: mason-lspconfig.nvim, role: enables Mason servers, why: standard, alternatives: [], revisit_if: "v3 API change"}
+  - {name: nvim-lspconfig, role: server configs, why: standard, alternatives: [], revisit_if: "configs move into Neovim core"}
+  - {name: conform.nvim, role: format on save, why: "per-filetype formatters, LSP fallback", alternatives: [efm (was used before), none-ls], revisit_if: never really}
+  - {name: grug-far.nvim, role: project find & replace, why: "live preview", alternatives: [spectre], revisit_if: never really}
+  - {name: vim-tmux-navigator, role: C-hjkl across nvim and tmux, why: "simple, no TPM needed", alternatives: [smart-splits.nvim], revisit_if: "tmux gains this natively"}

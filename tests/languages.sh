@@ -44,7 +44,7 @@ r=$(WAIT=25000 lsp ~/w/rs/src/main.rs); echo "  $r"; check "rust -> rust_analyze
 RIG_YES=1 rig remove rust > /tmp/rustoff.log 2>&1
 check "disable --purge removes the toolchain" '[[ ! -d ~/.local/share/rustup && ! -d ~/.local/share/cargo ]]'
 check "rust gone from nvim" '! grep -q rust_analyzer ~/.config/nvim/lua/config/modules.lua'
-check "doctor lists the selection" 'rig doctor 2>/dev/null | grep -q "selected:.*go"'
+doc=$(rig doctor 2>&1); check "doctor lists the selection" '[[ $doc == *"selected:"*go* ]]'
 
 RIG_YES=1 rig remove opencode > /tmp/ag.log 2>&1
 check "agents remove uninstalls opencode" '! command -v opencode >/dev/null'

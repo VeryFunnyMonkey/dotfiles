@@ -1,0 +1,109 @@
+# Tests for the dotfiles. Runs on push, monthly (so upstream breakage shows up
+# even when nothing is pushed), and by hand from the Actions tab.
+name: test
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 4 1 * *"   # monthly
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck zsh
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+      - name: shellcheck
+        run: |
+          shellcheck -S warning install.sh tests/run.sh home/dot_local/bin/executable_rig \
+            home/dot_local/bin/executable_dev home/dot_local/bin/executable_srv home/dot_local/share/rig/*.sh
+      - name: zsh syntax
+        run: for f in home/dot_zshenv home/dot_config/zsh/dot_zshrc home/dot_config/zsh/dot_zprofile home/dot_config/zsh/*.zsh; do zsh -n "$f"; done
+      - name: tutor exercises up to date
+        run: python3 scripts/build-tutor-json.py --check
+      - name: stack record covers everything chosen
+        run: python3 scripts/check-stack.py
+      - name: templates render for every item
+        run: |
+          cz() { "$HOME/.local/bin/chezmoi" --source "$PWD" --config "$RUNNER_TEMP/c.toml" "$@"; }
+          all=$(cz execute-template '{{ keys .catalog | sortAlpha | join "\",\"" }}')
+          printf '[data]\n  display = "wayland"\n  desktop = "kde"\n  selected = ["%s"]\n' "$all" > "$RUNNER_TEMP/c.toml"
+          for t in catalog-tsv profiles-tsv settings-tsv enabled; do cz execute-template "{{ includeTemplate \"$t\" . }}" > /dev/null; done
+          cz execute-template < home/dot_config/rig/packages.tsv.tmpl > /dev/null
+          cz execute-template < home/dot_config/nvim/lua/config/modules.lua.tmpl > /dev/null
+          echo "all templates render with every item selected"
+
+  linux:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {test: roundtrip, image: "archlinux:latest"}
+          - {test: roundtrip, image: "ubuntu:24.04"}
+          - {test: installer, image: "archlinux:latest"}
+          - {test: git-dev, image: "archlinux:latest"}
+          - {test: srv, image: "archlinux:latest"}
+          - {test: settings, image: "archlinux:latest"}
+          - {test: wm, image: "archlinux:latest"}
+    steps:
+      - uses: actions/checkout@v4
+      - run: tests/run.sh ${{ matrix.test }} ${{ matrix.image }}
+
+  languages:
+    # heavy (Mason tools, Node, Go and Rust toolchains): monthly and by hand
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: tests/run.sh languages archlinux:latest
+
+  macos:
+    # the only real test of the macOS path until it's set up on a Mac. Not on
+    # pull requests: macOS minutes cost more.
+    if: github.event_name != 'pull_request'
+    needs: lint
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: install (non-interactive)
+        run: |
+          echo "DOCK_BEFORE=$(defaults read com.apple.dock orientation 2>/dev/null || echo unset)" >> "$GITHUB_ENV"
+          RIG_SOURCE="$GITHUB_WORKSPACE" sh install.sh --profile minimal --select zoxide,eza,mac-dock,mac-finder,wm --yes
+      - name: checks
+        run: |
+          set -x
+          export PATH="$HOME/.local/bin:$PATH"
+          [ "$(defaults read com.apple.dock orientation)" = left ]
+          [ "$(defaults read com.apple.dock autohide)" = 1 ]
+          test -L "$HOME/.config/aerospace/aerospace.toml"
+          test -L "$HOME/.zshenv"
+          zsh -ic 'bindkey -lL main' | grep -q emacs
+          rig doctor || true
+      - name: srv over nfsmount (best effort)
+        continue-on-error: true
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist || sudo systemsetup -f -setremotelogin on
+          ssh-keygen -q -t ed25519 -N "" -f ~/.ssh/id_ed25519
+          cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
+          srv add self "$(id -un)@localhost" "~"
+          srv mount self
+          echo hello > ~/Servers/self/srv-ci.txt && sleep 3 && grep -q hello ~/srv-ci.txt
+          srv umount self
+      - name: uninstall restores
+        run: |
+          "$HOME/.local/bin/rig" uninstall --everything --yes
+          after=$(defaults read com.apple.dock orientation 2>/dev/null || echo unset)
+          echo "dock orientation: before $DOCK_BEFORE, after $after"
+          [ "$after" = "$DOCK_BEFORE" ]

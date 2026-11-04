@@ -4,7 +4,7 @@ My setup for client machines (Arch, macOS, Debian/Ubuntu including WSL, Fedora):
 
 Managed with [chezmoi](https://chezmoi.io) in **symlink mode**: most files in `~` are symlinks into this repo, so edits take effect immediately. The source lives in `home/` (`.chezmoiroot`).
 
-> **Status:** the installer, core, git accounts, `dev` workspaces, languages and agents are done. Ghostty's config, OS settings, the tutor, the keyboard-desktop item and CI come next.
+> **Status:** everything planned is built: the installer, core, git accounts, `dev`, `srv`, languages, agents, Ghostty, OS settings, the keyboard-driven desktop, the tutor, tests and CI. macOS and WSL paths are tested in CI or by rendering only, not yet on a real Mac or WSL machine.
 
 ## Set up a new machine
 
@@ -193,6 +193,12 @@ New to this setup (or back after a while)? **`:Tutor dotfiles`** is a short hand
 | `<leader>e` `E`, `<leader><space>` | explorer (file / cwd), recent & open files |
 
 Neovim's built-ins work too: `grn` rename, `gra` action, `grr` references, `gri` implementation, `K` hover, `[d` `]d` diagnostics, `gc` comment. Completion: `C-n`/`C-p` move, `C-y` or Enter accept, `C-e` dismiss.
+
+## Tests and upkeep
+
+- **Tests** run in throwaway containers: `tests/run.sh <test> [image]` with `roundtrip`, `installer`, `git-dev`, `languages`, `srv`, `settings`, `wm` (image `archlinux:latest` by default, or `ubuntu:24.04`). GitHub Actions (`.github/workflows/test.yml`) runs lint and these on every push, the heavy `languages` test monthly, and a macOS job (not on pull requests, since macOS minutes cost more).
+- **Pre-commit checks:** enable once per clone with `git config core.hooksPath .githooks` (shellcheck, zsh syntax, keys mentioned in docs exist, tutor exercises, the stack record, nothing private).
+- **Stack review:** `docs/stack.yaml` records every component, why it was chosen and when to look again. Every few months (`rig doctor` says when) ask your agent to "do the stack review" (procedure in AGENTS.md): it researches current upstream changes, reports, and changes only what you approve.
 
 ## Notes
 

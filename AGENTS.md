@@ -28,3 +28,18 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 
 ## Commits
 - No `Co-Authored-By` or any other attribution lines. Never push: the owner reviews and pushes.
+
+## Stack review
+`docs/stack.yaml` records every chosen component: why it was chosen, what lost, and `revisit_if` triggers. A review checks that the choices still hold. Do one when the owner asks, or offer one (once, at the start of a session) when `last_reviewed` is more than 90 days old; `rig doctor` also says when one is due.
+
+1. **Research, don't recall.** For each component, check current upstream sources: release notes, changelogs, deprecation notices, the project's README and status, `:help news` for the installed Neovim. Training data goes stale; that's what the review is for. Agent install methods (`dot_local/share/rig/agents.sh`) are checked every time.
+2. **Look for:** breaking changes or deprecations affecting this config; a `revisit_if` trigger that has fired; projects archived, unmaintained or relicensed; notable new alternatives that fit the principles (open source, few packages, keyboard-first, works on Arch, macOS and WSL).
+3. **Run the local checks:** `rig doctor`, `rig drift`, `nvim --headless "+checkhealth" +qa` (deprecation warnings), `chezmoi doctor`, the tests (`tests/run.sh <test>`; CI runs them monthly too).
+4. **Report before changing anything:** write `docs/reviews/<date>.md` with *Must fix* (breaking/deprecated), *Should consider* (each with a source link), *No change*. Wait for the owner to choose.
+5. **Apply only what the owner approves.** Each change updates its `stack.yaml` entry (why, alternatives, revisit_if) and, for keymaps, the tutor and README (the existing rule).
+6. **Bump `last_reviewed`** even when nothing changes.
+
+**Guard rails:** don't reopen settled decisions without a fired `revisit_if` trigger or new evidence; don't add packages that only duplicate a chosen one; prefer the smallest change that keeps things current.
+
+## Checks
+`.githooks/pre-commit` (enable once per clone: `git config core.hooksPath .githooks`) runs shellcheck, zsh syntax, `scripts/check-keys.sh`, `scripts/build-tutor-json.py --check`, `scripts/check-stack.py` and a scan for private data, skipping a check when its tool isn't installed.

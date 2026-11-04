@@ -331,8 +331,25 @@ cmd_doctor() {
     if [[ ${errs:-0} == 0 ]]; then ok "checkhealth: no errors"; else bad "checkhealth: $errs errors (run :checkhealth in nvim)"; ((fails++)) || true; fi
   else bad "nvim not installed"; ((fails++)) || true; fi
 
+  stack_review_due
+
   if ((fails)); then say; say "${Y}$fails problem(s)${N}"; return 1; fi
   say; say "${G}all good${N}"
+}
+
+# The stack review (AGENTS.md): due 90 days after docs/stack.yaml's last_reviewed.
+stack_review_due() {
+  local f; f="$(repo_root)/docs/stack.yaml"
+  [[ -f $f ]] || return 0
+  local d; d=$(sed -n 's/^last_reviewed: *//p' "$f")
+  [[ -n $d ]] || return 0
+  local then_s now_s
+  then_s=$(date -d "$d" +%s 2>/dev/null || date -j -f %Y-%m-%d "$d" +%s 2>/dev/null) || return 0
+  now_s=$(date +%s)
+  if (( (now_s - then_s) / 86400 > 90 )); then
+    info "upkeep"
+    say "  ${Y}!${N} stack review due (last: $d): ask your agent to do the stack review in AGENTS.md"
+  fi
 }
 
 login_shell() {
@@ -480,6 +497,9 @@ cmd_uninstall() {
     "$cache/zsh/zcompdump"* "$cache/nvim/mason-registry-update" "$cache/tree-sitter" \
     "$state/nvim/lsp.log" "$state/nvim/mason.log" "$state/nvim/nvim.log"
   chezmoi_forget
+  # chezmoi itself, if install.sh installed it (rig no longer needs it)
+  local czbin; czbin=$(awk -F'\t' '$1=="chezmoi-installed" {print $2}' "$RIG_STATE/system.log" | tail -n1)
+  if [[ -n $czbin && -x $czbin ]]; then rm -f "$czbin" && ok "removed chezmoi (install.sh installed it)"; fi
   rm -rf "$RIG_CONFIG" "$RIG_STATE"
   prune_empty "$data/fonts" "$data/zsh" "$data/nvim/site/pack" "$data/nvim/site" "$data/nvim" "$cache/zsh" \
     "$cache/nvim" "$state/zsh" "$state/nvim" "$data" "$cache" "$state" \
@@ -521,6 +541,7 @@ system_revert_all() {
       brew-installed) : ;; # handled by --runtimes
       ssh-key-created) : ;; # handled by --identities (keys are archived, never deleted)
       runtime-dir|agent) : ;; # handled by --runtimes / --agents
+      chezmoi-installed) : ;; # removed at the very end of uninstall
       system-unit) if [[ $prev != enabled ]]; then sudo_ systemctl disable --now "$key" 2>/dev/null || true; ok "disabled $key"; fi ;;
       ssh-include)
         if [[ $prev == created ]]; then

@@ -19,6 +19,10 @@ say() { printf '\033[34m==>\033[0m %s\n' "$*"; }
 if ! command -v chezmoi >/dev/null 2>&1; then
   say "installing chezmoi"
   sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$BIN" >/dev/null
+  # recorded, so rig uninstall can remove it too
+  STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
+  mkdir -p "$STATE"
+  printf 'chezmoi-installed\t%s\t-\t%s\n' "$BIN/chezmoi" "$(date +%Y-%m-%dT%H:%M:%S)" >>"$STATE/system.log"
 fi
 
 if [ -n "${RIG_SOURCE:-}" ]; then

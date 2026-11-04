@@ -25,5 +25,11 @@ for start, goal in EXERCISES.items():
         sys.exit(f"exercise line {start!r} found {len(hits)} times (needs exactly once)")
     expect[str(hits[0])] = goal
 out = TUTOR.with_name(TUTOR.name + ".json")
-out.write_text(json.dumps({"expect": expect}, indent=2) + "\n")
-print(f"wrote {out.relative_to(TUTOR.parents[4])}: {len(expect)} exercises")
+text = json.dumps({"expect": expect}, indent=2) + "\n"
+if "--check" in sys.argv:
+    if not out.exists() or out.read_text() != text:
+        sys.exit("dotfiles.tutor.json is out of date: run scripts/build-tutor-json.py")
+    print(f"tutor: {len(expect)} exercises, line numbers up to date")
+else:
+    out.write_text(text)
+    print(f"wrote {out.relative_to(TUTOR.parents[4])}: {len(expect)} exercises")

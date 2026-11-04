@@ -34,7 +34,7 @@ check "unmatched repo -> default (personal)" '[[ $(git -C /tmp/z config user.ema
 (cd ~/Projects/x && echo a > a && git add a && git commit -qm one)
 check "commit is signed and verifies" 'git -C ~/Projects/x log --show-signature -1 2>&1 | grep -q "Good \"git\" signature"'
 check "rig git which" '(cd ~/Projects/second/y && rig git which) | grep -q second'
-check "rig git list" 'rig git list | grep -q "(default)"'
+gl=$(rig git list 2>&1); check "rig git list shows the default" '[[ $gl == *"(default)"* ]]' || echo "$gl"
 
 # no default -> git refuses to commit outside the account folders
 printf 'y\n' > /tmp/yes; tty_feed /tmp/yes rig git remove personal
