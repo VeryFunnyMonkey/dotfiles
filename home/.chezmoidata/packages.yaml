@@ -86,4 +86,4 @@ packages:
       aerospace: "--cask nikitabobko/tap/aerospace"
       maccy: "--cask maccy"
       helium: "--cask helium-browser"
-      tailscale: "--cask tailscale"
+      tailscale: "--cask tailscale-app"

@@ -80,7 +80,7 @@ pm_brew_present() {
     brew list --cask "$c" >/dev/null 2>&1 && return 0
     # installed another way (the App Store, a download): the cask's app is there,
     # so rig doesn't install over it (and, as "already there", never removes it)
-    app=$(brew info --cask "$c" 2>/dev/null | awk '/^==> Artifacts/ {f=1; next} f && /\.app/ {sub(/ \(App\).*/, ""); print; exit}')
+    app=$(brew info --cask "$c" 2>/dev/null | brew_cask_app)
     [[ -n $app ]] && { [[ -d /Applications/$app ]] || [[ -d $HOME/Applications/$app ]]; }
   else brew list --formula "$1" >/dev/null 2>&1; fi
 }
@@ -96,6 +96,14 @@ pm_brew_install() {
   return $rc
 }
 
+# The app a cask puts in Applications, from `brew info --cask`: its app
+# artifact, or for casks that run an installer (.pkg) instead, its name + .app.
+brew_cask_app() {
+  awk '/^==> / {sec=$0; next}
+       sec ~ /^==> Artifacts/ && /\.app( |$)/ && !app {sub(/ \(App\).*/, ""); app=$0}
+       sec ~ /^==> Name/ && !name && NF {name=$0}
+       END {if (app) print app; else if (name) print name ".app"}'
+}
 pm_brew_remove() { brew uninstall "$@"; }
 pm_brew_search() { brew search "$@"; }
 pm_brew_upgrade() { brew update && brew upgrade; }

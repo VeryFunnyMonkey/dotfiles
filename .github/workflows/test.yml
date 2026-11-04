@@ -127,6 +127,9 @@ jobs:
           test -L "$HOME/.config/aerospace/aerospace.toml"
           test -L "$HOME/.zshenv"
           zsh -ic 'bindkey -lL main' | grep -q emacs
+          # a cask's app, as rig finds it (an App Store copy counts as installed)
+          [ "$(bash -c 'source ~/.local/share/rig/pkg/managers.sh; brew info --cask tailscale-app | brew_cask_app')" = Tailscale.app ]
+          [ "$(bash -c 'source ~/.local/share/rig/pkg/managers.sh; brew info --cask maccy | brew_cask_app')" = Maccy.app ]
           rig doctor || true
       - name: srv over nfsmount (best effort)
         continue-on-error: true
