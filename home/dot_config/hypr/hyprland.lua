@@ -9,7 +9,13 @@
 
 local c = require("theme")
 local function rgb(hex) return "rgb(" .. hex:gsub("^#", "") .. ")" end
-local function run(cmd) return "desk run " .. cmd end
+
+-- ~/.local/bin (desk, rig, dev, srv) on PATH for everything Hyprland starts:
+-- a login screen starts Hyprland without your shell, so it isn't there yet.
+local home = os.getenv("HOME")
+hl.env("PATH", home .. "/.local/bin:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin"))
+local desk = home .. "/.local/bin/desk"
+local function run(cmd) return desk .. " run " .. cmd end
 
 local terminal = "ghostty"
 -- mod is Super; HYPR_MOD overrides it (e.g. ALT when running Hyprland nested
@@ -27,7 +33,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(run("/usr/lib/hyprpolkitagent/hyprpolkitagent"))
     hl.exec_cmd(run("swayosd-server"))
     hl.exec_cmd(run("wl-paste --watch cliphist store"))
-    hl.exec_cmd("desk welcome --once")   -- the getting-started page, on the first login only
+    hl.exec_cmd(desk .. " welcome --once")   -- the getting-started page, on the first login only
 end)
 -- mako starts on the first notification (D-Bus activation).
 
@@ -121,27 +127,27 @@ end
 
 -- apps
 bind(key("RETURN"), hl.dsp.exec_cmd(run(terminal)), "terminal")
-bind(key("SHIFT + RETURN"), hl.dsp.exec_cmd("desk browser"), "browser")
-bind(key("SPACE"), hl.dsp.exec_cmd("desk launch"), "launcher")
-bind(key("V"), hl.dsp.exec_cmd("desk clipboard"), "clipboard history")
+bind(key("SHIFT + RETURN"), hl.dsp.exec_cmd(desk .. " browser"), "browser")
+bind(key("SPACE"), hl.dsp.exec_cmd(desk .. " launch"), "launcher")
+bind(key("V"), hl.dsp.exec_cmd(desk .. " clipboard"), "clipboard history")
 bind(key("E"), hl.dsp.exec_cmd(run(terminal .. " -e yazi")), "files (yazi)")
 bind(key("SHIFT + E"), hl.dsp.exec_cmd(run("thunar")), "files (Thunar)")
 
 -- controls (TUIs in a floating terminal)
-bind(key("A"), hl.dsp.exec_cmd("desk float wiremix"), "audio")
-bind(key("W"), hl.dsp.exec_cmd("desk float nmtui"), "Wi-Fi and network")
-bind(key("B"), hl.dsp.exec_cmd("desk float bluetui"), "Bluetooth")
-bind(key("N"), hl.dsp.exec_cmd("desk nightlight"), "night light on/off")
+bind(key("A"), hl.dsp.exec_cmd(desk .. " float wiremix"), "audio")
+bind(key("W"), hl.dsp.exec_cmd(desk .. " float nmtui"), "Wi-Fi and network")
+bind(key("B"), hl.dsp.exec_cmd(desk .. " float bluetui"), "Bluetooth")
+bind(key("N"), hl.dsp.exec_cmd(desk .. " nightlight"), "night light on/off")
 
 -- session
 bind(key("ESCAPE"), hl.dsp.exec_cmd("loginctl lock-session"), "lock")
-bind(key("SHIFT + ESCAPE"), hl.dsp.exec_cmd("desk power"), "power menu")
-bind(key("SLASH"), hl.dsp.exec_cmd("desk keys"), "these keys")
+bind(key("SHIFT + ESCAPE"), hl.dsp.exec_cmd(desk .. " power"), "power menu")
+bind(key("SLASH"), hl.dsp.exec_cmd(desk .. " keys"), "these keys")
 
 -- screenshots
-bind("Print", hl.dsp.exec_cmd("desk shot area"), "screenshot: area to clipboard")
-bind("SHIFT + Print", hl.dsp.exec_cmd("desk shot edit"), "screenshot: area, then annotate")
-bind("CTRL + Print", hl.dsp.exec_cmd("desk shot screen"), "screenshot: whole screen")
+bind("Print", hl.dsp.exec_cmd(desk .. " shot area"), "screenshot: area to clipboard")
+bind("SHIFT + Print", hl.dsp.exec_cmd(desk .. " shot edit"), "screenshot: area, then annotate")
+bind("CTRL + Print", hl.dsp.exec_cmd(desk .. " shot screen"), "screenshot: whole screen")
 
 -- media keys (work on the lock screen too)
 local media = { locked = true, repeating = true }
