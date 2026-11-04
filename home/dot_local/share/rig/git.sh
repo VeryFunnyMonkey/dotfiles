@@ -73,17 +73,6 @@ host_keys_url() {
   esac
 }
 
-# Mark a machine-profile value (stored in chezmoi's config) and re-render.
-rig_set_data() { # key value
-  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi/chezmoi.toml"
-  [[ -f $cfg ]] || die "no chezmoi config at $cfg"
-  if grep -qE "^[[:space:]]*$1 = " "$cfg"; then
-    sed -i.bak -E "s/^([[:space:]]*)$1 = .*/\1$1 = $2/" "$cfg" && rm -f "$cfg.bak"
-  else
-    sed -i.bak -E "s/^\[data\]$/[data]\n    $1 = $2/" "$cfg" && rm -f "$cfg.bak"
-  fi
-}
-
 # ------------------------------------------------------------- ssh ------------
 ensure_ssh_include() {
   mkdir -p "$SSH_DIR/config.d"; chmod 700 "$SSH_DIR" "$SSH_DIR/config.d"
@@ -183,10 +172,10 @@ ssh_check() { # alias host -> 0 if the key is accepted
 # ------------------------------------------------------------- github ---------
 ensure_gh() {
   have gh && return 0
-  info "this account is on GitHub: installing gh (and remembering that this machine uses GitHub)"
-  rig_set_data github true
+  info "this account is on GitHub: selecting the GitHub (gh) item and installing it"
+  state_write "$RIG_PROFILE" "$(list_add github "$(state_get selected)")" "$(state_get extra_packages)" "$RIG_AGENT_DEFAULT"
   chezmoi apply || die "couldn't apply; install gh and re-run rig git add"
-  hash -r
+  load_machine; hash -r
   have gh || die "gh still isn't installed"
 }
 
@@ -220,11 +209,11 @@ git_add() {
   load_machine; ledger_init; tty_in
   local n="${1:-}" gname email host hostname='' folder alias='' key='' sign=yes is_default=no
   local existing; existing=$(identities)
-  local first_default=personal; [[ $RIG_WORK == true ]] && first_default=work
+  local first_default=personal
 
   say; info "${B}new git account${N}"
   local ndef=''; if [[ -z $existing ]]; then ndef=$first_default; fi
-  if [[ -z $n ]]; then ask n "Name for this account (e.g. personal, a client name)" "$ndef"; fi
+  if [[ -z $n ]]; then ask n "Name for this account (e.g. personal, github-2)" "$ndef"; fi
   n=$(printf '%s' "$n" | tr 'A-Z ' 'a-z-' | tr -cd 'a-z0-9_-')
   [[ -n $n ]] || die "need a name"
   if [[ -f $ID_DIR/$n.meta ]]; then confirm "Account '$n' exists; set it up again?" || return 0; fi
@@ -232,8 +221,7 @@ git_add() {
   ask gname "Your name in commits" "$(git config --global user.name 2>/dev/null || true)"
   while :; do ask email "Email for this account" "$(meta_get "$n" email)"; [[ $email == *@* ]] && break; say "  that doesn't look like an email"; done
 
-  local hdef=github; [[ $RIG_WORK == true || $RIG_GITHUB != true ]] && hdef=''
-  choose host "Where is this account hosted?" "${hdef:-1}" \
+  choose host "Where is this account hosted?" 1 \
     "github     GitHub (sets everything up for you)" \
     "gitlab     GitLab" \
     "azure      Azure DevOps" \
@@ -249,13 +237,16 @@ git_add() {
   [[ $host == none || -n $hostname ]] || die "need a hostname"
   if [[ -n $hostname ]]; then alias="$hostname-$n"; fi
 
-  local fdef="$HOME/Work/$n"; [[ $n == personal ]] && fdef="$HOME/Projects"
+  local fdef="$HOME/Projects/$n"; [[ -z $existing ]] && fdef="$HOME/Projects"
   local fprev; fprev=$(meta_get "$n" folder)
   ask folder "Folder whose repos use this account" "${fprev:-$fdef}"
   folder=${folder/#\~/$HOME}; mkdir -p "$folder"
 
-  if [[ $RIG_WORK != true && -z $(default_identity) ]] || [[ $(default_identity) == "$n" ]]; then
-    ask_yn "Use '$n' for every repo that matches no other account?" y && is_default=yes
+  # default account: used for repos that match no account's folder or alias
+  local cur_def; cur_def=$(default_identity)
+  if [[ -z $cur_def ]]; then
+    ask_yn "Make '$n' the default account (used for repos that match no other)?" y && is_default=yes
+  elif [[ $cur_def == "$n" ]]; then is_default=yes
   fi
 
   # key
@@ -338,7 +329,7 @@ git_list() {
   done
   ((any)) || say "  no git accounts yet: rig git add"
   if [[ -z $(default_identity) && $any == 1 ]]; then
-    say "  ${DIM}no default: repos outside these folders refuse to commit until you pick one${N}"
+    say "  ${DIM}no default account: repos that match no account refuse to commit (rig git default <account>)${N}"
   fi
 }
 git_which() {
@@ -361,11 +352,9 @@ git_remove() {
   ok "removed '$n'"
   if [[ -n $key ]]; then say "  key kept: $key"; fi
   if [[ $host == github ]]; then say "  to remove it from GitHub too: gh ssh-key list, then gh ssh-key delete <id>"; fi
-  if [[ $host == github ]] && ! grep -lqs '^host=github$' "$ID_DIR"/*.meta 2>/dev/null && [[ $RIG_GITHUB == true ]]; then
-    if confirm "No GitHub accounts left. Stop using GitHub on this machine (uninstalls gh)?"; then
-      rig_set_data github false
-      cmd_remove gh >/dev/null 2>&1 || true
-      chezmoi apply
+  if [[ $host == github ]] && ! grep -lqs '^host=github$' "$ID_DIR"/*.meta 2>/dev/null && [[ " $RIG_SELECTED " == *" github "* ]]; then
+    if confirm "No GitHub accounts left. Deselect GitHub (gh) on this machine?"; then
+      cmd_del github
     fi
   fi
 }
@@ -412,6 +401,18 @@ git_uninstall_identities() { # called by rig uninstall --identities; rig-created
   ok "removed git accounts"
 }
 
+git_set_default() { # account|none
+  local n=${1:-} o
+  [[ -n $n ]] || die "usage: rig git default <account|none>"
+  if [[ $n != none && ! -f $ID_DIR/$n.meta ]]; then die "no account '$n' (rig git list)"; fi
+  for o in $(identities); do
+    sed -i.bak "s/^default=.*/default=$([[ $o == "$n" ]] && echo yes || echo no)/" "$ID_DIR/$o.meta" && rm -f "$ID_DIR/$o.meta.bak"
+  done
+  git_regenerate
+  if [[ $n == none ]]; then ok "no default account: git refuses to commit until a repo matches an account"
+  else ok "default account: $n"; fi
+}
+
 cmd_git() {
   local sub=${1:-list}; (($#)) && shift
   case $sub in
@@ -422,6 +423,7 @@ cmd_git() {
     remove|rm) git_remove "$@" ;;
     clone) git_clone "$@" ;;
     doctor) git_doctor ;;
-    *) die "usage: rig git add|list|which|remove|clone|doctor" ;;
+    default) load_machine; git_set_default "$@" ;;
+    *) die "usage: rig git add|list|which|remove|clone|default|doctor" ;;
   esac
 }

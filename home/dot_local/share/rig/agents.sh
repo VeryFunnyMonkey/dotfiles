@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# rig agents: coding agents chosen at setup (none, one or several). Sourced by rig.
+# rig agents: installing the coding agents selected in rig setup. Sourced by rig.
 # Install methods follow each vendor's docs; check them at every stack review.
 # Logins, API keys and agent settings are never touched.
 
@@ -65,14 +65,6 @@ agent_present() { with_node; have "$(agent_cmd_name "$1")"; }
 # ledger: agent <name> <installed|preexisting>
 agent_status() { awk -F'\t' -v n="$1" '$1=="agent" && $2==n {s=$3} END {print s}' "$RIG_STATE/system.log"; }
 
-# chezmoi data: agents = [...], agent_default = "..."
-set_agents_data() { # "a b c" default
-  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi/chezmoi.toml" list='' a
-  for a in $1; do list+="${list:+, }\"$a\""; done
-  sed -i.bak -E "s/^([[:space:]]*)agents = .*/\1agents = [$list]/; s/^([[:space:]]*)agent_default = .*/\1agent_default = \"$2\"/" "$cfg"
-  rm -f "$cfg.bak"
-}
-
 cmd_agents() {
   load_machine; ledger_init
   local sub=${1:-list}; (($#)) && shift
@@ -86,29 +78,11 @@ cmd_agents() {
         agent_present "$a" && note+=" installed" || { [[ " $RIG_AGENTS " == *" $a "* ]] && note+=" ${Y}missing${N}"; }
         printf '  %s %-9s %s%s\n' "$mark" "$a" "$(agent_label "$a")" "$note"
       done
-      say "  ${DIM}rig agents add|remove <name> · rig agents default <name>${N}" ;;
-    add)
-      (($#)) || die "usage: rig agents add <name>... ($AGENT_NAMES)"
-      local list=$RIG_AGENTS a def=$RIG_AGENT_DEFAULT
-      for a in "$@"; do agent_known "$a" || die "unknown agent '$a' ($AGENT_NAMES)"; [[ " $list " == *" $a "* ]] || list+=" $a"; done
-      [[ -n $def ]] || def=$1
-      set_agents_data "$list" "$def"; chezmoi apply ;;
-    remove|rm)
-      (($#)) || die "usage: rig agents remove <name>..."
-      local list='' a def=$RIG_AGENT_DEFAULT
-      for a in $RIG_AGENTS; do [[ " $* " == *" $a "* ]] || list+="${list:+ }$a"; done
-      for a in "$@"; do
-        if [[ $(agent_status "$a") == installed ]] && agent_present "$a"; then
-          info "uninstalling $(agent_label "$a")"; agent_remove "$a" || warn "couldn't uninstall $a"
-          printf '%s\t%s\t%s\t%s\n' agent "$a" removed "$(now)" >>"$RIG_STATE/system.log"
-        elif agent_present "$a"; then warn "$a was installed before rig; leaving it"; fi
-      done
-      [[ " $list " == *" $def "* ]] || def=${list%% *}
-      set_agents_data "$list" "$def"; chezmoi apply
-      [[ -n $def ]] && ok "dev now starts $def" ;;
+      say "  ${DIM}select agents in rig setup (or rig add <name>) · rig agents default <name>${N}" ;;
     default)
       local a=${1:-}; [[ " $RIG_AGENTS " == *" $a "* ]] || die "'$a' isn't one of this machine's agents ($RIG_AGENTS)"
-      set_agents_data "$RIG_AGENTS" "$a"; chezmoi apply --exclude=scripts >/dev/null; ok "dev starts $a" ;;
+      state_write "$RIG_PROFILE" "$(state_get selected)" "$(state_get extra_packages)" "$a"
+      chezmoi apply --exclude=scripts >/dev/null; ok "dev starts $a" ;;
     sync)
       local a
       for a in $RIG_AGENTS; do
@@ -123,11 +97,11 @@ cmd_agents() {
           else warn "couldn't install $a"; fi
         fi
       done
-      [[ -n $RIG_AGENTS ]] || ok "no agents chosen (rig agents add <name>)" ;;
+      [[ -n $RIG_AGENTS ]] || ok "no agents selected" ;;
     update)
       local a
       for a in $RIG_AGENTS; do [[ $(agent_status "$a") == installed ]] && agent_update "$a"; done; true ;;
-    *) die "usage: rig agents list|add|remove|default|sync" ;;
+    *) die "usage: rig agents list|default <name>|sync" ;;
   esac
 }
 

@@ -22,7 +22,8 @@ RIG_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
 MACHINE_ENV="$RIG_CONFIG/machine.env"
 PACKAGES_TSV="$RIG_CONFIG/packages.tsv"
 
-RIG_LIB="${XDG_DATA_HOME:-$HOME/.local/share}/rig"
+# Libraries sit next to rig (share/rig), installed or straight from the repo.
+RIG_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share/rig" 2>/dev/null && pwd)" || RIG_LIB="${XDG_DATA_HOME:-$HOME/.local/share}/rig"
 
 # ---------------------------------------------------------------- output ------
 if [[ -t 1 ]]; then
@@ -45,7 +46,7 @@ confirm() {
 }
 
 load_machine() {
-  [[ -r $MACHINE_ENV ]] || die "no machine profile yet ($MACHINE_ENV); run: chezmoi init --apply"
+  [[ -r $MACHINE_ENV ]] || die "this machine isn't set up yet; run: rig setup"
   # shellcheck disable=SC1090
   source "$MACHINE_ENV"
 }
@@ -150,8 +151,8 @@ cmd_sync() {
   [[ -r $PACKAGES_TSV ]] || die "no package list ($PACKAGES_TSV); run chezmoi apply"
   baseline_record
   local -A todo=()
-  local m n logical group
-  while IFS=$'\t' read -r m n logical group; do
+  local m n logical
+  while IFS=$'\t' read -r m n logical _; do
     if [[ -z $m || $m == \#* ]]; then continue; fi
     if pkg_present "$m" "$n"; then
       ledger_pkg_record "$m" "$n" "$logical" preexisting
@@ -207,8 +208,8 @@ cmd_drift() {
   comm -23 "$tmp/now" "$tmp/declared" | comm -23 - "$tmp/base" >"$tmp/extra"
   # declared but missing
   : >"$tmp/missing"
-  local m n logical group
-  while IFS=$'\t' read -r m n logical group; do
+  local m n logical
+  while IFS=$'\t' read -r m n logical _; do
     if [[ -z $m || $m == \#* ]]; then continue; fi
     pkg_present "$m" "$n" || printf '%s\t%s (%s)\n' "$m" "$n" "$logical" >>"$tmp/missing"
   done <"$PACKAGES_TSV"
@@ -221,67 +222,6 @@ cmd_drift() {
     info "declared but missing (rig sync installs them)"; sed 's/^/  /' "$tmp/missing"
   fi
   rm -rf "$tmp"
-}
-
-# Add/remove a logical name in packages.yaml (under packages.groups.<group>).
-yaml_add() { # pkg group
-  local f; f=$(packages_yaml)
-  grep -qE "^      - $1\$" "$f" && return 0
-  awk -v pkg="$1" -v grp="$2" '
-    !done && $0 ~ "^    " grp ":" {
-      line = $0
-      sub(/: *\[\]/, ":", line)          # "darwin: [] # note" -> "darwin: # note"
-      print line
-      print "      - " pkg
-      done = 1
-      next
-    }
-    { print }' "$f" >"$f.new"
-  mv "$f.new" "$f"
-  grep -qE "^      - $1\$" "$f" || die "couldn't add $1 to group $2 in $f (does the group exist?)"
-}
-yaml_remove() {
-  local f; f=$(packages_yaml)
-  grep -qE "^      - $1\$" "$f" || return 1
-  sed -i.bak -E "/^      - $1\$/d" "$f" && rm -f "$f.bak"
-}
-
-cmd_install() {
-  load_machine; ledger_init
-  local group=base pkgs=()
-  while (($#)); do
-    case $1 in
-      --group) group=$2; shift 2 ;;
-      -*) die "unknown option $1" ;;
-      *) pkgs+=("$1"); shift ;;
-    esac
-  done
-  ((${#pkgs[@]})) || die "usage: rig install <pkg>... [--group <group>]"
-  local p
-  for p in "${pkgs[@]}"; do yaml_add "$p" "$group"; ok "declared $p (group $group)"; done
-  chezmoi apply --exclude=scripts "$RIG_CONFIG/packages.tsv" >/dev/null
-  cmd_sync
-  say "  ${DIM}packages.yaml changed in the repo; commit it when you're happy${N}"
-}
-
-cmd_remove() {
-  load_machine; ledger_init
-  (($#)) || die "usage: rig remove <pkg>..."
-  local p m n logical group status
-  for p in "$@"; do
-    local line; line=$(awk -F'\t' -v l="$p" '$3==l' "$PACKAGES_TSV" | head -1)
-    if yaml_remove "$p"; then ok "removed $p from packages.yaml"; else warn "$p isn't declared"; fi
-    if [[ -n $line ]]; then
-      IFS=$'\t' read -r m n logical group <<<"$line"
-      status=$(ledger_pkg_status "$m" "$n")
-      if [[ $status == preexisting ]]; then
-        warn "$n was installed before rig; leaving it installed"
-      elif pkg_present "$m" "$n" && confirm "Uninstall $n ($m)?"; then
-        pkg_remove_cmd "$m" "$n" && ledger_pkg_forget "$m" "$n" && ok "uninstalled $n"
-      fi
-    fi
-  done
-  chezmoi apply --exclude=scripts "$RIG_CONFIG/packages.tsv" >/dev/null
 }
 
 cmd_search() {
@@ -324,8 +264,9 @@ cmd_update() {
 cmd_doctor() {
   load_machine
   local fails=0
-  info "machine: $RIG_PLATFORM · preset $RIG_PRESET · session $RIG_SESSION$( [[ $RIG_WSL == true ]] && printf ' · WSL')"
-  say "  modules: ${RIG_MODULES:-none}"
+  info "machine: $RIG_PLATFORM$( [[ $RIG_WSL == true ]] && printf ' (WSL)') · ${RIG_DESKTOP:-no desktop} · profile ${RIG_PROFILE:-none}"
+  say "  selected: ${RIG_SELECTED:-nothing beyond core}"
+  if [[ -n $RIG_SKIPPED ]]; then say "  ${DIM}skipped here: $RIG_SKIPPED${N}"; fi
 
   info "dotfiles"
   if have chezmoi; then
@@ -334,8 +275,8 @@ cmd_doctor() {
   else bad "chezmoi not installed"; ((fails++)) || true; fi
 
   info "packages"
-  local missing=0 m n logical group
-  while IFS=$'\t' read -r m n logical group; do
+  local missing=0 m n logical
+  while IFS=$'\t' read -r m n logical _; do
     if [[ -z $m || $m == \#* ]]; then continue; fi
     pkg_present "$m" "$n" || { bad "missing: $logical ($m: $n)"; missing=1; }
   done <"$PACKAGES_TSV"
@@ -361,11 +302,10 @@ cmd_doctor() {
   else
     bad "no git accounts yet (rig git add)"; ((fails++)) || true
   fi
-  if [[ $RIG_GITHUB == true ]]; then have gh && ok "gh installed (this machine uses GitHub)" || { bad "gh missing"; ((fails++)) || true; }; fi
 
-  info "modules"
-  ok "on: ${RIG_MODULES:-none} · runtimes: ${RIG_RUNTIMES:-none}"
-  if [[ " $RIG_MODULES " == *" homelab "* ]] && have tailscale; then
+  info "runtimes"
+  ok "${RIG_RUNTIMES:-none needed}"
+  if [[ " $RIG_SELECTED " == *" tailscale "* ]] && have tailscale; then
     if tailscale status >/dev/null 2>&1; then ok "tailscale connected"; else bad "tailscale logged out (sudo tailscale up)"; ((fails++)) || true; fi
   fi
   info "agents"
@@ -374,7 +314,7 @@ cmd_doctor() {
       if agent_present "$a"; then ok "$(agent_label "$a")$( [[ $a == "$RIG_AGENT_DEFAULT" ]] && printf ' (dev default)')"
       else bad "$(agent_label "$a") missing (rig agents sync)"; ((fails++)) || true; fi
     done
-  else say "  none chosen (rig agents add <name>)"; fi
+  else say "  none selected (rig setup, or rig add <agent>)"; fi
 
   info "neovim"
   if have nvim; then
@@ -400,12 +340,6 @@ cmd_edit() {
   if (($#)); then chezmoi edit --apply "$@"
   else (cd "$(repo_root)" && "${EDITOR:-nvim}" .); chezmoi apply; fi
 }
-cmd_profile() {
-  load_machine
-  info "re-answering the machine questions (chezmoi init --prompt)"
-  chezmoi init --prompt --source "$(repo_root)" && chezmoi apply
-}
-
 # ---------------------------------------------------------------- reset -------
 cmd_reset() {
   load_machine
@@ -606,19 +540,20 @@ cmd_help() {
   cat <<EOF
 ${B}rig${N}: this machine's setup
 
-  ${B}rig sync${N}                   install everything declared that's missing
-  ${B}rig install${N} <pkg> [--group g]   install and declare it (packages.yaml)
-  ${B}rig remove${N} <pkg>           undeclare, and uninstall if rig installed it
+  ${B}rig setup${N}                  the installer: pick software by category, review, install
+  ${B}rig add${N} <item|pkg>         select a catalog item, or add an extra package for this machine
+  ${B}rig remove${N} <item|pkg>      deselect it (uninstalls what rig installed for it)
+  ${B}rig profile${N} list|show|use|save   saved selections (the presets)
+  ${B}rig info${N} <item>            what an item brings (its guide)
+  ${B}rig sync${N}                   install whatever is selected but missing
   ${B}rig search${N} <query>         search the package managers
   ${B}rig drift${N} [--all]          installed-but-undeclared, declared-but-missing
   ${B}rig update${N}                 update everything: dotfiles, packages, plugins
   ${B}rig doctor${N}                 check this machine
   ${B}rig git${N} add|list|which|remove|clone|doctor   git accounts (GitHub, GitLab, ...)
-  ${B}rig module${N} list|info|enable|disable [--purge] <name>   language support, homelab, ...
-  ${B}rig agents${N} list|add|remove|default <name>   coding agents (installed by rig)
+  ${B}rig agents${N} list|default <name>   coding agents (select them in rig setup)
   ${B}rig edit${N} [file]            edit the dotfiles (then apply)
   ${B}rig diff${N} / ${B}rig apply${N}        chezmoi diff / apply
-  ${B}rig profile${N}                re-answer the machine questions
   ${B}rig reset${N} nvim|mason|zsh|chezmoi|all   rebuild a part that misbehaves
   ${B}rig uninstall${N} [--packages --runtimes --identities --agents | --everything] [--run]
                              put the machine back as it was (dry run unless --run)
@@ -626,7 +561,7 @@ ${B}rig${N}: this machine's setup
 EOF
 }
 
-for _lib in git modules agents; do
+for _lib in git runtimes agents setup; do
   # shellcheck source=/dev/null
   if [[ -r $RIG_LIB/$_lib.sh ]]; then source "$RIG_LIB/$_lib.sh"; fi
 done
@@ -636,8 +571,9 @@ main() {
   local cmd=${1:-help}; (($#)) && shift
   case $cmd in
     sync) cmd_sync "$@" ;;
-    install|add) cmd_install "$@" ;;
-    remove|rm) cmd_remove "$@" ;;
+    setup) cmd_setup "$@" ;;
+    add|install) cmd_add "$@" ;;
+    remove|rm|uninstall-pkg) cmd_del "$@" ;;
     search) cmd_search "$@" ;;
     drift) cmd_drift "$@" ;;
     update|up) cmd_update "$@" ;;
@@ -645,10 +581,10 @@ main() {
     edit) cmd_edit "$@" ;;
     diff) chezmoi diff "$@" ;;
     apply) chezmoi apply "$@" ;;
-    profile) cmd_profile "$@" ;;
+    profile|profiles) cmd_profile_cmd "$@" ;;
+    info) cmd_info "$@" ;;
     reset) cmd_reset "$@" ;;
     git) cmd_git "$@" ;;
-    module|modules) cmd_module "$@" ;;
     runtimes) cmd_runtimes "$@" ;;
     homelab) cmd_homelab "$@" ;;
     agents|agent) cmd_agents "$@" ;;
