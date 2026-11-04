@@ -174,52 +174,58 @@ cmd_forget() {
 #   kind: run = a tmux session is running, ws = has a workspace file, dir = a repo
 # Projects are git repos: the ones zoxide knows (folders you've been in) and
 # the ones under ~/Projects, plus anything with a running session or workspace.
-picker_row() { # kind name path [tabs]
-  local kind=$1 name=$2 path=$3 plain='' color='' label shown
-  case $kind in
-    run) plain="● open, $4 tab$([[ $4 == 1 ]] || echo s)"; color=32 ;;
-    ws)  plain="★ workspace"; color=34 ;;
-  esac
-  label=${path##*/}; [[ $kind == run ]] && label=$name
-  if ((${#label} > 24)); then label="${label:0:23}…"; fi
-  shown=${path/#"$HOME"/\~}
-  if ((${#shown} > 40)); then shown="…${shown: -39}"; fi
-  # pad the plain text, then colour it, so the columns line up
-  # pad by hand: printf counts bytes, and the symbol is one character but 3 bytes
-  local text=${plain#* } state=''
-  if [[ -n $plain ]]; then state=$'\033['"${color}m${plain%% *} ${text}"$'\033[0m'; fi
-  local width=0; [[ -n $plain ]] && width=$((2 + ${#text}))
-  state+=$(printf '%*s' $((16 - width)) '')
-  printf '%-24s  %s  \033[2m%s\033[0m\t%s\t%s\t%s\n' "$label" "$state" "$shown" "$kind" "$name" "$path"
-}
 # a repo inside another repo (a vendored library, a reference copy) isn't a project
 nested_repo() { local d=${1%/*}; while [[ $d == "$HOME"/* ]]; do [[ -e $d/.git ]] && return 0; d=${d%/*}; done; return 1; }
-picker_items() {
+picker_entries() { # kind \t name \t path \t tabs
   prune_registry
   local s p w n seen=$'\n'
-  # open sessions (not the throwaway ones each Ghostty window opens)
-  # \x1f between fields: with tabs, read would merge the empty @rig_window field away
+  # open sessions, not the throwaway ones each Ghostty window opens
+  # (\x1f between fields: with tabs, read would merge the empty @rig_window field away)
   while IFS=$'\x1f' read -r s p w n; do
     if [[ $w == 1 ]]; then continue; fi
-    picker_row run "$s" "$p" "$n"; seen+="$p"$'\n'
+    printf 'run\t%s\t%s\t%s\n' "$s" "$p" "$n"; seen+="$p"$'\n'
   done < <(tmux list-sessions -F $'#{session_name}\x1f#{session_path}\x1f#{@rig_window}\x1f#{session_windows}' 2>/dev/null || true)
-  # projects with a workspace file
   if [[ -f $REGISTRY ]]; then
     while IFS= read -r p; do
       if [[ $seen == *$'\n'"$p"$'\n'* ]]; then continue; fi
-      picker_row ws "$(session_name "$p")" "$p"; seen+="$p"$'\n'
+      printf 'ws\t%s\t%s\t\n' "$(session_name "$p")" "$p"; seen+="$p"$'\n'
     done <"$REGISTRY"
   fi
-  # other git repos: most-used first (zoxide), then the rest of ~/Projects
+  # other git repos: most used first (zoxide), then the rest of ~/Projects
   {
     if have zoxide; then zoxide query -l 2>/dev/null | head -n 200; fi
     find "$HOME/Projects" -mindepth 2 -maxdepth 4 -name .git -prune 2>/dev/null | sed 's#/\.git$##' | sort
   } | while IFS= read -r p; do
     [[ -e $p/.git && $seen != *$'\n'"$p"$'\n'* ]] || continue
     if nested_repo "$p"; then continue; fi
-    case $p in */.wt/*|*.wt/*) continue ;; esac   # dev wt worktrees show under their repo
-    picker_row dir "$(session_name "$p")" "$p"; seen+="$p"$'\n'
+    case $p in *.wt/*) continue ;; esac   # dev wt worktrees show under their repo
+    printf 'dir\t%s\t%s\t\n' "$(session_name "$p")" "$p"; seen+="$p"$'\n'
   done
+}
+# Rows: name (as wide as the longest), status, the folder it's in (dim).
+picker_items() {
+  local entries kind name path tabs label width=8
+  entries=$(picker_entries)
+  while IFS=$'\t' read -r kind name path tabs; do
+    [[ -n $kind ]] || continue
+    label=${path##*/}; [[ $kind == run ]] && label=$name
+    if ((${#label} > width)); then width=${#label}; fi
+  done <<<"$entries"
+  if ((width > 22)); then width=22; fi
+  while IFS=$'\t' read -r kind name path tabs; do
+    [[ -n $kind ]] || continue
+    label=${path##*/}; [[ $kind == run ]] && label=$name
+    if ((${#label} > width)); then label="${label:0:width-1}…"; fi
+    local state='' text='' where=${path%/*}
+    case $kind in
+      run) text="open, $tabs tab$([[ $tabs == 1 ]] || echo s)"; state=$'\033[32m● '"$text"$'\033[0m' ;;
+      ws)  text="workspace"; state=$'\033[34m★ '"$text"$'\033[0m' ;;
+    esac
+    # padded by hand: printf counts bytes, and the symbols are 3 bytes each
+    local pad=$((15 - (${#text} ? ${#text} + 2 : 0)))
+    printf '%-*s  %s%*s  \033[2m%s\033[0m\t%s\t%s\t%s\n' "$width" "$label" "$state" "$pad" '' \
+      "${where/#"$HOME"/\~}" "$kind" "$name" "$path"
+  done <<<"$entries"
 }
 cmd_preview() { # kind name path
   local kind=$1 name=$2 path=$3 ws
@@ -250,7 +256,7 @@ cmd_ls() {
         --prompt='project> ' \
         --header=$'Pick a project to work on (type to filter)\nenter open · ctrl-x close · ctrl-e/ctrl-n workspace file · esc' \
         --header-first \
-        --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,40%,border-left,wrap,<36(down,40%,border-top,wrap)' --gutter=' ' \
+        --preview="bash $(printf %q "$0") _preview {2} {3} {4}" --preview-window='right,45%,border-left,wrap,noinfo,<44(down,35%,border-top,wrap,noinfo)' --gutter=' ' \
         --color='bg+:#3c3836,bg:-1,hl:#83a598,fg:#ebdbb2,header:#a89984,info:#fabd2f,pointer:#8ec07c,prompt:#fabd2f,hl+:#83a598,border:#504945' \
         --expect=ctrl-e,ctrl-x,ctrl-n) || return 0
   key=$(head -n1 <<<"$out"); line=$(sed -n 2p <<<"$out")

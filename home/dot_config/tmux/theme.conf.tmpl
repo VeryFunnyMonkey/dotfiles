@@ -9,3 +9,8 @@ set -g mode-style "fg={{ $t.bg }},bg={{ $t.blue }}"
 set -g pane-border-style "fg={{ $t.bg2 }}"
 set -g pane-active-border-style "fg={{ $t.blue }}"
 set -g popup-border-style "fg={{ $t.bg2 }}"
+# popups and the key menu: the terminal's own background (tmux 3.8 defaults to grey)
+set -g popup-style "bg=default,fg={{ $t.fg }}"
+set -g menu-style "bg=default,fg={{ $t.fg }}"
+set -g menu-selected-style "fg={{ $t.bg }},bg={{ $t.blue }}"
+set -g menu-border-style "fg={{ $t.bg2 }}"
