@@ -7,7 +7,7 @@ catalog:
     files: [.config/ghostty]
     platforms: [arch, darwin]
     display: true
-    note: "not packaged for this distro yet; on WSL use Windows Terminal"
+    note: "not packaged for this distro yet; on Windows, the Windows Terminal item is the terminal"
   nerd-font:
     category: terminal
     name: JetBrainsMono Nerd Font
@@ -15,12 +15,12 @@ catalog:
     packages: [nerd-font]
     platforms: [arch, fedora, debian, darwin]
     display: true
-    note: "on WSL, install the font on Windows and pick it in Windows Terminal"
+    note: "on Windows, the Windows Terminal item installs it for Windows"
   clipboard:
     category: terminal
     name: Clipboard tools
-    description: "system clipboard for nvim and tmux (wl-clipboard, xclip, or win32yank on WSL)"
+    description: "system clipboard for nvim and tmux (wl-clipboard, xclip, or win32yank on Windows)"
     packages: [clipboard]
-    platforms: [arch, fedora, debian, wsl]
+    platforms: [arch, fedora, debian, windows]
     display: true
     note: "macOS has this built in"

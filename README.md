@@ -1,16 +1,24 @@
 # dotfiles
 
-My setup for client machines (Arch, macOS, Debian/Ubuntu including WSL, Fedora): zsh, tmux, Neovim, git, plus `rig`, a small command that installs, updates, checks and, if needed, cleanly uninstalls all of it. Servers are managed separately, by Ansible.
+My setup for client machines (Arch, macOS, Windows through WSL, Debian/Ubuntu, Fedora): zsh, tmux, Neovim, git, plus `rig`, a small command that installs, updates, checks and, if needed, cleanly uninstalls all of it. Servers are managed separately, by Ansible.
 
 Managed with [chezmoi](https://chezmoi.io) in **symlink mode**: most files in `~` are symlinks into this repo, so edits take effect immediately. The source lives in `home/` (`.chezmoiroot`).
 
-> **Status:** everything planned is built: the installer, core, git accounts, `dev`, `srv`, languages, agents, Ghostty, OS settings, the keyboard-driven desktop, the tutor, tests and CI. macOS and WSL paths are tested in CI or by rendering only, not yet on a real Mac or WSL machine.
+> **Status:** everything planned is built: the installer, core, git accounts, `dev`, `srv`, languages, agents, Ghostty, OS settings, the keyboard-driven desktop, the tutor, tests and CI. macOS and Windows are tested in CI, not yet on a real Windows machine.
 
 ## Set up a new machine
 
 ```sh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/VeryFunnyMonkey/dotfiles/main/install.sh)"
 ```
+
+On **Windows**, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/VeryFunnyMonkey/dotfiles/main/install.ps1 | iex
+```
+
+It installs WSL if it's missing (and carries on by itself after the restart), lets you pick Ubuntu, Arch or Fedora, creates your Linux user, then runs the same installer inside it, with Windows Terminal and the keyboard-driven desktop (GlazeWM) ticked; PowerToys is always set up. Everything it changes on Windows is undone by `rig uninstall` (inside WSL).
 
 It installs chezmoi, prepares the package manager, clones this repo and starts **the installer**, `rig setup`:
 
@@ -28,7 +36,7 @@ It installs chezmoi, prepares the package manager, clones this repo and starts *
    Review & install
 ```
 
-Start from a **profile**, tick software per category, check the review (what gets added and removed), install. Only items that make sense on this machine are shown (no Ghostty on WSL, no clipboard tools on macOS...), and a profile listing something that doesn't apply here just skips it with the reason.
+Start from a **profile**, tick software per category, check the review (what gets added and removed), install. Only items that make sense on this machine are shown (no Ghostty on Windows, no clipboard tools on macOS...), and a profile listing something that doesn't apply here just skips it with the reason.
 
 **Profiles** are saved selections, in `home/.chezmoidata/profiles/`: `desktop`, `tui`, `headless`, `minimal`, plus any you save (**Save as profile…**, or `rig profile save <name>`); commit them to use them on other machines. None of the built-ins turn on languages or agents.
 
@@ -94,7 +102,7 @@ rig git remove clienta
 | Category | Items |
 |---|---|
 | CLI tools | zoxide, eza, bat, delta, lazygit, jq, tealdeer |
-| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools, keyboard-driven desktop (KDE shortcuts / AeroSpace), **Hyprland desktop** (Arch: a complete keyboard-first gruvbox desktop; `rig info hyprland` has its keys), **Helium browser** (Arch via the AUR, macOS) |
+| Terminal & desktop | Ghostty, JetBrainsMono Nerd Font, clipboard tools, keyboard-driven desktop (KDE shortcuts / AeroSpace / GlazeWM), **Windows Terminal** (Windows: gruvbox, the font), **PowerToys** (Windows, always: Command Palette on alt+space), **Hyprland desktop** (Arch: a complete keyboard-first gruvbox desktop; `rig info hyprland` has its keys), **Helium browser** (Arch via the AUR, macOS) |
 | TUI apps | yazi, btop |
 | Containers | Podman (rootless, `docker` and `docker compose` work, `DOCKER_HOST` set; podman machine on macOS), lazydocker |
 | Languages | python (pyright, ruff, uv), web (ts_ls, prettierd), ops (Ansible, YAML schemas, OpenTofu, Docker, shell), go, rust |
@@ -196,11 +204,11 @@ Neovim's built-ins work too: `grn` rename, `gra` action, `grr` references, `gri`
 
 ## Tests and upkeep
 
-- **Tests** run in throwaway containers (Docker or Podman, whichever is installed): `tests/run.sh <test> [image]` with `roundtrip`, `installer`, `git-dev`, `languages`, `srv`, `settings`, `wm` (image `archlinux:latest` by default, or `ubuntu:24.04`). GitHub Actions (`.github/workflows/test.yml`) runs lint and these on every push and monthly: the container tests (Arch, Ubuntu), a **WSL** job (Ubuntu 24.04 under WSL2 on a Windows runner: `wsl` and `roundtrip`, through `tests/here.sh`), a **macOS** job (install, settings, srv over nfsmount, uninstall), and the heavy `languages` test monthly or by hand.
+- **Tests** run in throwaway containers (Docker or Podman, whichever is installed): `tests/run.sh <test> [image]` with `roundtrip`, `installer`, `git-dev`, `languages`, `srv`, `settings`, `wm` (image `archlinux:latest` by default, or `ubuntu:24.04`). GitHub Actions (`.github/workflows/test.yml`) runs lint and these on every push and monthly: the container tests (Arch, Ubuntu), a **Windows** job (Ubuntu 24.04 under WSL2 on a Windows runner: `windows`, with Windows Terminal, GlazeWM and PowerToys, and `roundtrip`, through `tests/here.sh`; `install.ps1` is linted), a **macOS** job (install, settings, srv over nfsmount, uninstall), and the heavy `languages` test monthly or by hand.
 - **Pre-commit checks:** enable once per clone with `git config core.hooksPath .githooks` (shellcheck, zsh syntax, keys mentioned in docs exist, tutor exercises, the stack record, nothing private).
 - **Stack review:** `docs/stack.yaml` records every component, why it was chosen and when to look again. Every few months (`rig doctor` says when) ask your agent to "do the stack review" (procedure in AGENTS.md): it researches current upstream changes, reports, and changes only what you approve.
 
 ## Notes
 
-- **WSL:** install JetBrainsMono Nerd Font on Windows and pick it in Windows Terminal. Not yet verified on a real WSL machine.
+- **Windows:** the Windows Terminal item installs the font and sets the terminal up; `install.ps1` is tested by lint only (the WSL install and restart need a real machine). Not yet verified on a real Windows machine.
 - **macOS:** the path exists but isn't verified on a real Mac yet.

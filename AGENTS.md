@@ -1,19 +1,19 @@
 # Agent instructions for this repo
 
-Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL, Fedora). Servers are managed by a separate Ansible repo; don't add server concerns here.
+Personal dotfiles for **client machines** (Arch, macOS, Windows through WSL, Debian/Ubuntu, Fedora). Servers are managed by a separate Ansible repo; don't add server concerns here.
 
 ## Layout
 - `home/` is the chezmoi source (`.chezmoiroot`); chezmoi runs in **symlink mode**, so plain files in `~` are symlinks into the repo. Templates (`*.tmpl`) and executables are copies: after editing them, `chezmoi apply`.
-- `home/.chezmoi.toml.tmpl`: chezmoi's config for the machine. It asks nothing: `rig setup` writes profile/selected/extra_packages/agent_default; detection (`.chezmoitemplates/detect`) adds wsl/display/desktop.
+- `home/.chezmoi.toml.tmpl`: chezmoi's config for the machine. It asks nothing: `rig setup` writes profile/selected/extra_packages/agent_default; detection (`.chezmoitemplates/detect`) adds wsl/display/desktop (the platform "windows" is WSL).
 - `home/.chezmoidata/`: all the data, no logic.
   - `catalog/*.yaml`: every selectable item, by category. Fields: packages, platforms, needs, nvim, settings, `module` (the rig module behind it), `files` (paths only it brings). The meaning of each field is in `catalog/_categories.yaml`; the OS setting kinds are in `catalog/_setting-kinds.yaml`.
   - `profiles/*.yaml` (saved selections), `packages.yaml` (core, per-manager names, virtual packages, downloads), `runtimes.yaml`, `theme.yaml`.
   - `.chezmoitemplates/enabled` works out what applies on this machine: selected, skipped, runtimes, agents, modules.
 - `home/.chezmoiscripts/`: the setup steps. The bootstrap and the backup run on their own; every other step is one line, `rig sync` or `rig modules sync <module>`, plus the template values that make it re-run.
 - `home/dot_local/bin/executable_rig`: the `rig` entry point. It only loads the parts in `home/dot_local/share/rig/` (found next to rig, so it runs from the repo too) and dispatches. The parts, each depending only on the layers above it:
-  - `lib/`: the building blocks. `sys` (helpers), `ui` (output, prompts, gum menus, doctor checks), `machine` (paths and this machine's selection), `ledger` (the undo record and its revert dispatcher), `units` (systemd units), `catalog`, `apply` (change the selection and apply), `modules` (the module registry and contract).
+  - `lib/`: the building blocks. `sys` (helpers), `ui` (output, prompts, gum menus, doctor checks), `machine` (paths and this machine's selection), `ledger` (the undo record and its revert dispatcher), `units` (systemd units), `windows` (the Windows side, from WSL), `catalog`, `apply` (change the selection and apply), `modules` (the module registry and contract).
   - `pkg/`: packages. `managers.sh` has one `pm_<manager>_*` set per package manager; `downloads.sh` one `dl_<name>_*` set per download; `sync.sh` holds sync, drift, search, update and cleanup.
-  - `modules/`: one feature each, with helpers in `modules/<name>/`. Core: srv, shell, ssh-agent, git (with the host table in `git/hosts.sh`), agents, runtimes, nvim, settings (kinds in `settings/kinds.sh`). Item modules, active while their item is selected: containers (Podman), tailscale.
+  - `modules/`: one feature each, with helpers in `modules/<name>/`. Core: srv, shell, ssh-agent, git (with the host table in `git/hosts.sh`), agents, runtimes, nvim, settings (kinds in `settings/kinds.sh`). Item modules, active while their item is selected: containers (Podman), tailscale, desktop (Hyprland), and on Windows winterm, powertoys and glazewm (the wm item).
   - `commands/`: what you type. setup (the installer), items (add/remove/profile/info), doctor, update, reset, uninstall, transfer (export/import), misc. Commands loop over modules; they don't know any feature.
 - **The module contract** (`lib/modules.sh`). A module `<m>` may define `<m>_sync`, `<m>_doctor`, `<m>_update`, `<m>_reset`, `<m>_uninstall` and `<m>_cmd` (for `rig <m> ...`), `<m>_export`/`<m>_exported`/`<m>_import` (its machine-local part, for `rig export`/`rig import`; never keys or tokens), plus `revert_<kind>` for each ledger kind it records. To add a feature:
   1. write `modules/<name>.sh`;
@@ -21,7 +21,7 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
   3. declare its files in the item (`files:`).
 
   Nothing else changes: the setup script for item modules, doctor, update and uninstall all pick it up.
-- `install.sh`: the bootstrap one-liner for a new machine.
+- `install.sh`: the bootstrap one-liner for a new machine; `install.ps1` the one for Windows (WSL, the distro and your user, then install.sh inside it).
 - `docs/catalog/`: guides for catalog items (`rig info <item>`).
 - `home/dot_local/bin/executable_dev`: `dev` (tmux workspaces): settings and `main`; its parts in `home/dot_local/share/dev/` (projects, agent, build, workspace, picker, worktrees, help). Workspace templates in `home/dot_config/dev/templates/`.
 - `home/dot_local/bin/executable_srv`: `srv` (mount servers over SSH with rclone: nfsmount on macOS, FUSE mount on Linux): settings and `main`; its parts in `home/dot_local/share/srv/` (hosts, mounts, edit, status, picker, connect, import, doctor). Hosts are machine-local (`~/.config/srv/hosts`), added by hand or imported from a hosts file (simple list or Ansible inventory); mount state lives in a runtime folder so it disappears with the mounts.
@@ -47,7 +47,7 @@ Personal dotfiles for **client machines** (Arch, macOS, Debian/Ubuntu incl. WSL,
 `docs/stack.yaml` records every chosen component: why it was chosen, what lost, and `revisit_if` triggers. A review checks that the choices still hold. Do one when the owner asks, or offer one (once, at the start of a session) when `last_reviewed` is more than 90 days old; `rig doctor` also says when one is due.
 
 1. **Research, don't recall.** For each component, check current upstream sources: release notes, changelogs, deprecation notices, the project's README and status, `:help news` for the installed Neovim. Training data goes stale; that's what the review is for. Agent install methods (`dot_local/share/rig/agents.sh`) are checked every time.
-2. **Look for:** breaking changes or deprecations affecting this config; a `revisit_if` trigger that has fired; projects archived, unmaintained or relicensed; notable new alternatives that fit the principles (open source, few packages, keyboard-first, works on Arch, macOS and WSL).
+2. **Look for:** breaking changes or deprecations affecting this config; a `revisit_if` trigger that has fired; projects archived, unmaintained or relicensed; notable new alternatives that fit the principles (open source, few packages, keyboard-first, works on Arch, macOS and Windows).
 3. **Run the local checks:** `rig doctor`, `rig drift`, `nvim --headless "+checkhealth" +qa` (deprecation warnings), `chezmoi doctor`, the tests (`tests/run.sh <test>`; CI runs them monthly too).
 4. **Report before changing anything:** write `docs/reviews/<date>.md` with *Must fix* (breaking/deprecated), *Should consider* (each with a source link), *No change*. Wait for the owner to choose.
 5. **Apply only what the owner approves.** Each change updates its `stack.yaml` entry (why, alternatives, revisit_if) and, for keymaps, the tutor and README (the existing rule).

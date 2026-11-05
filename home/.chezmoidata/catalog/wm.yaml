@@ -6,15 +6,20 @@
 # KDE: written into kglobalshortcutsrc (previous values restored when deselected;
 # Lock screen moves from Meta+L to Meta+Escape; Meta+1..9 stop opening taskbar
 # apps; Meta+Q stops opening the activity switcher). macOS: AeroSpace + Maccy.
+# Windows: GlazeWM, with Alt as mod as on macOS (Windows keeps the Win-key
+# shortcuts: Win+L, Win+1..9); the launcher is Command Palette (PowerToys).
 catalog:
   wm:
     category: terminal
     name: Keyboard-driven desktop
-    description: "mod+hjkl windows, mod+1..9 desktops, mod+space launcher, mod+enter terminal (KDE shortcuts; AeroSpace on macOS)"
-    desktops: [kde, macos]
+    description: "mod+hjkl windows, mod+1..9 desktops, mod+space launcher, mod+enter terminal (KDE shortcuts; AeroSpace on macOS; GlazeWM on Windows)"
+    desktops: [kde, macos, windows]
     packages_darwin: [aerospace, maccy]
     files_darwin: [.config/aerospace]
-    note: "needs KDE Plasma or macOS (the Hyprland item has these keys built in)"
+    packages_windows: [glazewm]
+    files_windows: [.config/rig/windows/glazewm.yaml]
+    module: glazewm
+    note: "needs KDE Plasma, macOS or Windows (the Hyprland item has these keys built in)"
     settings:
       - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Left", value: "Meta+H,Meta+Alt+Left,Switch to Window to the Left"}
       - {kind: kde, file: kglobalshortcutsrc, group: kwin, key: "Switch Window Down", value: "Meta+J,Meta+Alt+Down,Switch to Window Below"}

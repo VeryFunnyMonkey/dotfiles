@@ -25,7 +25,7 @@ RIG_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share/rig" 2>/dev/null && pwd)"
 [[ -r $RIG_LIB/lib/sys.sh ]] || { echo "rig: its libraries are missing ($RIG_LIB); run chezmoi apply" >&2; exit 1; }
 
 # lib/ in dependency order, then everything else (each file only defines functions)
-for _f in "$RIG_LIB"/lib/{sys,ui,machine,ledger,units,catalog,apply,modules}.sh \
+for _f in "$RIG_LIB"/lib/{sys,ui,machine,ledger,units,windows,catalog,apply,modules}.sh \
           "$RIG_LIB"/pkg/*.sh "$RIG_LIB"/modules/*.sh "$RIG_LIB"/modules/*/*.sh "$RIG_LIB"/commands/*.sh; do
   # shellcheck source=/dev/null
   [[ -r $_f ]] && source "$_f"

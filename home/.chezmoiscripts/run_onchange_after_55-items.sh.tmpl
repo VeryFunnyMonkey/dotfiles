@@ -2,5 +2,7 @@
 # The item modules (containers, tailscale, ...): each sets up its item when
 # selected and undoes it when not. Re-runs when the selected items' modules change:
 #   {{ (includeTemplate "enabled" . | fromJson).modules | toJson }}
+# and when what a module copies to Windows (or its colours) changes:
+#   {{ range $f := list "dot_config/rig/windows/wt-fragment.json.tmpl" "dot_config/rig/windows/glazewm.yaml.tmpl" }}{{ include $f | sha256sum | trunc 12 }} {{ end }}{{ .theme | toJson | sha256sum | trunc 12 }}
 set -euo pipefail
 exec {{ joinPath .chezmoi.destDir ".local/bin/rig" | quote }} modules sync --items

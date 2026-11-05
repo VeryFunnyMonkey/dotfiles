@@ -22,6 +22,16 @@ jobs:
         run: |
           mapfile -t files < <(scripts/shell-files.sh)
           shellcheck -S warning "${files[@]}"
+      - name: PowerShell (install.ps1 and rig's Windows helper)
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          $found = foreach ($f in 'install.ps1', 'home/dot_local/share/rig/modules/powertoys/json.ps1') {
+            Invoke-ScriptAnalyzer -Path $f -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost
+          }
+          $found | Format-Table -AutoSize
+          if ($found) { exit 1 }
       - name: zsh syntax
         run: for f in home/dot_zshenv home/dot_config/zsh/dot_zshrc home/dot_config/zsh/dot_zprofile home/dot_config/zsh/*.zsh; do zsh -n "$f"; done
       - name: tutor exercises up to date
@@ -75,15 +85,15 @@ jobs:
       - uses: actions/checkout@v5
       - run: tests/run.sh languages archlinux:latest
 
-  wsl:
-    # Ubuntu under WSL2 on a Windows runner: the work-laptop path.
+  windows:
+    # Windows: Ubuntu under WSL2 on a Windows runner (the work-laptop path).
     needs: lint
     runs-on: windows-2025
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        test: [wsl, roundtrip]
+        test: [windows, roundtrip]
     defaults:
       run:
         shell: wsl-bash {0}

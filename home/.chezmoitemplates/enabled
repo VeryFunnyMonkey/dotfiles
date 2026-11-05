@@ -8,6 +8,11 @@
 {{- $sel := list -}}{{- $skipped := list -}}{{- $unknown := list -}}
 {{- /* the selection, plus what selected items include (includes:) */ -}}
 {{- $want := list -}}
+{{- /* items marked always: apply wherever they're available, unasked */ -}}
+{{- range $id := keys $.catalog | sortAlpha -}}
+{{-   $it := index $.catalog $id -}}
+{{-   if and (dig "always" false $it) (eq (includeTemplate "available" (dict "item" $it "id" $id "d" $d) | trim) "ok") -}}{{- $want = append $want $id -}}{{- end -}}
+{{- end -}}
 {{- range $id := (dig "selected" list .) -}}
 {{-   $want = append $want $id -}}
 {{-   if hasKey $.catalog $id -}}{{- range $inc := (dig "includes" list (index $.catalog $id)) -}}{{- $want = append $want $inc -}}{{- end -}}{{- end -}}

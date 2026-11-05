@@ -4,7 +4,7 @@
 {{- range $c := .categories -}}
 {{-   range $id := keys $.catalog | sortAlpha -}}
 {{-     $it := index $.catalog $id -}}
-{{-     if eq $it.category $c.id }}
+{{-     if and (eq $it.category $c.id) (not (dig "always" false $it)) }}
 {{ $c.id }}	{{ $id }}	{{ $it.name }}	{{ $it.description }}	{{ includeTemplate "available" (dict "item" $it "d" $d) | trim }}
 {{-     end -}}
 {{-   end -}}

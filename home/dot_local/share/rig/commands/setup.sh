@@ -145,7 +145,7 @@ cmd_setup() {
     local p; p=$(menu_profile)
     if [[ -n $p ]]; then profile=$p; sel=$(profile_ids "$p"); fi
   fi
-  local detected; detected=$(cz_tmpl '{{ $d := includeTemplate "detect" . | fromJson }}{{ $d.platform }}{{ if $d.wsl }} (WSL){{ end }} · {{ $d.desktop | default "no desktop" }} · display: {{ $d.display }}')
+  local detected; detected=$(cz_tmpl '{{ $d := includeTemplate "detect" . | fromJson }}{{ $d.platform }}{{ if $d.wsl }} (Windows, WSL){{ end }} · {{ $d.desktop | default "no desktop" }} · display: {{ $d.display }}')
   local choice=''
   while :; do
     catalog_refresh "$sel"   # what's available follows the choices so far (a desktop brings a display)

@@ -51,6 +51,11 @@ ledger_last() { # kind key -> the latest "previous" recorded for it
 ledger_keys() { # kind [previous] -> every key recorded under kind
   awk -F'\t' -v k="$1" -v p="${2:-}" '$1==k && (p=="" || $3==p) {print $2}' "$RIG_STATE/system.log" 2>/dev/null
 }
+ledger_forget() { # kind key: drop its entries (a module undid the change itself)
+  [[ -f $RIG_STATE/system.log ]] || return 0
+  local tmp; tmp=$(mktemp)
+  awk -F'\t' -v k="$1" -v n="$2" '!($1==k && $2==n)' "$RIG_STATE/system.log" >"$tmp" && mv "$tmp" "$RIG_STATE/system.log"
+}
 ledger_count() { [[ -f $RIG_STATE/system.log ]] && wc -l <"$RIG_STATE/system.log" | tr -d ' ' || echo 0; }
 
 ledger_revert_all() {

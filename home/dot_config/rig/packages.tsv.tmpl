@@ -1,7 +1,7 @@
 {{- /*
   This machine's resolved package list. One line per package:
     <manager> TAB <name(s)> TAB <logical> TAB <source>
-  Sources: core, item:<id>, runtime:<name>, extra. Managers: pacman, aur, apt, dnf, brew, download.
+  Sources: core, item:<id>, runtime:<name>, extra. Managers: pacman, aur, apt, dnf, brew, winget, download.
   The rules (virtual packages, downloads, per-manager names) are data in
   .chezmoidata/packages.yaml.
 */ -}}
@@ -11,14 +11,16 @@
 {{- $native := "pacman" -}}
 {{- if eq $d.platform "debian" }}{{ $native = "apt" }}{{ end -}}
 {{- if eq $d.platform "fedora" }}{{ $native = "dnf" }}{{ end -}}
-{{- $variant := $d.display -}}{{- if $d.wsl }}{{ $variant = "wsl" }}{{ end -}}
+{{- $variant := $d.display -}}{{- if $d.wsl }}{{ $variant = "windows" }}{{ end -}}
 
 {{- /* (package, source, logical name) triples; a virtual package expands to this machine's packages */ -}}
 {{- $raw := list -}}
 {{- range $pkg := $p.core -}}{{- $raw = append $raw (list $pkg "core") -}}{{- end -}}
 {{- range $id := $en.selected -}}
 {{-   $it := index $.catalog $id -}}
-{{-   range $pkg := concat (dig "packages" list $it) (dig (printf "packages_%s" $d.platform) list $it) -}}
+{{-   $pk := concat (dig "packages" list $it) (dig (printf "packages_%s" $d.platform) list $it) -}}
+{{-   if ne $d.target $d.platform }}{{ $pk = concat $pk (dig (printf "packages_%s" $d.target) list $it) }}{{ end -}}
+{{-   range $pkg := $pk -}}
 {{-     $raw = append $raw (list $pkg (printf "item:%s" $id)) -}}
 {{-   end -}}
 {{- end -}}
@@ -40,6 +42,7 @@
 {{-   $logical := index $pair 2 -}}
 {{-   $mgr := "brew" -}}
 {{-   if has $pkg $p.download_everywhere -}}{{- $mgr = "download" -}}
+{{-   else if and $d.wsl (has $pkg $p.winget) -}}{{- $mgr = "winget" -}}
 {{-   else if and (eq $d.platform "arch") (has $pkg $p.aur) -}}{{- $mgr = "aur" -}}
 {{-   else if eq $d.platform "arch" -}}{{- $mgr = "pacman" -}}
 {{-   else if eq $d.platform "darwin" -}}{{- $mgr = "brew" -}}

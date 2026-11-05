@@ -15,7 +15,7 @@ Library/**
 {{-     $plat := "" }}{{- $isfiles := false }}
 {{-     if eq $key "files" }}{{ $isfiles = true }}
 {{-     else if hasPrefix "files_" $key }}{{ $isfiles = true }}{{ $plat = trimPrefix "files_" $key }}{{ end }}
-{{-     if and $isfiles (or (not $on) (and $plat (ne $plat $d.platform))) }}
+{{-     if and $isfiles (or (not $on) (and $plat (ne $plat $d.platform) (ne $plat $d.target))) }}
 {{-       range $f := index $it $key }}
 {{ $f }}
 {{ $f }}/**

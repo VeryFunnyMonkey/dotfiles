@@ -1,0 +1,37 @@
+# Windows (through WSL): the Windows side of the machine, set up from inside
+# WSL with winget, and files and registry values in your Windows profile
+# (modules/winterm.sh, modules/powertoys.sh; helpers in lib/windows.sh). The
+# keyboard-driven desktop item (wm.yaml) is GlazeWM here. install.ps1 sets up
+# WSL itself, then runs the normal installer inside it.
+catalog:
+  windows-terminal:
+    category: terminal
+    name: Windows Terminal
+    description: "the terminal on Windows: gruvbox, JetBrainsMono Nerd Font, your WSL distro as the default"
+    platforms: [windows]
+    packages: [windows-terminal]
+    module: winterm
+    files_windows: [.config/rig/windows/wt-fragment.json]
+    note: "Windows only (WSL)"
+  powertoys:
+    category: terminal
+    name: PowerToys
+    description: "Command Palette on alt+space (apps, files, calculator, windows); FancyZones off, so GlazeWM places windows"
+    platforms: [windows]
+    always: true
+    packages: [powertoys]
+    module: powertoys
+    note: "Windows only (WSL)"
+    # PowerToys' settings (modules/powertoys.sh): per PowerToys module, the
+    # properties merged into its settings (PowerToys.DSC.exe); everything not
+    # named stays as PowerToys ships it. The previous values are saved first
+    # and set back on uninstall.
+    powertoys_settings:
+      App:
+        startup: true
+        theme: dark
+        Enabled: {FancyZones: false, "PowerToys Run": false, CmdPal: true}
+    # Command Palette's own settings (not covered by PowerToys' DSC): alt+space
+    # opens it (code 32 = space), as PowerToys Run did.
+    cmdpal_settings:
+      Hotkey: {win: false, ctrl: false, alt: true, shift: false, code: 32}

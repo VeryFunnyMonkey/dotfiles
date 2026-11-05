@@ -137,6 +137,33 @@ pm_brew_exists() {
   fi
 }
 
+# ------------------------------------------------------------- winget -------
+# Windows (WSL): packages on the Windows side, through winget.exe (WSL's
+# interop). Per user where the package offers it (PowerToys), so there's no
+# admin prompt; GlazeWM installs for all users, so Windows asks once.
+winget_() { local w; w=$(win_exe winget.exe) || { warn "winget isn't on this Windows (App Installer, from the Microsoft Store)"; return 1; }; (cd /mnt/c && "$w" "$@" --accept-source-agreements --disable-interactivity); }
+pm_winget_present() { winget_ list --id "$1" --exact --source winget >/dev/null 2>&1; }
+pm_winget_install() {
+  local id rc=0
+  for id in "$@"; do
+    # per user if the package offers it; else for all users (Windows asks for admin)
+    winget_ install --id "$id" --exact --source winget --silent --scope user --accept-package-agreements >/dev/null 2>&1 ||
+      winget_ install --id "$id" --exact --source winget --silent --accept-package-agreements || rc=1
+  done
+  return $rc
+}
+pm_winget_remove() { local id; for id in "$@"; do winget_ uninstall --id "$id" --exact --source winget --silent || true; done; }
+pm_winget_upgrade() { winget_ upgrade --all --silent --accept-package-agreements || true; }
+pm_winget_search() { winget_ search "$@"; }
+pm_winget_explicit() { :; }   # Windows' own list isn't rig's to judge (drift stays on the Linux side)
+# winget's package index on GitHub (no winget needed, so it runs anywhere):
+# Publisher.Name lives at manifests/<p>/<Publisher>/<Name> (p: its first letter, lowercase).
+pm_winget_exists() {
+  local pub=${1%%.*} name=${1#*.} letter
+  letter=$(printf '%s' "${pub:0:1}" | tr '[:upper:]' '[:lower:]')
+  url_exists "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/$letter/$pub/${name//.//}"
+}
+
 # ------------------------------------------------------------- download -----
 # Things rig fetches itself (pkg/downloads.sh), one at a time.
 pm_download_present() { "dl_${1//-/_}_present"; }

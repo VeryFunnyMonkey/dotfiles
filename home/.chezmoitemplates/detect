@@ -1,6 +1,6 @@
 {{- /*
   Facts about this machine, as JSON: platform (arch|fedora|debian|darwin|unknown),
-  wsl, display (wayland|x11|darwin|wsl|none), desktop (kde|hyprland|gnome|macos|"").
+  wsl (a WSL kernel), display (wayland|x11|darwin|windows|none), desktop (kde|hyprland|gnome|macos|windows|"").
   display and desktop are detected once and then kept in chezmoi's config, so an
   apply from an SSH session doesn't decide the machine has no display.
 */ -}}
@@ -10,9 +10,13 @@
 {{-   if contains "microsoft" (lower .chezmoi.kernel.osrelease) -}}{{- $wsl = true -}}{{- end -}}
 {{- end -}}
 {{- $display := dig "display" "" . -}}
+{{- /* "wsl" is what older configs stored for Windows */ -}}
+{{- if eq $display "wsl" -}}{{- $display = "windows" -}}{{- end -}}
+{{- /* a machine stored as Windows is one, also where the kernel can't be read (scripts/check-packages.sh renders it) */ -}}
+{{- if eq $display "windows" -}}{{- $wsl = true -}}{{- end -}}
 {{- if not $display -}}
 {{-   if eq .chezmoi.os "darwin" -}}{{- $display = "darwin" -}}
-{{-   else if $wsl -}}{{- $display = "wsl" -}}
+{{-   else if $wsl -}}{{- $display = "windows" -}}
 {{-   else if or (env "WAYLAND_DISPLAY") (eq (env "XDG_SESSION_TYPE") "wayland") -}}{{- $display = "wayland" -}}
 {{-   else if env "DISPLAY" -}}{{- $display = "x11" -}}
 {{-   else -}}{{- $display = "none" -}}{{- end -}}
@@ -21,6 +25,7 @@
 {{- if not $desktop -}}
 {{-   $xdg := lower (env "XDG_CURRENT_DESKTOP") -}}
 {{-   if eq .chezmoi.os "darwin" -}}{{- $desktop = "macos" -}}
+{{-   else if $wsl -}}{{- $desktop = "windows" -}}
 {{-   else if contains "kde" $xdg -}}{{- $desktop = "kde" -}}
 {{-   else if contains "hyprland" $xdg -}}{{- $desktop = "hyprland" -}}
 {{-   else if contains "gnome" $xdg -}}{{- $desktop = "gnome" -}}
@@ -32,6 +37,6 @@
 {{-   if eq $display "none" -}}{{- $display = "wayland" -}}{{- end -}}
 {{-   if not $desktop -}}{{- $desktop = "hyprland" -}}{{- end -}}
 {{- end -}}
-{{- /* the platform an item is matched against: wsl counts separately */ -}}
-{{- $target := $platform -}}{{- if $wsl -}}{{- $target = "wsl" -}}{{- end -}}
+{{- /* the platform an item is matched against: Windows (through WSL) counts separately */ -}}
+{{- $target := $platform -}}{{- if $wsl -}}{{- $target = "windows" -}}{{- end -}}
 {{- dict "platform" $platform "target" $target "wsl" $wsl "display" $display "desktop" $desktop | toJson -}}

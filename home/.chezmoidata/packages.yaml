@@ -35,10 +35,10 @@ packages:
   native: [bash, zsh, git, openssh, curl, unzip, build-tools, wl-clipboard, xclip, wslu, fuse3, podman, podman-docker, docker-compose]
 
   # Virtual packages: one logical name that means different packages (or none)
-  # depending on the machine: "wsl", else the display (wayland, x11, ...).
+  # depending on the machine: "windows" (WSL), else the display (wayland, x11, ...).
   virtual:
     clipboard:
-      wsl: [win32yank, wslu]
+      windows: [win32yank, wslu]
       wayland: [wl-clipboard]
       x11: [xclip]
 
@@ -46,6 +46,10 @@ packages:
   # Fedora (not packaged suitably there), or on every platform.
   download: [nerd-font, tailscale]
   download_everywhere: [win32yank]
+
+  # On Windows (WSL): installed on the Windows side, with winget (per user where
+  # the package allows it, so no admin prompt).
+  winget: [windows-terminal, powertoys, glazewm]
 
   # On Arch, from the AUR, through the AUR helper (yay; the bootstrap installs it).
   aur: [helium]
@@ -56,6 +60,10 @@ packages:
 
   # Per-manager names, where they differ from the logical name. "-" = not needed there.
   names:
+    winget:
+      windows-terminal: Microsoft.WindowsTerminal
+      powertoys: Microsoft.PowerToys
+      glazewm: glzr-io.glazewm
     aur:
       helium: helium-browser-bin
     pacman:

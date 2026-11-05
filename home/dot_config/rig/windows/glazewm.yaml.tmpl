@@ -1,0 +1,92 @@
+{{- /* GlazeWM: the keyboard-driven desktop on Windows (the wm item). Alt is
+       mod, as in AeroSpace on macOS (Windows keeps the Win-key shortcuts).
+       Rendered from theme.yaml; modules/glazewm.sh copies it to
+       %USERPROFILE%\.glzr\glazewm\config.yaml. Keys: rig info wm. */ -}}
+# Written by rig (the wm item); rig modules sync glazewm writes it again.
+general:
+  startup_commands: []
+  shutdown_commands: []
+  config_reload_commands: []
+  focus_follows_cursor: false
+  toggle_workspace_on_refocus: false
+  cursor_jump:
+    enabled: true
+    trigger: 'monitor_focus'
+  hide_method: 'cloak'
+  show_all_in_taskbar: false
+
+# "Tight": small gaps, a thin border (aqua when focused)
+gaps:
+  scale_with_dpi: true
+  inner_gap: '4px'
+  outer_gap: { top: '4px', right: '4px', bottom: '4px', left: '4px' }
+
+window_effects:
+  focused_window:
+    border: { enabled: true, color: '{{ .theme.aqua }}' }
+    hide_title_bar: { enabled: false }
+    corner_style: { enabled: true, style: 'small_rounded' }
+    transparency: { enabled: false, opacity: '95%' }
+  other_windows:
+    border: { enabled: true, color: '{{ .theme.bg2 }}' }
+    hide_title_bar: { enabled: false }
+    corner_style: { enabled: true, style: 'small_rounded' }
+    transparency: { enabled: false, opacity: '0%' }
+
+window_behavior:
+  initial_state: 'tiling'
+  state_defaults:
+    floating: { centered: true, shown_on_top: false }
+    fullscreen: { maximized: false, shown_on_top: false }
+
+workspaces:
+{{- range $i := until 9 }}
+  - name: '{{ add $i 1 }}'
+{{- end }}
+
+window_rules:
+  - commands: ['ignore']
+    match:
+      # PowerToys' own pop-ups and Command Palette float over everything
+      - window_title: { equals: 'Command Palette' }
+        window_class: { equals: 'WinUIDesktopWin32WindowClass' }
+      - window_process: { equals: 'PowerToys' }
+        window_class: { regex: 'HwndWrapper\[PowerToys\.PowerAccent.*?\]' }
+      - window_process: { equals: 'PowerToys' }
+        window_title: { regex: '.*? - Peek' }
+      - window_title: { regex: '[Pp]icture.in.[Pp]icture' }
+        window_class: { regex: 'Chrome_WidgetWin_1|MozillaDialogClass' }
+  - commands: ['set-floating --centered']
+    match:
+      # Settings windows and small dialogs
+      - window_process: { equals: 'PowerToys.Settings' }
+      - window_class: { equals: '#32770' }
+
+keybindings:
+  # windows
+  - { commands: ['focus --direction left'], bindings: ['alt+h'] }
+  - { commands: ['focus --direction down'], bindings: ['alt+j'] }
+  - { commands: ['focus --direction up'], bindings: ['alt+k'] }
+  - { commands: ['focus --direction right'], bindings: ['alt+l'] }
+  - { commands: ['move --direction left'], bindings: ['alt+shift+h'] }
+  - { commands: ['move --direction down'], bindings: ['alt+shift+j'] }
+  - { commands: ['move --direction up'], bindings: ['alt+shift+k'] }
+  - { commands: ['move --direction right'], bindings: ['alt+shift+l'] }
+  - { commands: ['resize --width -3%'], bindings: ['alt+ctrl+h'] }
+  - { commands: ['resize --height +3%'], bindings: ['alt+ctrl+j'] }
+  - { commands: ['resize --height -3%'], bindings: ['alt+ctrl+k'] }
+  - { commands: ['resize --width +3%'], bindings: ['alt+ctrl+l'] }
+  - { commands: ['close'], bindings: ['alt+q'] }
+  - { commands: ['toggle-fullscreen'], bindings: ['alt+shift+f'] }
+  - { commands: ['toggle-floating --centered'], bindings: ['alt+shift+space'] }
+  # workspaces
+{{- range $i := until 9 }}
+  - { commands: ['focus --workspace {{ add $i 1 }}'], bindings: ['alt+{{ add $i 1 }}'] }
+  - { commands: ['move --workspace {{ add $i 1 }}'], bindings: ['alt+shift+{{ add $i 1 }}'] }
+{{- end }}
+  # apps (alt+space, the launcher, is Command Palette's own key: PowerToys)
+  - { commands: ['shell-exec wt.exe'], bindings: ['alt+enter'] }
+  # GlazeWM itself
+  - { commands: ['wm-reload-config'], bindings: ['alt+shift+r'] }
+  - { commands: ['wm-toggle-pause'], bindings: ['alt+shift+p'] }
+  - { commands: ['wm-exit'], bindings: ['alt+shift+e'] }

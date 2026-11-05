@@ -22,8 +22,8 @@ cz() { chezmoi --source "$repo" --config "$tmp/c.toml" "$@"; }
 printf '[data]\n' >"$tmp/c.toml"
 all=$(cz execute-template '{{ keys .catalog | sortAlpha | join "\",\"" }}')
 
-# Every display variant (the clipboard differs per display; "wsl" is WSL's).
-for display in wayland x11 wsl; do
+# Every display variant (the clipboard differs per display; "windows" is WSL's).
+for display in wayland x11 windows; do
   printf '[data]\n  display = "%s"\n  desktop = "kde"\n  selected = ["%s"]\n' "$display" "$all" >"$tmp/c.toml"
   cz execute-template <"$repo/home/dot_config/rig/packages.tsv.tmpl"
 done | awk -F'\t' 'NF>=2 && $1 !~ /^#/ && !seen[$1"\t"$2]++' >"$tmp/list"

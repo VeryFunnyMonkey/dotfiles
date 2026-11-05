@@ -3,7 +3,8 @@
 #   name, description        shown in the installer
 #   packages                 logical package names (resolved per OS by packages.yaml);
 #                            packages_<platform> (e.g. packages_darwin) only there
-#   platforms                where it exists: arch fedora debian darwin wsl (default: all)
+#   platforms                where it exists: arch fedora debian darwin windows (WSL) (default: all)
+#   always                   true = not a choice: applies wherever it's available (like core)
 #   desktops                 only on these desktops: kde hyprland gnome macos (default: any)
 #   display                  true = needs a display (not on headless machines)
 #   needs                    runtimes: node go rust (runtimes.yaml)
@@ -14,7 +15,8 @@
 #   module                   the rig module that sets it up beyond packages
 #                            (share/rig/modules/<name>.sh: services, logins, ...)
 #   files                    target paths only this item brings (ignored when it isn't
-#                            selected); files_<platform> only there
+#                            selected); files_<platform> only there (packages_<platform> too;
+#                            "windows" counts as a platform there)
 #   settings                 OS settings it applies (see catalog/settings.yaml); rig
 #                            records each previous value and restores it on deselect
 categories:

@@ -1,0 +1,28 @@
+{{- /* Windows Terminal: the gruvbox scheme (theme.yaml) and this WSL distro's
+       profile in it, with the Nerd Font, starting at home. modules/winterm.sh
+       fills in the profile and copies it to Windows Terminal's Fragments
+       folder (it isn't settings.json, which stays yours). */ -}}
+{{- $t := .theme -}}{{- $n := .theme.normal -}}
+{
+  "schemes": [
+    {
+      "name": "rig gruvbox",
+      "background": "{{ $t.bg }}", "foreground": "{{ $t.fg }}",
+      "cursorColor": "{{ $t.fg }}", "selectionBackground": "{{ $t.bg2 }}",
+      "black": "{{ $t.bg }}", "red": "{{ $n.red }}", "green": "{{ $n.green }}", "yellow": "{{ $n.yellow }}",
+      "blue": "{{ $n.blue }}", "purple": "{{ $n.purple }}", "cyan": "{{ $n.aqua }}", "white": "{{ $n.white }}",
+      "brightBlack": "{{ $t.gray }}", "brightRed": "{{ $t.red }}", "brightGreen": "{{ $t.green }}", "brightYellow": "{{ $t.yellow }}",
+      "brightBlue": "{{ $t.blue }}", "brightPurple": "{{ $t.purple }}", "brightCyan": "{{ $t.aqua }}", "brightWhite": "{{ $t.fg }}"
+    }
+  ],
+  "profiles": [
+    {
+      "updates": "@PROFILE_GUID@",
+      "colorScheme": "rig gruvbox",
+      "font": { "face": "JetBrainsMono Nerd Font", "size": 11 },
+      "startingDirectory": "~",
+      "padding": "6",
+      "cursorShape": "filledBox"
+    }
+  ]
+}
