@@ -50,6 +50,11 @@ packages:
   # On Windows (WSL): installed on the Windows side, with winget (per user where
   # the package allows it, so no admin prompt).
   winget: [windows-terminal, powertoys, glazewm, git-for-windows]
+  # Extra installer settings, per winget id (winget install --custom).
+  winget_custom:
+    # GlazeWM's installer adds Zebar (a bar) by default; rig doesn't start it,
+    # and two programs under one id make winget refuse to uninstall either
+    glzr-io.glazewm: "Custom_InstallZebar=0"
 
   # On Arch, from the AUR, through the AUR helper (yay; the bootstrap installs it).
   aur: [helium]

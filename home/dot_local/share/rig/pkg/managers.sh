@@ -175,6 +175,9 @@ pm_winget_install() {
     # for everyone only, winget otherwise falls back to an old version that
     # does (GlazeWM 3 -> 2.1.1).
     v=$(pm_winget_version "$id"); ver=(); if [[ -n $v ]]; then ver=(--version "$v"); fi
+    # its installer settings (packages.yaml winget_custom)
+    local custom; custom=$(cz_tmpl "{{ dig \"winget_custom\" \"$id\" \"\" .packages }}" 2>/dev/null || true)
+    if [[ -n $custom ]]; then ver+=(--custom "$custom"); fi
     if out=$(winget_ install --id "$id" --exact --source winget --silent "${ver[@]}" --scope user --accept-package-agreements 2>&1); then
       printf '%s\n' "$out" | winget_out
     else
