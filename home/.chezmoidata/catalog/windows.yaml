@@ -30,7 +30,7 @@ catalog:
       App:
         startup: true
         theme: dark
-        Enabled: {FancyZones: false, "PowerToys Run": false, CmdPal: true}
+        enabled: {FancyZones: false, "PowerToys Run": false, CmdPal: true}
     # Command Palette's own settings (not covered by PowerToys' DSC): alt+space
     # opens it (code 32 = space), as PowerToys Run did.
     cmdpal_settings:

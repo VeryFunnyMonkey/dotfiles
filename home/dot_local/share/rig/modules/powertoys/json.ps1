@@ -58,11 +58,12 @@ $out = Invoke-Dsc get --resource settings --module $Module
 if ($LASTEXITCODE -ne 0) { Stop-Unexpected "get $Module failed, exit $LASTEXITCODE" $out }
 $cur = Read-Json $out
 if (-not $cur) { Stop-Unexpected "get $Module, no JSON" $out }
-# the documented shape is {"settings":{"properties":{...},"name":...,"version":...}}
+# {"settings":{"properties":{...},"name":...}} for most modules (as documented);
+# App's settings sit right in "settings" (startup, theme, enabled: {...})
 if (-not $cur.settings) { Stop-Unexpected "get $Module, no settings" $out }
-if (-not $cur.settings.properties) { $cur.settings | Add-Member -Force -NotePropertyName properties -NotePropertyValue (New-Object psobject) }
+$target = if ($cur.settings.PSObject.Properties['properties']) { $cur.settings.properties } else { $cur.settings }
 if ($Save) { [IO.File]::WriteAllText($Save, ($cur | ConvertTo-Json -Depth 30 -Compress), (New-Object Text.UTF8Encoding $false)) }
-Merge $cur.settings.properties ($Want | ConvertFrom-Json)
+Merge $target ($Want | ConvertFrom-Json)
 $in = $cur | ConvertTo-Json -Depth 30 -Compress
 $res = Invoke-Dsc set --resource settings --module $Module --input (Arg $in)
 if ($LASTEXITCODE -ne 0) { Stop-Unexpected "set $Module failed, exit $LASTEXITCODE" $res }
