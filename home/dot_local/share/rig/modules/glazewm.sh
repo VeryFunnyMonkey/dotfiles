@@ -12,9 +12,13 @@ glazewm_sync() {
   if module_active glazewm; then glazewm_setup; else glazewm_teardown; fi
 }
 
+# Where GlazeWM's installer says it put itself (HKLM\SOFTWARE\glzr.io\GlazeWM,
+# InstallDir), else its usual folders.
 glazewm_exe() {
-  local l p; l=$(win_env LOCALAPPDATA) || return 1
-  for p in "/mnt/c/Program Files/glzr.io/GlazeWM/glazewm.exe" "$l/Programs/glzr.io/GlazeWM/glazewm.exe" "/mnt/c/Program Files/glzr.io"/*/glazewm.exe; do
+  local l p d; l=$(win_env LOCALAPPDATA) || return 1
+  d=$(win_reg_get 'HKLM\SOFTWARE\glzr.io\GlazeWM' InstallDir); d=${d#*|}
+  if [[ -n $d ]]; then d=$(wslpath -u "${d%\\}" 2>/dev/null) || d=''; fi
+  for p in ${d:+"$d/glazewm.exe"} "/mnt/c/Program Files/glzr.io/GlazeWM/glazewm.exe" "$l/Programs/glzr.io/GlazeWM/glazewm.exe"; do
     if [[ -f $p ]]; then printf '%s' "$p"; return 0; fi
   done
   return 1
@@ -24,7 +28,12 @@ glazewm_running() { win_running glazewm.exe; }
 
 glazewm_setup() {
   local exe src="$CONFIG_HOME/rig/windows/glazewm.yaml"
-  exe=$(glazewm_exe) || { warn "GlazeWM isn't installed yet (rig sync)"; return 0; }
+  # winget can return while GlazeWM's own installer is still finishing
+  local i; for ((i = 0; i < 15; i++)); do
+    if exe=$(glazewm_exe) || ! pm_winget_present glzr-io.glazewm; then break; fi
+    sleep 2
+  done
+  [[ -n ${exe:-} ]] || { warn "GlazeWM isn't installed yet (rig sync)"; return 0; }
   [[ -f $src ]] || { warn "GlazeWM's config isn't rendered yet (chezmoi apply)"; return 0; }
   if win_file_write "$(glazewm_config)" "$src"; then
     ok "GlazeWM config (alt+hjkl, alt+1..9; the keys: rig info wm)"
