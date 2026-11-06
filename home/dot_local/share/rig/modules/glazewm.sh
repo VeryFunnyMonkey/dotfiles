@@ -28,7 +28,7 @@ glazewm_setup() {
   [[ -f $src ]] || { warn "GlazeWM's config isn't rendered yet (chezmoi apply)"; return 0; }
   if win_file_write "$(glazewm_config)" "$src"; then
     ok "GlazeWM config (alt+hjkl, alt+1..9; the keys: rig info wm)"
-    if glazewm_running; then (cd /mnt/c && "$exe" command wm-reload-config >/dev/null 2>&1) || true; fi
+    if glazewm_running; then (cd /mnt/c && "$exe" command wm-reload-config >/dev/null 2>&1 </dev/null) || true; fi
   fi
   win_reg_set "$GLAZE_RUN_KEY" GlazeWM REG_SZ "\"$(win_path "$exe")\""
   if ! glazewm_running; then win_start "$exe"; fi

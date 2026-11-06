@@ -141,7 +141,9 @@ pm_brew_exists() {
 # Windows (WSL): packages on the Windows side, through winget.exe (WSL's
 # interop). Per user where the package offers it (PowerToys), so there's no
 # admin prompt; GlazeWM installs for all users, so Windows asks once.
-winget_() { local w; w=$(win_exe winget.exe) || { warn "winget isn't on this Windows (App Installer, from the Microsoft Store)"; return 1; }; (cd /mnt/c && "$w" "$@" --accept-source-agreements --disable-interactivity); }
+# (input empty: winget reads its input, and would swallow the package list a
+# loop is reading; see win_cmd)
+winget_() { local w; w=$(win_exe winget.exe) || { warn "winget isn't on this Windows (App Installer, from the Microsoft Store)"; return 1; }; (cd /mnt/c && "$w" "$@" --accept-source-agreements --disable-interactivity </dev/null); }
 pm_winget_present() { winget_ list --id "$1" --exact --source winget >/dev/null 2>&1; }
 pm_winget_install() {
   local id rc=0

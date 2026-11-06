@@ -25,10 +25,12 @@ win_exe() { # name.exe -> its path
 }
 
 # Windows programs run from a Windows folder (from a Linux one, cmd.exe warns
-# about UNC paths); their output has CRLF line ends.
-win_cmd() { local c; c=$(win_exe cmd.exe) || return 1; (cd /mnt/c 2>/dev/null || true; "$c" /d /c "$@" 2>/dev/null) | tr -d '\r'; }
-win_ps() { local p; p=$(win_exe powershell.exe) || return 1; (cd /mnt/c 2>/dev/null || true; "$p" -NoProfile -NonInteractive -ExecutionPolicy Bypass "$@") | tr -d '\r'; }
-win_reg() { local r; r=$(win_exe reg.exe) || return 1; (cd /mnt/c 2>/dev/null || true; "$r" "$@") | tr -d '\r'; }
+# about UNC paths); their output has CRLF line ends. Their input is empty: a
+# Windows program reads whatever input it's given, so inside a
+# `while read ...; done <list` it would swallow the rest of the list.
+win_cmd() { local c; c=$(win_exe cmd.exe) || return 1; (cd /mnt/c 2>/dev/null || true; "$c" /d /c "$@" 2>/dev/null </dev/null) | tr -d '\r'; }
+win_ps() { local p; p=$(win_exe powershell.exe) || return 1; (cd /mnt/c 2>/dev/null || true; "$p" -NoProfile -NonInteractive -ExecutionPolicy Bypass "$@" </dev/null) | tr -d '\r'; }
+win_reg() { local r; r=$(win_exe reg.exe) || return 1; (cd /mnt/c 2>/dev/null || true; "$r" "$@" </dev/null) | tr -d '\r'; }
 
 # A Windows folder (USERPROFILE, LOCALAPPDATA, APPDATA) as a Linux path.
 # Cached in rig's state (they don't change, and every lookup starts cmd.exe;
