@@ -67,7 +67,9 @@ pm_aur_exists() {
 
 # ------------------------------------------------------------- apt ----------
 pm_apt_present() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }
-pm_apt_install() { sudo_ apt-get update -qq; sudo_ env DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"; }
+# --no-remove: an install that would remove something else stops instead
+# (apt -y would remove it without asking)
+pm_apt_install() { sudo_ apt-get update -qq; sudo_ env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-remove "$@"; }
 pm_apt_remove() { sudo_ env DEBIAN_FRONTEND=noninteractive apt-get remove -y "$@"; }
 pm_apt_search() { apt-cache search "$@"; }
 pm_apt_upgrade() { sudo_ apt-get update && sudo_ env DEBIAN_FRONTEND=noninteractive apt-get upgrade -y; }

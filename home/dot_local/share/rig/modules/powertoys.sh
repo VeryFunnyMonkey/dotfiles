@@ -55,7 +55,7 @@ powertoys_setup() {
   done
   if ((failed == 0)); then ok "PowerToys settings (FancyZones off, Command Palette on)"; fi
   powertoys_cmdpal
-  if ! win_cmd 'tasklist /FI "IMAGENAME eq PowerToys.exe"' | grep -qi powertoys.exe; then win_start "$dir/PowerToys.exe"; fi
+  if ! win_running PowerToys.exe; then win_start "$dir/PowerToys.exe"; fi
 }
 
 # Command Palette's key: its settings file, merged (it reads it when it starts).
@@ -67,7 +67,7 @@ powertoys_cmdpal() {
   if [[ -f $f ]]; then cp "$f" "$wt"; fi
   pt_json -File "$(win_path "$wt")" -Want "$want" >/dev/null || { warn "Command Palette's key wasn't set"; return 0; }
   if win_file_write "$f" "$wt"; then
-    win_cmd 'taskkill /IM Microsoft.CmdPal.UI.exe /F' >/dev/null 2>&1 || true   # it starts again with PowerToys, on the new key
+    win_cmd taskkill /IM Microsoft.CmdPal.UI.exe /F >/dev/null 2>&1 || true   # it starts again with PowerToys, on the new key
     ok "Command Palette on alt+space"
   fi
   rm -f "$wt"

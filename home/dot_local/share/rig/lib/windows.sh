@@ -25,7 +25,9 @@ win_exe() { # name.exe -> its path
 }
 
 # Windows programs run from a Windows folder (from a Linux one, cmd.exe warns
-# about UNC paths); their output has CRLF line ends. Their input is empty: a
+# about UNC paths); their output has CRLF line ends. Pass each argument on its
+# own (win_cmd tasklist /FI "IMAGENAME eq x.exe"): WSL quotes each one for
+# Windows, but escapes quotes inside one as \", which cmd.exe misreads. Their input is empty: a
 # Windows program reads whatever input it's given, so inside a
 # `while read ...; done <list` it would swallow the rest of the list.
 win_cmd() { local c; c=$(win_exe cmd.exe) || return 1; (cd /mnt/c 2>/dev/null || true; "$c" /d /c "$@" 2>/dev/null </dev/null) | tr -d '\r'; }
@@ -39,7 +41,7 @@ win_env() { # NAME
   local cache="$RIG_STATE/windows.env" v
   v=$(awk -F= -v k="$1" '$1==k {sub(/^[^=]*=/,""); print; exit}' "$cache" 2>/dev/null)
   if [[ -z $v ]]; then
-    v=$(win_cmd "echo %$1%")
+    v=$(win_cmd echo "%$1%")
     [[ -n $v && $v != "%$1%" ]] || return 1
     v=$(wslpath -u "$v")
     mkdir -p "$RIG_STATE" && printf '%s=%s\n' "$1" "$v" >>"$cache"
@@ -50,8 +52,9 @@ win_path() { wslpath -w "$1"; }   # Linux path on the Windows drive -> C:\...
 
 # Start a Windows program in the background (the tray apps: GlazeWM, PowerToys).
 win_start() { # Linux path to the .exe
-  win_cmd "start \"\" \"$(win_path "$1")\"" >/dev/null || true
+  win_cmd start "" "$(win_path "$1")" >/dev/null || true
 }
+win_running() { win_cmd tasklist /FI "IMAGENAME eq $1" | grep -qi -- "$1"; }   # name.exe
 
 # UUIDv5 as Windows Terminal makes them: the name hashed as UTF-16LE.
 uuid5() { # namespace name -> {guid}

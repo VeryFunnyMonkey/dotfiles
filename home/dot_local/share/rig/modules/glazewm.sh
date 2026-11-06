@@ -20,7 +20,7 @@ glazewm_exe() {
   return 1
 }
 glazewm_config() { printf '%s/.glzr/glazewm/config.yaml' "$(win_env USERPROFILE)"; }
-glazewm_running() { win_cmd 'tasklist /FI "IMAGENAME eq glazewm.exe"' | grep -qi glazewm.exe; }
+glazewm_running() { win_running glazewm.exe; }
 
 glazewm_setup() {
   local exe src="$CONFIG_HOME/rig/windows/glazewm.yaml"
@@ -36,7 +36,7 @@ glazewm_setup() {
 
 glazewm_teardown() {
   if ledger_has win-file "$(glazewm_config 2>/dev/null)" || ledger_has win-reg "$GLAZE_RUN_KEY|GlazeWM"; then
-    if glazewm_running; then win_cmd 'taskkill /IM glazewm.exe' >/dev/null 2>&1 || true; fi
+    if glazewm_running; then win_cmd taskkill /IM glazewm.exe >/dev/null 2>&1 || true; fi
     win_file_restore "$(glazewm_config)"
     win_reg_restore "$GLAZE_RUN_KEY" GlazeWM
   fi
