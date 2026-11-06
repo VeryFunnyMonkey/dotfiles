@@ -193,7 +193,7 @@ pkg_remove_set() {
       done
       names=("${left[@]+"${left[@]}"}")
     done
-    for n in "${names[@]+"${names[@]}"}"; do warn "kept $n ($m): something else still needs it"; done
+    for n in "${names[@]+"${names[@]}"}"; do warn "couldn't remove $n ($m): something else needs it, or its uninstaller failed; remove it by hand"; done
   done
 }
 

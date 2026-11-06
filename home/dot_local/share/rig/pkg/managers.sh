@@ -165,6 +165,9 @@ pm_winget_version() { winget_ show --id "$1" --exact --source winget 2>/dev/null
 winget_out() { tr -d '\r' | awk '{ t = $0; gsub(/[[:space:]\\|\/-]/, "", t); if (t != "") print }'; }
 pm_winget_install() {
   local id rc=0 v ver out
+  # a fresh index first ("0x8a15000f: data required by the source is missing"
+  # when it was never fetched)
+  winget_ source update --name winget >/dev/null 2>&1 || true
   for id in "$@"; do
     # The latest version, per user if it installs that way (no admin prompt),
     # else for all users (Windows asks for admin). Pinned to the version:
@@ -181,7 +184,14 @@ pm_winget_install() {
   done
   return $rc
 }
-pm_winget_remove() { local id; for id in "$@"; do winget_ uninstall --id "$id" --exact --source winget --silent || true; done; }
+pm_winget_remove() { # fails when one is still installed after (its uninstaller failed)
+  local id rc=0
+  for id in "$@"; do
+    winget_ uninstall --id "$id" --exact --source winget --silent 2>&1 | winget_out || true
+    if pm_winget_present "$id"; then rc=1; fi
+  done
+  return $rc
+}
 pm_winget_upgrade() { winget_ upgrade --all --silent --accept-package-agreements || true; }
 pm_winget_search() { winget_ search "$@"; }
 pm_winget_explicit() { :; }   # Windows' own list isn't rig's to judge (drift stays on the Linux side)

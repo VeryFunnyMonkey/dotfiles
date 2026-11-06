@@ -38,5 +38,5 @@ check "uninstall ok" '[[ $? -eq 0 ]]' || tail -20 /tmp/uninstall.log
 check "Git Credential Manager put back (rig's local.gitconfig gone)" '[[ ! -e ~/.config/git/local.gitconfig ]]'
 check "win32yank removed" '[[ ! -e ~/.local/bin/win32yank.exe ]]'
 check "Windows put back: fragment, font, GlazeWM config and login entry" '[[ ! -e "$frag" && ! -e "$UP/.glzr/glazewm/config.yaml" ]] && [[ $(ls "$LAD/Microsoft/Windows/Fonts" 2>/dev/null | grep -c JetBrainsMonoNerdFont || true) == "$fonts_before" ]] && ! win_reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v GlazeWM >/dev/null 2>&1'
-check "PowerToys and GlazeWM uninstalled (rig installed them)" '! pm_winget_present Microsoft.PowerToys && ! pm_winget_present glzr-io.glazewm'
+check "PowerToys and GlazeWM uninstalled (rig installed them)" '! pm_winget_present Microsoft.PowerToys && ! pm_winget_present glzr-io.glazewm' || { for i in Microsoft.PowerToys glzr-io.glazewm; do if pm_winget_present $i; then echo "still installed: $i"; winget_ list --id $i 2>&1 | tr -d "\r" | tail -2; fi; done; grep -iE "remove|winget|kept|couldn" /tmp/uninstall.log | tail -10; }
 done_tests
