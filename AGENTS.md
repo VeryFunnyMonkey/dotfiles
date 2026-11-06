@@ -43,7 +43,8 @@ Personal dotfiles for **client machines** (Arch, macOS, Windows through WSL, Deb
 - OS settings are catalog items with `settings:`; `rig settings` records each previous value before changing it, so they stay undoable.
 
 ## Commits
-- No `Co-Authored-By` or any other attribution lines. Never push: the owner reviews and pushes.
+- No `Co-Authored-By` or any other attribution lines.
+- Push to `main` after committing tested work (run the relevant tests first), then watch CI and fix what fails. The owner has given standing permission; no need to ask.
 
 ## Stack review
 `docs/stack.yaml` records every chosen component: why it was chosen, what lost, and `revisit_if` triggers. A review checks that the choices still hold. Do one when the owner asks, or offer one (once, at the start of a session) when `last_reviewed` is more than 90 days old; `rig doctor` also says when one is due.
