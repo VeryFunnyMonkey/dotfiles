@@ -22,19 +22,19 @@ function Arg($json) { if ($PSVersionTable.PSVersion.Major -lt 7) { $json -replac
 function Read-Json($lines) {
   $text = ($lines | Out-String).Trim()
   if (-not $text) { return $null }
-  try { return $text | ConvertFrom-Json } catch { }
+  try { return $text | ConvertFrom-Json } catch { Write-Verbose 'not JSON as a whole; looking for a JSON line' }
   foreach ($l in @($lines)[-1..-(@($lines).Count)]) {
-    if ("$l".TrimStart().StartsWith('{')) { try { return "$l" | ConvertFrom-Json } catch { } }
+    if ("$l".TrimStart().StartsWith('{')) { try { return "$l" | ConvertFrom-Json } catch { Write-Verbose "not JSON: $l" } }
   }
   return $null
 }
 # PowerToys.DSC.exe, its output (stderr too) as lines; 5.1 would throw on a
 # stderr line under ErrorActionPreference Stop, so not for this call
-function Invoke-Dsc {
+function Invoke-Dsc([string] $exe) {
   $ErrorActionPreference = 'Continue'
-  & $Dsc @args 2>&1 | ForEach-Object { "$_" }
+  & $exe @args 2>&1 | ForEach-Object { "$_" }
 }
-function Stop-Unexpected($what, $lines) {
+function Exit-Unexpected($what, $lines) {
   [Console]::Error.WriteLine("rig: PowerToys' DSC printed something rig didn't expect ($what):")
   [Console]::Error.WriteLine((($lines | Out-String).Trim() -split "`n" | Select-Object -First 30) -join "`n")
   exit 2
@@ -50,21 +50,21 @@ if ($File) {
 }
 if ($Restore) {
   $in = (Get-Content -Raw $Restore | ConvertFrom-Json) | ConvertTo-Json -Depth 30 -Compress
-  $res = Invoke-Dsc set --resource settings --module $Module --input (Arg $in)
-  if ($LASTEXITCODE -ne 0) { Stop-Unexpected "set $Module failed, exit $LASTEXITCODE" $res }
+  $res = Invoke-Dsc $Dsc set --resource settings --module $Module --input (Arg $in)
+  if ($LASTEXITCODE -ne 0) { Exit-Unexpected "set $Module failed, exit $LASTEXITCODE" $res }
   exit 0
 }
-$out = Invoke-Dsc get --resource settings --module $Module
-if ($LASTEXITCODE -ne 0) { Stop-Unexpected "get $Module failed, exit $LASTEXITCODE" $out }
+$out = Invoke-Dsc $Dsc get --resource settings --module $Module
+if ($LASTEXITCODE -ne 0) { Exit-Unexpected "get $Module failed, exit $LASTEXITCODE" $out }
 $cur = Read-Json $out
-if (-not $cur) { Stop-Unexpected "get $Module, no JSON" $out }
+if (-not $cur) { Exit-Unexpected "get $Module, no JSON" $out }
 # {"settings":{"properties":{...},"name":...}} for most modules (as documented);
 # App's settings sit right in "settings" (startup, theme, enabled: {...})
-if (-not $cur.settings) { Stop-Unexpected "get $Module, no settings" $out }
+if (-not $cur.settings) { Exit-Unexpected "get $Module, no settings" $out }
 $target = if ($cur.settings.PSObject.Properties['properties']) { $cur.settings.properties } else { $cur.settings }
 if ($Save) { [IO.File]::WriteAllText($Save, ($cur | ConvertTo-Json -Depth 30 -Compress), (New-Object Text.UTF8Encoding $false)) }
 Merge $target ($Want | ConvertFrom-Json)
 $in = $cur | ConvertTo-Json -Depth 30 -Compress
-$res = Invoke-Dsc set --resource settings --module $Module --input (Arg $in)
-if ($LASTEXITCODE -ne 0) { Stop-Unexpected "set $Module failed, exit $LASTEXITCODE" $res }
+$res = Invoke-Dsc $Dsc set --resource settings --module $Module --input (Arg $in)
+if ($LASTEXITCODE -ne 0) { Exit-Unexpected "set $Module failed, exit $LASTEXITCODE" $res }
 exit 0
