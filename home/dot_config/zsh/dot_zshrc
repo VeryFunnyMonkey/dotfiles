@@ -3,6 +3,24 @@
 # --- options -----------------------------------------------------------------
 setopt auto_cd interactive_comments no_beep prompt_subst
 
+# --- ssh agent without systemd -----------------------------------------------
+# ~/.zshenv points at the systemd agent socket; Linux without a systemd user
+# session (WSL without systemd, say) has none. Then: one ssh-agent per user on
+# a fixed socket, started by the first shell and shared by the rest (and tmux).
+if [[ -z $SSH_AUTH_SOCK && $OSTYPE == linux* ]] && (( $+commands[ssh-agent] )); then
+  if [[ -n $XDG_RUNTIME_DIR && -d $XDG_RUNTIME_DIR && -O $XDG_RUNTIME_DIR ]]; then
+    export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.zsh.sock"
+  else
+    [[ -d ~/.ssh ]] || mkdir -m 700 ~/.ssh
+    export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+  fi
+  ssh-add -l >/dev/null 2>&1
+  if (( $? == 2 )); then   # 2: no agent there (1 is an agent with no keys yet)
+    rm -f "$SSH_AUTH_SOCK"
+    ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null 2>&1 || unset SSH_AUTH_SOCK
+  fi
+fi
+
 # --- history -----------------------------------------------------------------
 HISTFILE="$XDG_STATE_HOME/zsh/history"
 [[ -d ${HISTFILE:h} ]] || mkdir -p "${HISTFILE:h}"

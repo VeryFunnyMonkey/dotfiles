@@ -1,5 +1,11 @@
 # Git preferences. No identity here: names, emails and keys are per account,
 # machine-local, and written by `rig git add` into identities.gitconfig.
+# Machine-local settings go in ~/.config/git/local.gitconfig (not
+# `git config --global`, which would write into this file, in the repo).
+
+# your ~/.gitconfig from before rig, first: everything below wins over it
+[include]
+	path = ~/.local/state/rig/gitconfig-before-rig
 
 [init]
 	defaultBranch = main
@@ -33,8 +39,11 @@
 [help]
 	autocorrect = prompt
 
-# theme (rendered from theme.yaml), then machine-local identities
+# theme (rendered from theme.yaml), machine-local identities, then this
+# machine's own settings (yours, and rig's items': Git Credential Manager on Windows)
 [include]
 	path = theme.gitconfig
 [include]
 	path = identities.gitconfig
+[include]
+	path = local.gitconfig

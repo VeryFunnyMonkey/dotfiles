@@ -1,13 +1,13 @@
 # Windows, through WSL (run on a real WSL2 distro by CI's windows job, not in a container):
 # detection, the Windows-side pieces (win32yank, wslview), what's skipped, and
 # the Windows items: Windows Terminal (font, fragment), GlazeWM (the wm item),
-# PowerToys (always), all put back by rig uninstall.
+# PowerToys (always), Git Credential Manager, all put back by rig uninstall.
 # Windows' state before, to compare after the uninstall
 for f in lib/sys.sh lib/ui.sh lib/windows.sh pkg/managers.sh; do source ~/dotfiles/home/dot_local/share/rig/$f; done
 RIG_STATE=$(mktemp -d); export RIG_STATE
 LAD=$(win_env LOCALAPPDATA); UP=$(win_env USERPROFILE)
 fonts_before=$(ls "$LAD/Microsoft/Windows/Fonts" 2>/dev/null | grep -c JetBrainsMonoNerdFont || true)
-install_rig --profile minimal --select clipboard,zoxide,ghostty,nerd-font,windows-terminal,wm --yes
+install_rig --profile minimal --select clipboard,zoxide,ghostty,nerd-font,windows-terminal,wm,git-credential-manager --yes
 check "install ok" '[[ $? -eq 0 ]] && grep -q "nvim bootstrap done" /tmp/install.log' || tail -30 /tmp/install.log
 check "Windows detected and stored" 'grep -q "wsl = true" ~/.config/chezmoi/chezmoi.toml && grep -q "display = \"windows\"" ~/.config/chezmoi/chezmoi.toml'
 check "clipboard on WSL: win32yank" '[[ -x ~/.local/bin/win32yank.exe ]]'
@@ -31,9 +31,11 @@ frag="$LAD/Microsoft/Windows Terminal/Fragments/rig/rig.json"
 check "Windows Terminal: fragment with gruvbox and this distro's profile" 'grep -q "rig gruvbox" "$frag" && grep -qE "\"updates\": \"\{[0-9a-f-]{36}\}\"" "$frag"' || cat "$frag"
 check "GlazeWM: rig's config, starts at login" 'cmp -s ~/.config/rig/windows/glazewm.yaml "$UP/.glzr/glazewm/config.yaml" && grep -q "alt+shift+h" "$UP/.glzr/glazewm/config.yaml" && win_reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v GlazeWM >/dev/null'
 check "PowerToys: settings saved, then applied" '[[ -s $RIG_STATE/powertoys/App.json ]] && grep -qP "^powertoys-dsc\tApp\t" $RIG_STATE/system.log' || grep -i powertoys /tmp/install.log
+check "Git Credential Manager: git signs in through Windows" '[[ $(git config --get-all credential.helper | tail -n1) == */git-credential-manager.exe ]] && [[ -f ~/.config/git/local.gitconfig ]]' || { git config --show-origin --get-all credential.helper; grep -i "credential" /tmp/install.log; }
 doc=$(rig doctor 2>&1); check "doctor: packages" '[[ $doc == *"all declared packages installed"* ]]' || echo "$doc"
 ~/.local/bin/rig uninstall --everything --yes > /tmp/uninstall.log 2>&1
 check "uninstall ok" '[[ $? -eq 0 ]]' || tail -20 /tmp/uninstall.log
+check "Git Credential Manager put back (rig's local.gitconfig gone)" '[[ ! -e ~/.config/git/local.gitconfig ]]'
 check "win32yank removed" '[[ ! -e ~/.local/bin/win32yank.exe ]]'
 check "Windows put back: fragment, font, GlazeWM config and login entry" '[[ ! -e "$frag" && ! -e "$UP/.glzr/glazewm/config.yaml" ]] && [[ $(ls "$LAD/Microsoft/Windows/Fonts" 2>/dev/null | grep -c JetBrainsMonoNerdFont || true) == "$fonts_before" ]] && ! win_reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v GlazeWM >/dev/null 2>&1'
 check "PowerToys and GlazeWM uninstalled (rig installed them)" '! pm_winget_present Microsoft.PowerToys && ! pm_winget_present glzr-io.glazewm'

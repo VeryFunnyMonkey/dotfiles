@@ -57,8 +57,8 @@ write_profile() { # name desc selected file
   printf 'profiles:\n  %s:\n    description: "%s"\n    select: [%s]\n' "$1" "${2//\"/\'}" "$list" >"$4"
 }
 
-# The Git section: accounts, the default account, and the host CLIs (gh,
-# glab, gt). Adding an account selects its host's CLI by itself.
+# The Git section: accounts, the default account, and the git tools (host
+# CLIs: gh, glab, gt; on Windows, Git Credential Manager). Adding an account selects its host's CLI by itself.
 menu_git() {
   local accounts=1
   if ! declare -F identities >/dev/null || [[ ! -r $MACHINE_ENV ]]; then accounts=0; fi
@@ -70,7 +70,7 @@ menu_git() {
       def=$(default_identity); def=${def:-none}
       rows+=("Add an account" "Remove an account" "Default account: $def" "Test accounts")
     fi
-    rows+=("Host CLIs: $clis" "Back")
+    rows+=("Tools: $clis" "Back")
     local head="Git: accounts (set up after the first install: rig git add)"
     if ((accounts)); then head="Git: accounts $(identities | tr '\n' ' ')"; fi
     mapfile -t rows < <(menu_rows "${rows[@]}")
@@ -88,13 +88,13 @@ menu_git() {
         n=$(gum_choose --header "Default account (none: commits need a matching account)" "${ids[@]}" none </dev/tty) || continue
         git_set_default "$n" ;;
       "Test accounts") git_test || true; gum input --placeholder "enter to continue" </dev/tty >/dev/null || true ;;
-      Host*) sel=$(menu_category git "Git host CLIs (adding an account on a host selects its CLI)" "$sel") ;;
+      Tools*) sel=$(menu_category git "Git tools: host CLIs (adding an account on a host selects its CLI); on Windows, its credential manager" "$sel") ;;
       *) return ;;
     esac
   done
 }
 
-git_clis() { # selected -> names of the selected host CLIs
+git_clis() { # selected -> names of the selected git tools (host CLIs, GCM)
   local in='' y
   for y in $1; do [[ $(item_field "$y" 1) == git && $(item_status "$y") == ok ]] && in+=" $y"; done
   names_of "$in" " · "
@@ -161,7 +161,7 @@ cmd_setup() {
       for y in $sel; do [[ $(item_field "$y" 1) == "$cid" && $(item_status "$y") == ok ]] && in+=" $y"; done
       rows+=("$(printf '%-20s %s' "$cname" "$(names_of "$in" " · ")")")
     done < <(categories)
-    rows+=("$(printf '%-20s %s' Git "$(git_row) · CLIs: $(git_clis "$sel")")")
+    rows+=("$(printf '%-20s %s' Git "$(git_row) · tools: $(git_clis "$sel")")")
     rows+=("Save as profile…" "Review & install" "Quit")
     mapfile -t rows < <(menu_rows "${rows[@]}")
     local at; at=$(cursor_on "$choice" "${rows[@]}")

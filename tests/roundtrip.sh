@@ -1,7 +1,7 @@
 # Set up over existing dotfiles, then rig uninstall --everything: the machine
 # must end up exactly as before (files, packages, login shell, /etc/shells).
 printf "# my old zshrc\nalias old=1\n" > .zshrc
-printf "[user]\n\tname = Test User\n\temail = test@example.invalid\n" > .gitconfig
+printf "[user]\n\tname = Test User\n\temail = test@example.invalid\n[alias]\n\tst = status\n" > .gitconfig
 mkdir -p old-dots/nvim && echo "-- old nvim" > old-dots/nvim/init.lua
 mkdir -p .config && ln -s ../old-dots/nvim .config/nvim
 echo "old tmux" > .tmux.conf
@@ -20,6 +20,7 @@ check "old Stow-style nvim link replaced by a real folder" '[[ ! -L ~/.config/nv
 check "login shell is zsh" '[[ $(getent passwd $(id -un) | cut -d: -f7) == */zsh ]]'
 check "emacs keymap" 'zsh -ic "bindkey -lL main" 2>/dev/null | grep -q emacs'
 check "fzf, zoxide, autosuggestions load" 'zsh -ic "whence -w fzf-history-widget z _zsh_autosuggest_start" >/dev/null 2>&1' || zsh -ic "whence -w fzf-history-widget z _zsh_autosuggest_start" 2>&1 | tail -10
+check "the old ~/.gitconfig still applies under rig's (its alias, its name)" '[[ $(git config alias.st) == status && $(git config user.name) == "Test User" ]]'
 check "git pager is delta... only if delta selected (it isn't)" '[[ $(git config core.pager) == delta ]] || true'
 doc=$(rig doctor 2>&1)
 check "doctor: packages" '[[ $doc == *"all declared packages installed"* ]]'

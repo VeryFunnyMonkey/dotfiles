@@ -17,3 +17,12 @@ catalog:
     name: Gitea CLI (gt)
     description: "logs in and uploads keys for Gitea, Forgejo and Codeberg accounts; PRs and issues from the terminal"
     packages: [gitea-cli]
+  # Windows (WSL): git signs in through Windows (modules/gcm.sh)
+  git-credential-manager:
+    category: git
+    name: Git Credential Manager (Windows)
+    description: "git in WSL signs in through Windows: your Windows and work accounts (Entra/MSAL), Windows' credential store; Azure DevOps too"
+    platforms: [windows]
+    packages: [git-for-windows]
+    module: gcm
+    note: "Windows only (WSL)"

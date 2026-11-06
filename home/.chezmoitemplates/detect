@@ -10,8 +10,6 @@
 {{-   if contains "microsoft" (lower .chezmoi.kernel.osrelease) -}}{{- $wsl = true -}}{{- end -}}
 {{- end -}}
 {{- $display := dig "display" "" . -}}
-{{- /* "wsl" is what older configs stored for Windows */ -}}
-{{- if eq $display "wsl" -}}{{- $display = "windows" -}}{{- end -}}
 {{- /* a machine stored as Windows is one, also where the kernel can't be read (scripts/check-packages.sh renders it) */ -}}
 {{- if eq $display "windows" -}}{{- $wsl = true -}}{{- end -}}
 {{- if not $display -}}

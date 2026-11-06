@@ -49,7 +49,7 @@ packages:
 
   # On Windows (WSL): installed on the Windows side, with winget (per user where
   # the package allows it, so no admin prompt).
-  winget: [windows-terminal, powertoys, glazewm]
+  winget: [windows-terminal, powertoys, glazewm, git-for-windows]
 
   # On Arch, from the AUR, through the AUR helper (yay; the bootstrap installs it).
   aur: [helium]
@@ -64,6 +64,7 @@ packages:
       windows-terminal: Microsoft.WindowsTerminal
       powertoys: Microsoft.PowerToys
       glazewm: glzr-io.glazewm
+      git-for-windows: Git.Git
     aur:
       helium: helium-browser-bin
     pacman:

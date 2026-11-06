@@ -1,9 +1,0 @@
-# Targets chezmoi deletes on apply: files earlier versions put in ~ that the
-# repo no longer has (symlinks would otherwise be left pointing at nothing).
-# rig's libraries before they moved into lib/, pkg/, modules/ and commands/:
-.local/share/rig/setup.sh
-.local/share/rig/git.sh
-.local/share/rig/runtimes.sh
-.local/share/rig/agents.sh
-.local/share/rig/settings.sh
-.local/share/rig/containers.sh

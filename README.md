@@ -18,7 +18,7 @@ On **Windows**, in PowerShell:
 irm https://raw.githubusercontent.com/VeryFunnyMonkey/dotfiles/main/install.ps1 | iex
 ```
 
-It installs WSL if it's missing (and carries on by itself after the restart), lets you pick Ubuntu, Arch or Fedora, creates your Linux user, then runs the same installer inside it, with Windows Terminal ticked and the keyboard-driven desktop (GlazeWM) there to pick; PowerToys is always set up. Everything it changes on Windows is undone by `rig uninstall` (inside WSL).
+It installs WSL if it's missing (and carries on by itself after the restart), lets you pick Ubuntu, Arch or Fedora, creates your Linux user, then runs the same installer inside it, with Windows Terminal and Git Credential Manager ticked and the keyboard-driven desktop (GlazeWM) there to pick; PowerToys is always set up. Everything it changes on Windows is undone by `rig uninstall` (inside WSL).
 
 It installs chezmoi, prepares the package manager, clones this repo and starts **the installer**, `rig setup`:
 
@@ -107,7 +107,7 @@ rig git remove clienta
 | Containers | Podman (rootless, `docker` and `docker compose` work, `DOCKER_HOST` set; podman machine on macOS), lazydocker |
 | Languages | python (pyright, ruff, uv), web (ts_ls, prettierd), ops (Ansible, YAML schemas, OpenTofu, Docker, shell), go, rust |
 | Homelab | Tailscale |
-| Git | host CLIs: gh (GitHub), glab (GitLab), gt (Gitea, Forgejo, Codeberg); in the Git section with your accounts |
+| Git | host CLIs: gh (GitHub), glab (GitLab), gt (Gitea, Forgejo, Codeberg); **Git Credential Manager** (Windows: git signs in through Windows, your work accounts too); in the Git section with your accounts |
 | Coding agents | Claude Code, Copilot CLI, Codex CLI, Gemini CLI, OpenCode |
 | OS settings | Ghostty as default terminal, Helium as default browser, open text files in Neovim (Linux); Dock left/hidden/instant, Finder tweaks, fast key repeat (macOS) |
 
@@ -183,7 +183,8 @@ While anything is mounted, the prompt shows ` ⇅ ops-server` (or ` ⇅ 3`) and 
 - **tmux** (`C-Space` prefix; **`prefix Space` shows a menu of the keys**, and the status bar says so while the prefix is held): `\` / `-` split, `C-h/j/k/l` moves across tmux panes *and* nvim splits, `prefix f` workspace picker, `prefix m` server picker, `prefix g` lazygit, `prefix r` reload, `v`/`y` copy (OSC52, works over SSH).
 - **Ghostty** (when selected): every window opens in tmux, as its own session in the window's folder that goes away when the window closes, so tabs and splits are always tmux's (`prefix c`, `\`, `-`). Ghostty's own tab and split keys are off on Linux and macOS. `dev` sessions are separate and persist; the picker doesn't list the per-window ones. `ghostty -e <cmd>` and SSH logins skip tmux; `RIG_NO_TMUX=1 ghostty` gives a plain shell. Also: gruvbox, the Nerd Font, OSC52 clipboard; over SSH it brings its terminfo along, so servers understand it. Option is Alt on macOS.
 - **Neovim** 0.12 with `vim.pack`: gruvbox, mini.nvim, fzf-lua, treesitter, blink.cmp, Mason + LSP, conform (format on save), grug-far. Press `<leader>` (Space) and wait for a menu; `<leader>fk` searches every key by description.
-- **git**: delta for diffs, sensible defaults. No identity in the repo: it's machine-local (`~/.config/git/identities.gitconfig`).
+- **git**: delta for diffs, sensible defaults. No identity in the repo: it's machine-local (`~/.config/git/identities.gitconfig`). This machine's own settings go in `~/.config/git/local.gitconfig` (not `git config --global`: that writes into the repo). A `~/.gitconfig` from before rig is set aside, and still applies wherever rig sets nothing (its credential helper, aliases).
+- **SSH agent**: one per login, so a key's passphrase is asked once: systemd's socket on Linux, Keychain on macOS; without systemd (WSL without it), zsh starts one and every shell shares it.
 - **Theme:** gruvbox dark everywhere; colours in `home/.chezmoidata/theme.yaml`.
 
 ## Neovim keys

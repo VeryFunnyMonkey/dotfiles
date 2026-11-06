@@ -11,8 +11,9 @@
     3. installs the distro you pick: Ubuntu (the default), Arch or Fedora
     4. creates your Linux user (with sudo) and makes it the default
     5. runs the normal installer inside it (install.sh: rig setup), with
-       Windows Terminal ticked; the keyboard-driven desktop (GlazeWM, the wm
-       item) is there to pick; PowerToys is always set up. Everything rig does on Windows is undoable:
+       Windows Terminal and Git Credential Manager (git signs in through
+       Windows) ticked; the keyboard-driven desktop (GlazeWM, the wm item) is
+       there to pick; PowerToys is always set up. Everything rig does on Windows is undoable:
        rig uninstall, inside WSL.
     6. opens Windows Terminal in the new distro
 #>
@@ -140,8 +141,8 @@ if (-not (Get-Command wt.exe -ErrorAction SilentlyContinue)) {
   & winget.exe install --id Microsoft.WindowsTerminal --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null
 }
 Say "setting up $name (the rig installer)"
-Note 'pick what you want; Windows Terminal is ticked, the keyboard-driven desktop (GlazeWM) is yours to pick'
-$run = "curl -fsSL $Raw/install.sh | RIG_BRANCH=$Branch sh -s -- --select windows-terminal"
+Note 'pick what you want; Windows Terminal and Git Credential Manager are ticked, the keyboard-driven desktop (GlazeWM) is yours to pick'
+$run = "curl -fsSL $Raw/install.sh | RIG_BRANCH=$Branch sh -s -- --select windows-terminal,git-credential-manager"
 & wsl.exe -d $name --cd ~ -- bash -lc $run
 if ($LASTEXITCODE -ne 0) { Fail "the installer didn't finish; run it again inside ${name}: $run" }
 

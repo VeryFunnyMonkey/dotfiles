@@ -66,10 +66,14 @@ rm -f "$tmpstate"
 
 # Files that would shadow this setup if left in place (zsh reads $ZDOTDIR,
 # git reads ~/.config/git): backed up like the rest, so uninstall restores them.
+# A ~/.gitconfig keeps working: rig's git config includes a copy of it
+# first, so what rig doesn't set itself (a credential helper, aliases, url
+# rewrites) still applies.
 for t in .zshrc .zprofile .zlogin .zlogout .gitconfig .tmux.conf; do
   seen "$t" && continue
   if [[ -e $DEST/$t || -L $DEST/$t ]]; then
     save file "$t"
+    if [[ $t == .gitconfig ]]; then cp -L "$DEST/$t" "$STATE/gitconfig-before-rig" 2>/dev/null || true; fi
     rm -rf "${DEST:?}/$t"
   fi
   mark "$t"
