@@ -13,9 +13,9 @@ components:
     revisit_if: "the Mac moves to nix-darwin or a machine to NixOS; chezmoi changes symlink mode or data merging"
   - name: gum
     role: installer menus (rig setup)
-    why: multi-select with pre-ticked items, confirm and input screens in one small binary
+    why: menus, confirm and input screens in one small binary. The multi-select (ticking items) is rig's own (pick_many, lib/ui.sh), since in gum 2 space doesn't tick in choose --no-limit (charmbracelet/gum#1143)
     alternatives: [fzf-only menus (no pre-ticked multi-select), dialog/whiptail (dated)]
-    revisit_if: "gum is unmaintained or its choose/--selected flags change"
+    revisit_if: "gum is unmaintained or its choose/--selected flags change; gum#1143 is fixed (pick_many could go back to gum choose --no-limit)"
   - name: rclone
     role: srv mounts (nfsmount on macOS, FUSE mount on Linux)
     why: no macFUSE or system settings on macOS; through the normal ssh

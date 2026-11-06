@@ -109,6 +109,61 @@ cursor_on() { # previous-choice rows... -> --selected=<the row with the same lab
   for r in "$@"; do if [[ $(row_key "$r") == "$want" ]]; then printf -- '--selected=%s' "$r"; return 0; fi; done
 }
 
+# A multi-select menu. Not gum choose --no-limit: in gum 2 space doesn't tick
+# there (charmbracelet/gum#1143). Keys: up/down or j/k move, space (or x, tab)
+# ticks, a ticks all or none, enter is done, esc or q goes back (returns 1).
+# Draws on the terminal; prints the ticked rows, in order.
+pick_many() { # header height ticked-rows(one per line) rows...
+  local header=$1 height=$2 pre=$3; shift 3
+  local rows=("$@") n=$# cur=0 top=0 i k rest drawn=0 cols tick=() any line
+  ((n)) || return 1
+  cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}'); if ((${cols:-0} < 20)); then cols=80; fi
+  for ((i = 0; i < n; i++)); do
+    if grep -qxF -- "${rows[i]}" <<<"$pre"; then tick[i]=1; else tick[i]=0; fi
+  done
+  ((height < n)) || height=$n
+  local hi=$'\e[38;5;212m' dim=$'\e[2m' off=$'\e[0m'
+  pick_draw() {
+    local out='' r p
+    if ((drawn)); then out+=$'\e['"${drawn}F"; fi
+    drawn=0
+    while IFS= read -r line; do out+=$'\e[2K'"${line:0:cols-1}"$'\n'; drawn=$((drawn + 1)); done <<<"$header"
+    for ((r = top; r < top + height; r++)); do
+      if ((tick[r])); then p="✓ "; else p="• "; fi
+      line="${rows[r]:0:cols-5}"
+      if ((r == cur)); then out+=$'\e[2K'"$hi> $p$line$off"$'\n'; else out+=$'\e[2K'"  $p$line"$'\n'; fi
+      drawn=$((drawn + 1))
+    done
+    out+=$'\e[2K'"$dim  ↑↓ move · space tick · a all · enter done · esc back$off"$'\n'; drawn=$((drawn + 1))
+    printf '%s' "$out" >/dev/tty
+  }
+  pick_end() { printf '\e[%dF\e[J\e[?25h' "$drawn" >/dev/tty; }
+  trap 'pick_end; exit 130' INT
+  printf '\e[?25l' >/dev/tty
+  while :; do
+    pick_draw
+    IFS= read -rsn1 k </dev/tty || { pick_end; return 1; }
+    if [[ $k == $'\e' ]]; then
+      rest=''; IFS= read -rsn2 -t 0.05 rest </dev/tty || true
+      case $rest in '[A' | OA) k=up ;; '[B' | OB) k=down ;; *) k=esc ;; esac
+    fi
+    case $k in
+      up | k) if ((cur > 0)); then cur=$((cur - 1)); fi ;;
+      down | j) if ((cur < n - 1)); then cur=$((cur + 1)); fi ;;
+      ' ' | x | $'\t') tick[cur]=$((1 - tick[cur])) ;;
+      a)
+        any=0; for ((i = 0; i < n; i++)); do if ((!tick[i])); then any=1; fi; done
+        for ((i = 0; i < n; i++)); do tick[i]=$any; done ;;
+      '') break ;;
+      esc | q) pick_end; return 1 ;;
+    esac
+    if ((cur < top)); then top=$cur; fi
+    if ((cur >= top + height)); then top=$((cur - height + 1)); fi
+  done
+  pick_end
+  for ((i = 0; i < n; i++)); do if ((tick[i])); then printf '%s\n' "${rows[i]}"; fi; done
+}
+
 # Menu rows can't contain commas: gum reads --selected (where the cursor
 # returns to) as a comma-separated list. Items are joined with " · " instead.
 menu_rows() { local r; for r in "$@"; do printf '%s\n' "${r//,/;}"; done; }

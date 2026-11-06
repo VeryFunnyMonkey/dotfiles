@@ -10,5 +10,6 @@ bash -c "source ~/dotfiles/tests/lib.sh; source ~/dotfiles/tests/$name.sh" >"$lo
 grep -E '^(PASS|FAIL|===|note:)' "$log"
 if grep -q '^FAIL' "$log" || ! grep -q '^===' "$log"; then
   echo "--- the whole log:"; cat "$log"
+  for f in /tmp/install.log /tmp/uninstall.log; do if [[ -f $f ]]; then echo "--- $f:"; cat "$f"; fi; done
   exit 1
 fi

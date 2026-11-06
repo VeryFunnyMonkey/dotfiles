@@ -23,7 +23,7 @@ cmd_sync() {
   done < <(pkg_declared)
   if ((${#todo[@]} == 0)); then ok "all declared packages are installed"; return 0; fi
   local mgr names
-  for mgr in pacman aur apt dnf brew download; do
+  for mgr in pacman aur apt dnf brew winget download; do
     [[ -n ${todo[$mgr]:-} ]] || continue
     names=$(printf '%s' "${todo[$mgr]}" | tr '\n' ' ')
     info "installing with $mgr: $names"

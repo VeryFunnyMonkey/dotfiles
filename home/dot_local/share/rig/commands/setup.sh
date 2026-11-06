@@ -12,15 +12,17 @@ menu_category() { # category-id category-name selected -> prints new selection
   done <<<"$CATALOG"
   local notes; notes=$(awk -F'\t' -v c="$cat" '$1==c && $5!="ok" {print "not here: " $3 " (" $5 ")"}' <<<"$CATALOG")
   local picked
-  picked=$(gum_choose --no-limit --height 20 \
-    --header "$cname: space to tick, enter when done${notes:+$'\n'$notes}" \
-    "${pre[@]/#/--selected=}" -- "${labels[@]}" </dev/tty) || { printf '%s' "$sel"; return; }
+  picked=$(pick_many "$cname: space to tick, enter when done${notes:+$'\n'$notes}" 20 \
+    "$(printf '%s\n' "${pre[@]}")" "${labels[@]}") || { printf '%s' "$sel"; return; }
   # keep selections from other categories (and items not available here)
   local out='' x
   for x in $sel; do [[ $(item_field "$x" 1) == "$cat" && $(item_status "$x") == ok ]] || out+="${out:+ }$x"; done
   while IFS= read -r line; do [[ -n $line ]] && out+="${out:+ }${line%%  ·  *}"; done <<<"$picked"
   printf '%s' "$out"
 }
+
+# Does the category have anything to pick on this machine? (Empty ones aren't shown.)
+category_offered() { awk -F'\t' -v c="$1" '$1==c && $5=="ok" {f=1} END {exit !f}' <<<"$CATALOG"; }
 
 menu_profile() { # current -> prints chosen profile name (or empty)
   local opts=() n d ids
@@ -154,6 +156,7 @@ cmd_setup() {
     rows+=("$(printf '%-20s %s' Profile "${profile:-none}$mod")")
     while IFS=$'\t' read -r cid cname; do
       [[ $cid == git ]] && continue  # shown in the Git row
+      category_offered "$cid" || continue   # nothing in it for this machine (OS settings on Windows, say)
       local in='' y
       for y in $sel; do [[ $(item_field "$y" 1) == "$cid" && $(item_status "$y") == ok ]] && in+=" $y"; done
       rows+=("$(printf '%-20s %s' "$cname" "$(names_of "$in" " · ")")")
