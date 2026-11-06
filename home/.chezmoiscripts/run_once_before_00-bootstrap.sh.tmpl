@@ -3,6 +3,7 @@
 # Debian/Ubuntu and Fedora get Homebrew on Linux for developer tools; macOS
 # gets Homebrew. Recorded in the ledger so `rig uninstall --runtimes` can undo it.
 set -euo pipefail
+export HOMEBREW_NO_ASK=1   # brew's own [y/n] (rig setup already asked)
 {{- $platform := includeTemplate "platform" . | trim }}
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
 mkdir -p "$STATE"; touch "$STATE/system.log"

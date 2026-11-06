@@ -11,6 +11,9 @@
 #   modules/   one feature each (shell, git, nvim, containers, ...), see lib/modules.sh
 #   commands/  what you type: setup, add/remove, doctor, update, reset, uninstall
 set -euo pipefail
+# Homebrew asks before installing ("Do you want to proceed? [y/n]"); rig has
+# already asked (setup's review), so every brew rig runs goes ahead.
+export HOMEBREW_NO_ASK=1
 USER=${USER:-$(id -un)}
 
 # Homebrew may not be on PATH yet (fresh shell right after it was installed).

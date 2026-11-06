@@ -94,7 +94,7 @@ pm_brew_present() {
     # so rig doesn't install over it (and, as "already there", never removes it)
     app=$(brew info --cask --json=v2 "$c" 2>/dev/null | brew_cask_app)
     [[ -n $app ]] && { [[ -d /Applications/$app ]] || [[ -d $HOME/Applications/$app ]]; }
-  else brew list --formula "$1" >/dev/null 2>&1; fi
+  else brew list --formula "$1" >/dev/null 2>&1 || brew list --cask "$1" >/dev/null 2>&1; fi   # brew on Linux has casks too
 }
 
 # brew's --cask applies to the whole command: formulas and casks go separately
