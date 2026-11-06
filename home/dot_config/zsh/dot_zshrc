@@ -79,13 +79,15 @@ unset _f
 # Machine-local additions (not in the repo).
 [[ -r $ZDOTDIR/local.zsh ]] && source "$ZDOTDIR/local.zsh"
 
-# --- Ghostty windows open in tmux --------------------------------------------
-# Each window is its own tmux session (tabs and splits are tmux's: prefix c,
-# \ and -), in the folder the window opened in, and gone when the window
-# closes. dev's project sessions are separate and stay. Not inside tmux, not
-# over SSH, not for `ghostty -e <cmd>` (no shell), and off with RIG_NO_TMUX=1.
-# If tmux can't start, you get this shell instead. Last in this file, so the
-# tmux server (and its popups) gets the full environment: theme, fzf, DOCKER_HOST.
-if [[ $TERM_PROGRAM == ghostty && -z $TMUX && -z $SSH_CONNECTION && -z $RIG_NO_TMUX ]] && (( $+commands[tmux] )); then
+# --- terminal windows open in tmux -------------------------------------------
+# Ghostty's, and Windows Terminal's on Windows (WT_SESSION, which WSL passes
+# in). Each window is its own tmux session (tabs and splits are tmux's:
+# prefix c, \ and -), in the folder the window opened in, and gone when the
+# window closes. dev's project sessions are separate and stay. Not inside
+# tmux, not over SSH, not for `ghostty -e <cmd>` (no shell), and off with
+# RIG_NO_TMUX=1. If tmux can't start, you get this shell instead. Last in this
+# file, so the tmux server (and its popups) gets the full environment: theme,
+# fzf, DOCKER_HOST.
+if [[ ( $TERM_PROGRAM == ghostty || -n $WT_SESSION ) && -z $TMUX && -z $SSH_CONNECTION && -z $RIG_NO_TMUX ]] && (( $+commands[tmux] )); then
   tmux new-session \; set-option destroy-unattached on \; set-option @rig_window 1 && exit
 fi

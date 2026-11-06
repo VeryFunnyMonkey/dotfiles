@@ -12,6 +12,11 @@ The terminal on Windows, set up from inside WSL:
   `settings.json` (`defaultProfile`). The previous value is recorded and put
   back when you deselect the item. If Windows Terminal hasn't been opened yet,
   open it once and run `rig modules sync winterm`.
+- **Each window in tmux**, as with Ghostty: every window (and tab) is its own
+  tmux session, in the folder it opened in, gone when it closes. Tabs and
+  splits are tmux's (`prefix c`, `\` and `-`). Not over SSH or inside tmux;
+  `RIG_NO_TMUX=1` turns it off. (That's zsh's doing, `.zshrc`, keyed on
+  Windows Terminal's `WT_SESSION`.)
 
 `install.ps1` ticks this item. Deselecting it removes the fragment and the
 font, and puts the default profile back.
