@@ -17,9 +17,32 @@ function Merge($into, $from) {
 }
 # Windows PowerShell 5.1 drops the double quotes in an argument to a native program
 function Arg($json) { if ($PSVersionTable.PSVersion.Major -lt 7) { $json -replace '"', '\"' } else { $json } }
+# JSON from a program's output: all of it, else its last line that is JSON
+# (a tool may print other lines around it). $null if there's none.
+function Read-Json($lines) {
+  $text = ($lines | Out-String).Trim()
+  if (-not $text) { return $null }
+  try { return $text | ConvertFrom-Json } catch { }
+  foreach ($l in @($lines)[-1..-(@($lines).Count)]) {
+    if ("$l".TrimStart().StartsWith('{')) { try { return "$l" | ConvertFrom-Json } catch { } }
+  }
+  return $null
+}
+# PowerToys.DSC.exe, its output (stderr too) as lines; 5.1 would throw on a
+# stderr line under ErrorActionPreference Stop, so not for this call
+function Invoke-Dsc {
+  $ErrorActionPreference = 'Continue'
+  & $Dsc @args 2>&1 | ForEach-Object { "$_" }
+}
+function Stop-Unexpected($what, $lines) {
+  [Console]::Error.WriteLine("rig: PowerToys' DSC printed something rig didn't expect ($what):")
+  [Console]::Error.WriteLine((($lines | Out-String).Trim() -split "`n" | Select-Object -First 30) -join "`n")
+  exit 2
+}
 
 if ($File) {
-  $doc = if (Test-Path $File) { Get-Content -Raw $File | ConvertFrom-Json } else { New-Object psobject }
+  $text = if (Test-Path $File) { (Get-Content -Raw $File) } else { '' }
+  $doc = if ($text -and $text.Trim()) { $text | ConvertFrom-Json } else { New-Object psobject }
   Merge $doc ($Want | ConvertFrom-Json)
   New-Item -ItemType Directory -Force (Split-Path $File) | Out-Null
   [IO.File]::WriteAllText($File, ($doc | ConvertTo-Json -Depth 30), (New-Object Text.UTF8Encoding $false))
@@ -27,12 +50,20 @@ if ($File) {
 }
 if ($Restore) {
   $in = (Get-Content -Raw $Restore | ConvertFrom-Json) | ConvertTo-Json -Depth 30 -Compress
-  & $Dsc set --resource settings --module $Module --input (Arg $in) | Out-Null
-  exit $LASTEXITCODE
+  $res = Invoke-Dsc set --resource settings --module $Module --input (Arg $in)
+  if ($LASTEXITCODE -ne 0) { Stop-Unexpected "set $Module failed, exit $LASTEXITCODE" $res }
+  exit 0
 }
-$cur = (& $Dsc get --resource settings --module $Module) | ConvertFrom-Json
+$out = Invoke-Dsc get --resource settings --module $Module
+if ($LASTEXITCODE -ne 0) { Stop-Unexpected "get $Module failed, exit $LASTEXITCODE" $out }
+$cur = Read-Json $out
+if (-not $cur) { Stop-Unexpected "get $Module, no JSON" $out }
+# the documented shape is {"settings":{"properties":{...},"name":...,"version":...}}
+if (-not $cur.settings) { Stop-Unexpected "get $Module, no settings" $out }
+if (-not $cur.settings.properties) { $cur.settings | Add-Member -Force -NotePropertyName properties -NotePropertyValue (New-Object psobject) }
 if ($Save) { [IO.File]::WriteAllText($Save, ($cur | ConvertTo-Json -Depth 30 -Compress), (New-Object Text.UTF8Encoding $false)) }
 Merge $cur.settings.properties ($Want | ConvertFrom-Json)
 $in = $cur | ConvertTo-Json -Depth 30 -Compress
-& $Dsc set --resource settings --module $Module --input (Arg $in) | Out-Null
-exit $LASTEXITCODE
+$res = Invoke-Dsc set --resource settings --module $Module --input (Arg $in)
+if ($LASTEXITCODE -ne 0) { Stop-Unexpected "set $Module failed, exit $LASTEXITCODE" $res }
+exit 0
