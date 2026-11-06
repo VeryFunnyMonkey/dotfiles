@@ -37,21 +37,25 @@ winterm_settings_files() { # every Windows Terminal's settings.json here (Store,
   done
 }
 
-# The distro's profile: as Windows Terminal listed it in settings.json, else
-# the GUID it gives a WSL distro (from the name).
-winterm_guid() {
-  local d f g; d=$(winterm_distro)
+# This distro's profiles in Windows Terminal, one GUID per line, the visible
+# ones first: a distro can be listed twice (WSL's own profile, and a hidden
+# one from Terminal's older WSL generator), and rig's look goes on both. None
+# listed yet (Terminal never opened): the GUID Terminal gives a WSL distro.
+winterm_guids() {
+  local d f; d=$(winterm_distro)
   [[ -n $d ]] || return 1
-  while IFS= read -r f; do
-    g=$(awk -v d="$d" '
-      /^[[:space:]]*\{[[:space:]]*$/ { g = ""; n = 0 }
-      /"guid"[[:space:]]*:/ { if (match($0, /\{[0-9a-fA-F-]+\}/)) g = substr($0, RSTART, RLENGTH) }
-      index($0, "\"name\": \"" d "\"") { n = 1 }
-      n && g { print g; exit }' "$f")
-    if [[ -n $g ]]; then printf '%s' "$g"; return 0; fi
-  done < <(winterm_settings_files)
-  uuid5 "$WT_DYNAMIC_NS" "$d"
+  {
+    while IFS= read -r f; do
+      awk -v d="$d" '
+        /^[[:space:]]*\{[[:space:]]*$/ { g = ""; n = 0; h = 0 }
+        /"guid"[[:space:]]*:/ { if (match($0, /\{[0-9a-fA-F-]+\}/)) g = substr($0, RSTART, RLENGTH) }
+        index($0, "\"name\": \"" d "\"") { n = 1 }
+        /"hidden"[[:space:]]*:[[:space:]]*true/ { h = 1 }
+        /^[[:space:]]*\}[[:space:]]*,?[[:space:]]*$/ { if (n && g) print h "\t" g; g = ""; n = 0; h = 0 }' "$f"
+    done < <(winterm_settings_files)
+  } | sort -s -k1,1 | cut -f2 | awk '!seen[tolower($0)]++' | grep . || uuid5 "$WT_DYNAMIC_NS" "$d"
 }
+winterm_guid() { winterm_guids | head -n1; }   # the one to open by default
 
 winterm_font() {
   local dir; dir=$(winterm_fonts_dir)
@@ -74,8 +78,18 @@ winterm_font() {
 winterm_fragment() {
   local src="$CONFIG_HOME/rig/windows/wt-fragment.json" guid tmp
   [[ -f $src ]] || { warn "the fragment isn't rendered yet (chezmoi apply)"; return 0; }
-  guid=$(winterm_guid) || { warn "couldn't tell which WSL distro this is; Windows Terminal's profile wasn't changed"; return 0; }
-  tmp=$(mktemp); sed "s/@PROFILE_GUID@/$guid/" "$src" >"$tmp"
+  local guids; guids=$(winterm_guids) || { warn "couldn't tell which WSL distro this is; Windows Terminal's profile wasn't changed"; return 0; }
+  # the template's profile entry, once per profile of this distro
+  tmp=$(mktemp)
+  awk -v guids="$guids" '
+    /"profiles"[[:space:]]*:/ { inp = 1 }
+    inp && /^[[:space:]]*\{[[:space:]]*$/ { cap = 1; buf = "" }
+    cap { buf = buf $0 "\n"; if ($0 ~ /^[[:space:]]*\}[[:space:]]*$/) {
+            n = split(guids, g, "\n"); out = ""
+            for (i = 1; i <= n; i++) { b = buf; gsub(/@PROFILE_GUID@/, g[i], b); sub(/\n$/, "", b); out = out (i > 1 ? ",\n" : "") b }
+            print out; cap = 0; inp = 0 }
+          next }
+    { print }' "$src" >"$tmp"
   if win_file_write "$(winterm_fragment_file)" "$tmp"; then ok "Windows Terminal: gruvbox and the Nerd Font for $(winterm_distro)"; fi
   rm -f "$tmp"
 }
