@@ -159,20 +159,25 @@ pm_brew_exists() {
 # loop is reading; see win_cmd)
 winget_() { local w; w=$(win_exe winget.exe) || { warn "winget isn't on this Windows (App Installer, from the Microsoft Store)"; return 1; }; (cd /mnt/c && "$w" "$@" --accept-source-agreements --disable-interactivity </dev/null); }
 pm_winget_present() { winget_ list --id "$1" --exact --source winget >/dev/null 2>&1; }
-# The version winget would install (with extra options, e.g. --scope user)
-pm_winget_version() { winget_ show --id "$1" --exact --source winget "${@:2}" 2>/dev/null | tr -d '\r' | awk -F': *' '/^Version:/ {print $2; exit}'; }
+# The latest version of a package
+pm_winget_version() { winget_ show --id "$1" --exact --source winget 2>/dev/null | tr -d '\r' | awk -F': *' '/^Version:/ {print $2; exit}'; }
+# winget's output without its spinner frames
+winget_out() { tr -d '\r' | awk '{ t = $0; gsub(/[[:space:]\\|\/-]/, "", t); if (t != "") print }'; }
 pm_winget_install() {
-  local id rc=0 latest scope
+  local id rc=0 v ver out
   for id in "$@"; do
-    # per user (no admin prompt) only when that gets the latest version: asked
-    # for a per-user install of a package whose current version installs for
-    # everyone only, winget quietly falls back to an old version that doesn't
-    # (GlazeWM 3 -> 2.1.1). Else for all users (Windows asks for admin).
-    latest=$(pm_winget_version "$id"); scope=()
-    if [[ -n $latest && $(pm_winget_version "$id" --scope user) == "$latest" ]]; then scope=(--scope user); fi
-    winget_ install --id "$id" --exact --source winget --silent "${scope[@]}" --accept-package-agreements 2>&1 |
-      tr -d '\r' | grep -vE '^[[:space:]]*[-\\|/][[:space:]-\\|/]*$' || true
-    pm_winget_present "$id" || rc=1
+    # The latest version, per user if it installs that way (no admin prompt),
+    # else for all users (Windows asks for admin). Pinned to the version:
+    # asked for a per-user install of a package whose current version installs
+    # for everyone only, winget otherwise falls back to an old version that
+    # does (GlazeWM 3 -> 2.1.1).
+    v=$(pm_winget_version "$id"); ver=(); if [[ -n $v ]]; then ver=(--version "$v"); fi
+    if out=$(winget_ install --id "$id" --exact --source winget --silent "${ver[@]}" --scope user --accept-package-agreements 2>&1); then
+      printf '%s\n' "$out" | winget_out
+    else
+      winget_ install --id "$id" --exact --source winget --silent "${ver[@]}" --accept-package-agreements 2>&1 | winget_out || true
+      pm_winget_present "$id" || rc=1
+    fi
   done
   return $rc
 }
