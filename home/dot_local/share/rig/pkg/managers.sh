@@ -160,11 +160,15 @@ pm_brew_exists() {
 winget_() { local w; w=$(win_exe winget.exe) || { warn "winget isn't on this Windows (App Installer, from the Microsoft Store)"; return 1; }; (cd /mnt/c && "$w" "$@" --accept-source-agreements --disable-interactivity </dev/null); }
 pm_winget_present() { winget_ list --id "$1" --exact --source winget >/dev/null 2>&1; }
 pm_winget_install() {
-  local id rc=0
+  local id rc=0 out
   for id in "$@"; do
-    # per user if the package offers it; else for all users (Windows asks for admin)
-    winget_ install --id "$id" --exact --source winget --silent --scope user --accept-package-agreements >/dev/null 2>&1 ||
+    # per user if the package offers it; else for all users (Windows asks for
+    # admin). winget's word for what happened is shown either way.
+    if out=$(winget_ install --id "$id" --exact --source winget --silent --scope user --accept-package-agreements 2>&1); then
+      printf '%s\n' "$out" | tr -d '\r' | grep -vE '^[[:space:]]*[-\\|/]?[[:space:]]*$' || true
+    else
       winget_ install --id "$id" --exact --source winget --silent --accept-package-agreements || rc=1
+    fi
   done
   return $rc
 }
