@@ -9,6 +9,6 @@ log=$(mktemp)
 bash -c "source ~/dotfiles/tests/lib.sh; source ~/dotfiles/tests/$name.sh" >"$log" 2>&1 || true
 grep -E '^(PASS|FAIL|===|note:)' "$log"
 if grep -q '^FAIL' "$log" || ! grep -q '^===' "$log"; then
-  echo "--- last lines of the log:"; tail -n 60 "$log"
+  echo "--- the whole log:"; cat "$log"
   exit 1
 fi

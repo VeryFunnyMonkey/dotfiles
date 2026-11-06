@@ -93,7 +93,7 @@ win_reg_get() { # key name -> "TYPE|data" (nothing if unset)
     { line = $0; sub(/^[ \t]+/, "", line) }
     index(line, n) == 1 { rest = substr(line, length(n) + 1); sub(/^[ \t]+/, "", rest)
       t = rest; sub(/[ \t].*/, "", t); d = rest; sub(/^[^ \t]+[ \t]+/, "", d); if (d == rest) d = ""
-      print t "|" d; exit }'
+      print t "|" d; exit }' || true   # reg.exe fails when the value isn't set: that's "nothing"
 }
 win_reg_set() { # key name type data
   local cur; cur=$(win_reg_get "$1" "$2")

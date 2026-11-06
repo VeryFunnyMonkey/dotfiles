@@ -19,7 +19,7 @@ check "zshenv is a symlink into the repo" '[[ $(readlink ~/.zshenv) == */dotfile
 check "old Stow-style nvim link replaced by a real folder" '[[ ! -L ~/.config/nvim && -L ~/.config/nvim/init.lua ]]'
 check "login shell is zsh" '[[ $(getent passwd $(id -un) | cut -d: -f7) == */zsh ]]'
 check "emacs keymap" 'zsh -ic "bindkey -lL main" 2>/dev/null | grep -q emacs'
-check "fzf, zoxide, autosuggestions load" 'zsh -ic "whence -w fzf-history-widget z _zsh_autosuggest_start" >/dev/null 2>&1'
+check "fzf, zoxide, autosuggestions load" 'zsh -ic "whence -w fzf-history-widget z _zsh_autosuggest_start" >/dev/null 2>&1' || zsh -ic "whence -w fzf-history-widget z _zsh_autosuggest_start" 2>&1 | tail -10
 check "git pager is delta... only if delta selected (it isn't)" '[[ $(git config core.pager) == delta ]] || true'
 doc=$(rig doctor 2>&1)
 check "doctor: packages" '[[ $doc == *"all declared packages installed"* ]]'
