@@ -128,5 +128,17 @@ winterm_doctor() {
   module_active winterm && win_ready || return 0
   info "Windows Terminal"
   if [[ -f $(winterm_fonts_dir)/JetBrainsMonoNerdFont-Regular.ttf ]]; then check_ok "Nerd Font installed for Windows"; else check_bad "Nerd Font missing (rig modules sync winterm)"; fi
-  if [[ -f $(winterm_fragment_file) ]]; then check_ok "rig's fragment (gruvbox, $(winterm_distro))"; else check_bad "fragment missing (rig modules sync winterm)"; fi
+  local frag; frag=$(winterm_fragment_file)
+  if [[ ! -f $frag ]]; then check_bad "fragment missing (rig modules sync winterm)"; return 0; fi
+  # the profile it updates must be one Terminal has (written before Terminal
+  # first ran, it can only guess the GUID, and WSL's own profiles differ)
+  local f g ok=0 have=0
+  while IFS= read -r f; do
+    have=1
+    while IFS= read -r g; do
+      if grep -qiF -- "$g" "$f"; then ok=1; fi
+    done < <(grep -o '"updates"[^,]*' "$frag" | grep -o '{[0-9a-fA-F-]*}')
+  done < <(winterm_settings_files)
+  if ((have && !ok)); then check_bad "rig's fragment updates a profile Terminal doesn't have, so the look doesn't show: rig modules sync winterm, then restart Terminal"
+  else check_ok "rig's fragment (gruvbox, $(winterm_distro))"; fi
 }
