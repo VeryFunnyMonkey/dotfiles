@@ -22,19 +22,27 @@ cmd_sync() {
     fi
   done < <(pkg_declared)
   if ((${#todo[@]} == 0)); then ok "all declared packages are installed"; return 0; fi
-  local mgr names
+  local mgr names failed=()
   for mgr in pacman aur apt dnf brew winget download; do
     [[ -n ${todo[$mgr]:-} ]] || continue
     names=$(printf '%s' "${todo[$mgr]}" | tr '\n' ' ')
     info "installing with $mgr: $names"
-    # casks and downloads one at a time; the rest in one go
-    if [[ $mgr == download || $mgr == brew && $names == *--cask* ]]; then
-      while IFS= read -r n; do [[ -n $n ]] && pkg_install_cmd "$mgr" "$n"; done <<<"${todo[$mgr]}"
-    else
-      # shellcheck disable=SC2086
-      pkg_install_cmd "$mgr" $names
+    # casks and downloads one at a time; the rest in one go, and if that
+    # fails, one at a time: one bad package doesn't keep out the others
+    # (or the managers after this one)
+    # shellcheck disable=SC2086
+    if [[ $mgr == download || $mgr == brew && $names == *--cask* ]] || ! pkg_install_cmd "$mgr" $names; then
+      while IFS= read -r n; do
+        [[ -n $n ]] || continue
+        if pkg_present "$mgr" "$n" || pkg_install_cmd "$mgr" "$n"; then continue; fi
+        failed+=("$n ($mgr)")
+      done <<<"${todo[$mgr]}"
     fi
   done
+  if ((${#failed[@]})); then
+    bad "not installed: ${failed[*]} (the output above says why; then: rig sync)"
+    return 1
+  fi
   ok "packages in sync"
 }
 

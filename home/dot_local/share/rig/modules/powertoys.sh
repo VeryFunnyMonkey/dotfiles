@@ -37,22 +37,22 @@ powertoys_sync() {
 
 powertoys_setup() {
   local dir; dir=$(pt_dir) || { warn "PowerToys isn't installed yet (rig sync)"; return 0; }
-  local dsc="$dir/PowerToys.DSC.exe" mods m want saved
+  local dsc="$dir/PowerToys.DSC.exe" mods m want saved failed=0
   mods=$(cz_tmpl '{{ range $m, $_ := (index .catalog "powertoys").powertoys_settings }}{{ $m }} {{ end }}')
   for m in $mods; do
     want=$(cz_tmpl "{{ index (index .catalog \"powertoys\").powertoys_settings \"$m\" | toJson }}")
     saved="$RIG_STATE/powertoys/$m.json"
     if ledger_has powertoys-dsc "$m"; then
-      pt_json -Dsc "$(win_path "$dsc")" -Module "$m" -Want "$want" >/dev/null || warn "PowerToys: $m settings weren't applied"
+      pt_json -Dsc "$(win_path "$dsc")" -Module "$m" -Want "$want" >/dev/null || { warn "PowerToys: $m settings weren't applied"; failed=1; }
     else
       mkdir -p "$RIG_STATE/powertoys"
       local t; t=$(win_env TEMP)/rig-pt-$m.json
       if pt_json -Dsc "$(win_path "$dsc")" -Module "$m" -Save "$(win_path "$t")" -Want "$want" >/dev/null; then
         mv "$t" "$saved"; ledger_record powertoys-dsc "$m" "$saved"
-      else warn "PowerToys: $m settings weren't applied"; fi
+      else warn "PowerToys: $m settings weren't applied"; failed=1; fi
     fi
   done
-  ok "PowerToys settings (FancyZones off, Command Palette on)"
+  if ((failed == 0)); then ok "PowerToys settings (FancyZones off, Command Palette on)"; fi
   powertoys_cmdpal
   if ! win_cmd 'tasklist /FI "IMAGENAME eq PowerToys.exe"' | grep -qi powertoys.exe; then win_start "$dir/PowerToys.exe"; fi
 }
