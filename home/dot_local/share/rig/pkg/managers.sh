@@ -9,6 +9,9 @@
 #   pm_<m>_exists <name>       is there a package by that name to install? 0 yes,
 #                              1 no, 2 couldn't tell (network); for
 #                              scripts/check-packages.sh, which catches upstream renames
+#   pm_<m>_bins <name>         the commands an installed package put in place
+#                              (paths); for rig doctor, which says when another
+#                              copy earlier on PATH hides one (optional)
 # A name can hold several packages ("gcc make") or a brew cask ("--cask x").
 # Adding a manager is adding these functions; nothing else changes.
 
@@ -48,6 +51,7 @@ pm_pacman_search() { local h; h=$(pacman_helper); if [[ $h == pacman ]]; then pa
 pm_pacman_upgrade() { local h; h=$(pacman_helper); if [[ $h == pacman ]]; then sudo_ pacman -Syu --noconfirm; else "$h" -Syu --noconfirm; fi; }
 pm_pacman_explicit() { pacman -Qqen | sed 's/^/pacman\t/'; }   # repo packages (the AUR ones: pm_aur_explicit)
 pm_pacman_exists() { pacman -Si -- "$1" >/dev/null 2>&1 || [[ -n $(pacman -Sgq -- "$1" 2>/dev/null) ]]; }
+pm_pacman_bins() { pacman -Qlq -- "$1" 2>/dev/null | grep -E '/s?bin/[^/]+$' || true; }
 
 # ------------------------------------------------------------- aur ----------
 # AUR packages, built by the AUR helper. On Arch the bootstrap installs yay
@@ -60,6 +64,7 @@ pm_aur_present() { pm_pacman_present "$1"; }
 pm_aur_install() { local h; h=$(aur_helper); "$h" -S --needed --noconfirm "$@"; }
 pm_aur_remove() { pm_pacman_remove "$@"; }
 pm_aur_explicit() { pacman -Qqem | sed 's/^/aur\t/'; }
+pm_aur_bins() { pm_pacman_bins "$1"; }
 pm_aur_exists() {
   local out; out=$(curl -fsS --retry 3 "https://aur.archlinux.org/rpc/v5/info?arg%5B%5D=$1") || return 2
   [[ $out == *'"resultcount":1'* ]]
@@ -74,6 +79,7 @@ pm_apt_remove() { sudo_ env DEBIAN_FRONTEND=noninteractive apt-get remove -y "$@
 pm_apt_search() { apt-cache search "$@"; }
 pm_apt_upgrade() { sudo_ apt-get update && sudo_ env DEBIAN_FRONTEND=noninteractive apt-get upgrade -y; }
 pm_apt_explicit() { apt-mark showmanual | sed 's/^/apt\t/'; }
+pm_apt_bins() { dpkg -L -- "$1" 2>/dev/null | grep -E '/s?bin/[^/]+$' || true; }
 pm_apt_exists() { [[ -n $(apt-cache policy -- "$1" 2>/dev/null | awk '/Candidate:/ && $2 != "(none)"') ]]; }
 
 # ------------------------------------------------------------- dnf ----------
@@ -84,6 +90,7 @@ pm_dnf_search() { dnf search "$@"; }
 pm_dnf_upgrade() { sudo_ dnf upgrade --refresh -y; }
 pm_dnf_explicit() { dnf repoquery --userinstalled --qf '%{name}\n' 2>/dev/null | sed 's/^/dnf\t/'; }
 pm_dnf_exists() { [[ -n $(dnf -q repoquery --qf '%{name}\n' -- "$1" 2>/dev/null) ]]; }
+pm_dnf_bins() { rpm -ql -- "$1" 2>/dev/null | grep -E '/s?bin/[^/]+$' || true; }
 
 # ------------------------------------------------------------- brew ---------
 pm_brew_present() {
@@ -121,6 +128,11 @@ brew_cask_app() {
 pm_brew_remove() { brew uninstall "$@"; }
 pm_brew_search() { brew search "$@"; }
 pm_brew_upgrade() { brew update && brew upgrade; }
+pm_brew_bins() { # a formula's commands (casks are apps)
+  [[ $1 == --cask\ * ]] && return 0
+  local d; d="${HOMEBREW_PREFIX:-$(brew --prefix 2>/dev/null)}/opt/$1/bin"
+  if [[ -d $d ]]; then printf '%s\n' "$d"/*; fi
+}
 pm_brew_explicit() {
   brew leaves 2>/dev/null | sed 's/^/brew\t/'
   brew list --cask 2>/dev/null | sed 's/^/brew\t--cask /'

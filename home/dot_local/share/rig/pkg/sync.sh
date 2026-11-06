@@ -109,6 +109,26 @@ pkg_update() {
   cmd_sync
 }
 
+# A command rig installed that another copy earlier on PATH hides (an install
+# from before rig, say): the other copy is what runs. Name it, so it can go.
+pkg_shadowed() {
+  local m n p b c first
+  while IFS=$'\t' read -r m n _; do
+    declare -F "pm_${m}_bins" >/dev/null || continue
+    [[ $n == --cask\ * ]] && continue
+    for p in $n; do
+      pkg_present "$m" "$p" || continue
+      while IFS= read -r b; do
+        [[ -f $b && -x $b ]] || continue
+        c=${b##*/}
+        first=$(type -P "$c" 2>/dev/null) || continue
+        [[ $(realpath "$first" 2>/dev/null) == "$(realpath "$b" 2>/dev/null)" ]] && continue
+        check_bad "$c: ${first/#$HOME/\~} runs, not rig's (${b/#$HOME/\~}); an older install? remove it"
+      done < <("pm_${m}_bins" "$p")
+    done
+  done < <(pkg_declared)
+}
+
 pkg_doctor() {
   info "packages"
   if [[ ${RIG_NATIVE:-} == pacman ]]; then
@@ -117,6 +137,7 @@ pkg_doctor() {
   local missing; missing=$(pkg_missing)
   if [[ -z $missing ]]; then check_ok "all declared packages installed"
   else while IFS=$'\t' read -r m rest; do check_bad "missing: $rest ($m)"; done <<<"$missing"; fi
+  pkg_shadowed
 }
 
 # After a change of selection: packages rig installed that nothing needs now.

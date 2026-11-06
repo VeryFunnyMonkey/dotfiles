@@ -18,7 +18,7 @@ On **Windows**, in PowerShell:
 irm https://raw.githubusercontent.com/VeryFunnyMonkey/dotfiles/main/install.ps1 | iex
 ```
 
-It installs WSL if it's missing (and carries on by itself after the restart), lets you pick Ubuntu, Arch or Fedora, creates your Linux user, then runs the same installer inside it, with Windows Terminal and Git Credential Manager ticked and the keyboard-driven desktop (GlazeWM) there to pick; PowerToys is always set up. Everything it changes on Windows is undone by `rig uninstall` (inside WSL).
+It installs WSL if it's missing (and carries on by itself after the restart), lets you pick Ubuntu, Arch or Fedora, creates your Linux user and turns systemd on in the distro (so services start as on any Linux), then runs the same installer inside it, with Windows Terminal and Git Credential Manager ticked and the keyboard-driven desktop (GlazeWM) there to pick; PowerToys is always set up. Everything it changes on Windows is undone by `rig uninstall` (inside WSL).
 
 It installs chezmoi, prepares the package manager, clones this repo and starts **the installer**, `rig setup`:
 

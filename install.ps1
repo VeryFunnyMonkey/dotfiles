@@ -9,7 +9,8 @@
     2. installs WSL if it's missing (asks for admin for that step alone), then
        carries on by itself after the restart it needs
     3. installs the distro you pick: Ubuntu (the default), Arch or Fedora
-    4. creates your Linux user (with sudo) and makes it the default
+    4. creates your Linux user (with sudo) and makes it the default; turns
+       systemd on in the distro (services start as on any Linux)
     5. runs the normal installer inside it (install.sh: rig setup), with
        Windows Terminal and Git Credential Manager (git signs in through
        Windows) ticked; the keyboard-driven desktop (GlazeWM, the wm item) is
@@ -125,6 +126,10 @@ if ($current) {
     default { 'G=sudo' }
   }
   Invoke-InDistro root "set -e; $prep; useradd -m -s /bin/bash -G `$G $user; printf '[user]\ndefault=$user\n' >> /etc/wsl.conf"
+  # systemd on (new distros mostly have it already): the SSH agent, Podman's
+  # socket and every other service start as on any Linux
+  Invoke-InDistro root 'f=/etc/wsl.conf; if grep -qs "^systemd *=" $f; then sed -i "s/^systemd *=.*/systemd=true/" $f; elif grep -qs "^\[boot\]" $f; then sed -i "/^\[boot\]/a systemd=true" $f; else printf "\n[boot]\nsystemd=true\n" >> $f; fi'
+  if ($LASTEXITCODE -ne 0) { Note "couldn't turn systemd on in /etc/wsl.conf; rig doctor (inside $name) shows how" }
   if ($LASTEXITCODE -ne 0) { Fail "couldn't create $user" }
   # the password goes in on stdin, never as an argument (PowerShell adds a CR)
   "${user}:$pw" | & wsl.exe -d $name -u root -- sh -c "tr -d '\r' | chpasswd"

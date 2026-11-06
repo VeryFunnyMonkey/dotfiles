@@ -15,6 +15,7 @@ cmd_doctor() {
     else check_bad "chezmoi: pending changes (rig diff / chezmoi apply)"; fi
   else check_bad "chezmoi not installed"; fi
   moved_aside
+  wsl_systemd
 
   pkg_doctor
   modules_run doctor
@@ -30,6 +31,17 @@ moved_aside() {
   [[ -s $m ]] || return 0
   local list; list=$(awk -F'\t' '{printf "%s~/%s", (NR > 1 ? ", " : ""), $2}' "$m")
   say "  ${DIM}yours, moved aside when rig took over: $list (in ${RIG_STATE/#$HOME/\~}/backup; rig uninstall puts them back)${N}"
+}
+
+# WSL can run systemd (one setting; new distros have it on). Without it the
+# SSH agent and Podman's socket can't start on their own.
+wsl_systemd() {
+  is_windows && ! have_system_systemd || return 0
+  info "WSL"
+  check_bad "systemd is off in this distro: the SSH agent's socket and Podman's can't start on their own"
+  say "  to turn it on: printf '\\n[boot]\\nsystemd=true\\n' | sudo tee -a /etc/wsl.conf"
+  say "  (or add systemd=true under an existing [boot] in /etc/wsl.conf); then, in PowerShell:"
+  say "  wsl --shutdown, open a new terminal, and: rig modules sync ssh-agent containers"
 }
 
 # The stack review (AGENTS.md): due 90 days after docs/stack.yaml's last_reviewed.

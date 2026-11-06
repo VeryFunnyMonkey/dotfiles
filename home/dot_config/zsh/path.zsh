@@ -15,7 +15,4 @@ for _p in /opt/homebrew /usr/local/Homebrew /home/linuxbrew/.linuxbrew; do
 done
 unset _p
 
-# fnm installed by its own script lives here (distro/brew packages are on PATH already)
-[[ -x ${XDG_DATA_HOME:-$HOME/.local/share}/fnm/fnm ]] && path=("${XDG_DATA_HOME:-$HOME/.local/share}/fnm" $path)
-
 path=("$HOME/.local/bin" $path)
