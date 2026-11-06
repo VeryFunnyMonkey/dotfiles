@@ -12,11 +12,21 @@ BK="$STATE/backup/$(date +%Y%m%d-%H%M%S)"
 
 seen() { grep -qxF "$1" "$STATE/seen"; }
 mark() { printf '%s\n' "$1" >>"$STATE/seen"; }
+MOVED=()
 save() { # kind relpath
   mkdir -p "$BK/$(dirname "$2")"
   cp -aP "$DEST/$2" "$BK/$2"
   printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$BK" "" >>"$STATE/backup.manifest"
-  echo "rig: backed up ~/$2"
+  MOVED+=("$2")
+}
+# where your own additions go now, for a moved file (.chezmoidata/local.yaml)
+local_for() { # relpath -> "file|note"
+  case $1 in
+{{- range .local_files }}
+    {{ range $i, $p := .paths }}{{ if $i }} | {{ end }}{{ $p | quote }}{{ if hasSuffix "/" $p }}*{{ end }}{{ end }}) printf '%s|%s' {{ .file | quote }} {{ dig "note" "" . | quote }} ;;
+{{- end }}
+    *) ;;
+  esac
 }
 
 # A parent directory that is a symlink (e.g. an old Stow link) would make
@@ -78,3 +88,14 @@ for t in .zshrc .zprofile .zlogin .zlogout .gitconfig .tmux.conf; do
   fi
   mark "$t"
 done
+
+# Say what moved and where it went: nothing of yours disappears silently.
+if ((${#MOVED[@]})); then
+  echo "rig: moved aside (rig's versions are in their place now; rig uninstall puts yours back):"
+  for t in "${MOVED[@]}"; do
+    echo "  ~/$t  ->  ${BK/#$DEST/\~}/$t"
+    w=$(local_for "$t")
+    if [[ -n ${w#*|} ]]; then echo "      ${w#*|}"
+    elif [[ -n $w ]]; then echo "      what you want back from it goes in ${w%%|*}"; fi
+  done
+fi

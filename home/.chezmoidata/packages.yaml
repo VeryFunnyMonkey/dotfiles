@@ -54,6 +54,18 @@ packages:
   # On Arch, from the AUR, through the AUR helper (yay; the bootstrap installs it).
   aur: [helium]
 
+  # Packages left out while something they would replace is installed (that
+  # manager's package names): rig doesn't remove what you already have; it
+  # says what it left out and why. Docker stays yours next to Podman, say.
+  conflicts:
+    podman-docker:
+      apt: [docker-ce-cli, docker.io]
+      pacman: [docker]
+      dnf: [docker-ce-cli, moby-engine]
+    docker-compose:
+      apt: [docker-compose-plugin]
+      dnf: [docker-compose-plugin]
+
   # Packages that exist only for some managers (skipped elsewhere).
   only:
     wslu: [apt]

@@ -3,8 +3,15 @@
 # packages.yaml and the selected items) means for this machine: install what's
 # missing, report drift, search, update, and clean up after a deselect.
 
-# packages.tsv: manager \t name(s) \t logical \t source
+# packages.tsv: manager \t name(s) \t logical \t source \t blocked by
 pkg_declared() { awk -F'\t' 'NF>=2 && $1 !~ /^#/' "$PACKAGES_TSV"; }
+
+# The installed package (of the same manager) that keeps this one out, if any
+# (packages.yaml conflicts: rig doesn't replace what you already have).
+pkg_blocker() { # manager "blockers..."
+  local b; for b in $2; do if pkg_present "$1" "$b"; then printf '%s' "$b"; return 0; fi; done
+  return 1
+}
 
 # Install everything declared for this machine that's missing.
 cmd_sync() {
@@ -12,10 +19,12 @@ cmd_sync() {
   [[ -r $PACKAGES_TSV ]] || die "no package list ($PACKAGES_TSV); run chezmoi apply"
   baseline_record
   local -A todo=()
-  local m n logical
-  while IFS=$'\t' read -r m n logical _; do
+  local m n logical blk by
+  while IFS=$'\t' read -r m n logical _ blk; do
     if pkg_present "$m" "$n"; then
       ledger_pkg_record "$m" "$n" "$logical" preexisting
+    elif by=$(pkg_blocker "$m" "${blk:-}"); then
+      say "  ${DIM}left out $n: your $by is installed, and $n would replace it (rig leaves it as it is)${N}"
     else
       todo[$m]+="$n"$'\n'
       ledger_pkg_record "$m" "$n" "$logical" installed
@@ -54,9 +63,9 @@ baseline_record() {
 }
 pkg_declared_names() { pkg_declared | awk -F'\t' '{n=split($2,a," "); if ($2 ~ /^--cask /) print $1"\t"$2; else for (i=1;i<=n;i++) print $1"\t"a[i]}'; }
 pkg_missing() { # "manager\tname (logical)" for each declared package that isn't installed
-  local m n logical
-  while IFS=$'\t' read -r m n logical _; do
-    pkg_present "$m" "$n" || printf '%s\t%s (%s)\n' "$m" "$n" "$logical"
+  local m n logical blk
+  while IFS=$'\t' read -r m n logical _ blk; do
+    pkg_present "$m" "$n" || pkg_blocker "$m" "${blk:-}" >/dev/null || printf '%s\t%s (%s)\n' "$m" "$n" "$logical"
   done < <(pkg_declared)
 }
 

@@ -14,6 +14,7 @@ cmd_doctor() {
     if [[ -z $(chezmoi status --exclude=scripts 2>/dev/null || true) ]]; then check_ok "chezmoi: everything applied"
     else check_bad "chezmoi: pending changes (rig diff / chezmoi apply)"; fi
   else check_bad "chezmoi not installed"; fi
+  moved_aside
 
   pkg_doctor
   modules_run doctor
@@ -21,6 +22,14 @@ cmd_doctor() {
 
   if ((DOCTOR_FAILS)); then say; say "${Y}$DOCTOR_FAILS problem(s)${N}"; return 1; fi
   say; say "${G}all good${N}"
+}
+
+# Your files rig moved aside when it took over (not a problem: where they are).
+moved_aside() {
+  local m=$RIG_STATE/backup.manifest
+  [[ -s $m ]] || return 0
+  local list; list=$(awk -F'\t' '{printf "%s~/%s", (NR > 1 ? ", " : ""), $2}' "$m")
+  say "  ${DIM}yours, moved aside when rig took over: $list (in ${RIG_STATE/#$HOME/\~}/backup; rig uninstall puts them back)${N}"
 }
 
 # The stack review (AGENTS.md): due 90 days after docs/stack.yaml's last_reviewed.

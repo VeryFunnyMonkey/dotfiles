@@ -89,7 +89,7 @@ winterm_default() {
     [[ ${cur,,} == "${guid,,}" ]] && continue
     if ! ledger_has win-wt-default "$f"; then ledger_record win-wt-default "$f" "$cur"; fi
     winterm_set_default "$f" "$guid"
-    ok "Windows Terminal opens $(winterm_distro) by default"
+    ok "Windows Terminal opens $(winterm_distro) by default (the one line rig changed in its settings.json; it was $cur, and rig uninstall puts that back)"
   done < <(winterm_settings_files)
   if ((n == 0)); then say "  ${DIM}Windows Terminal hasn't been opened yet: open it once, then rig modules sync winterm makes $(winterm_distro) its default${N}"; fi
 }

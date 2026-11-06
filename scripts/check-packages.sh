@@ -29,7 +29,7 @@ for display in wayland x11 windows; do
 done | awk -F'\t' 'NF>=2 && $1 !~ /^#/ && !seen[$1"\t"$2]++' >"$tmp/list"
 
 checked=0 missing=0 unsure=0
-while IFS=$'\t' read -r mgr names logical src; do
+while IFS=$'\t' read -r mgr names logical src _; do
   # one entry can be several packages ("gcc make"), or a cask ("--cask x")
   if [[ $names == --cask\ * ]]; then set -- "$names"; else read -ra parts <<<"$names"; set -- "${parts[@]}"; fi
   for n in "$@"; do

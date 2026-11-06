@@ -1,6 +1,8 @@
 {{- /*
   This machine's resolved package list. One line per package:
-    <manager> TAB <name(s)> TAB <logical> TAB <source>
+    <manager> TAB <name(s)> TAB <logical> TAB <source> TAB <blocked by>
+  <blocked by>: that manager's packages which, installed, keep this one out
+  (packages.yaml conflicts).
   Sources: core, item:<id>, runtime:<name>, extra. Managers: pacman, aur, apt, dnf, brew, winget, download.
   The rules (virtual packages, downloads, per-manager names) are data in
   .chezmoidata/packages.yaml.
@@ -55,7 +57,8 @@
 {{-     if hasKey $map $pkg }}{{ $name = index $map $pkg }}{{ end -}}
 {{-   end -}}
 {{-   if and (hasKey $p.only $pkg) (not (has $mgr (index $p.only $pkg))) -}}{{- $name = "-" -}}{{- end -}}
+{{-   $blk := dig $pkg $mgr list (dig "conflicts" dict $p) -}}
 {{-   if ne $name "-" }}
-{{ $mgr }}	{{ $name }}	{{ $logical }}	{{ $src }}
+{{ $mgr }}	{{ $name }}	{{ $logical }}	{{ $src }}	{{ join " " $blk }}
 {{-   end -}}
 {{- end }}

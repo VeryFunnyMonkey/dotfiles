@@ -65,6 +65,7 @@ settings_cmd() {
       printf '%s\t%s\t%s\t%s\t%s\n' "$kind" "$key_id" "$cur" "$type" "$item" >>"$(APPLIED)"
     fi
     setting_write "$kind" "$id" "$val" "$extra"
+    say "  ${DIM}$item: $id set to $val (it was ${cur:-unset}; deselecting $item puts that back)${N}"
     changed=1
   done <<<"$desired"
 
@@ -75,6 +76,7 @@ settings_cmd() {
     if ! awk -F'\t' -v k="$k" -v i="$i" '$2==k && $3==i {f=1} END {exit !f}' <<<"$desired"; then
       if ((dry)); then say "  would restore $it: $k $i -> $p"; continue; fi
       setting_revert "$k" "$i" "$p" "$t"
+      say "  ${DIM}$it: $i put back to ${p:-unset}${N}"
       applied_del "$k" "$i"
       changed=1
       [[ $k == defaults ]] && restarts+=" $(restart_for "$it")"

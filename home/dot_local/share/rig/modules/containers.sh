@@ -8,6 +8,15 @@
 # Every change goes in the ledger; deselecting/uninstalling undoes it.
 
 docker_host_file() { printf '%s/docker-host' "$RIG_STATE"; }
+# Docker of your own (not podman-docker's stand-in): rig leaves `docker` and
+# DOCKER_HOST to it, and Podman runs next to it as `podman`.
+docker_is_yours() { have docker && ! docker --version 2>/dev/null | grep -qi podman; }
+docker_host_set() { # socket
+  if docker_is_yours; then
+    rm -f "$(docker_host_file)"
+    say "  ${DIM}your Docker stays: docker and DOCKER_HOST are left to it; Podman runs next to it as podman${N}"
+  else printf 'unix://%s\n' "$1" >"$(docker_host_file)"; fi
+}
 
 subids_ok() { grep -q "^$(id -un):" /etc/subuid 2>/dev/null && grep -q "^$(id -un):" /etc/subgid 2>/dev/null; }
 
@@ -27,7 +36,7 @@ containers_setup() {
       podman machine start >/dev/null && ok "podman machine started"
     fi
     local sock; sock=$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}' 2>/dev/null || true)
-    if [[ -n $sock ]]; then printf 'unix://%s\n' "$sock" >"$(docker_host_file)"; fi
+    if [[ -n $sock ]]; then docker_host_set "$sock"; fi
   else
     if ! subids_ok; then
       info "adding sub-ID ranges for rootless containers ($(id -un))"
@@ -37,25 +46,29 @@ containers_setup() {
     fi
     if have_user_systemd; then unit_enable_user podman.socket
     else warn "no systemd user session: start the Docker-compatible socket by hand when needed (podman system service)"; fi
-    printf 'unix://%s/podman/podman.sock\n' "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" >"$(docker_host_file)"
+    docker_host_set "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock"
   fi
-  ok "podman ready ($(podman --version 2>/dev/null | awk '{print $3}')); docker, docker compose and DOCKER_HOST use it"
+  if docker_is_yours; then ok "podman ready ($(podman --version 2>/dev/null | awk '{print $3}'))"
+  else ok "podman ready ($(podman --version 2>/dev/null | awk '{print $3}')); docker, docker compose and DOCKER_HOST use it"; fi
 }
 
 # Deselected: stop what rig started; ask before deleting the VM (images and
 # volumes live in it). Packages are handled like any other deselected item.
 containers_teardown() {
-  [[ -f $(docker_host_file) ]] || return 0
-  rm -f "$(docker_host_file)"
+  local did=0
+  if [[ -f $(docker_host_file) ]]; then rm -f "$(docker_host_file)"; did=1; fi
   if is_darwin && have podman; then
-    podman machine stop >/dev/null 2>&1 || true
-    if ledger_has podman-machine default created && confirm "Delete the podman machine too (its images and volumes go with it)?"; then
-      podman machine rm -f >/dev/null 2>&1 && ok "podman machine deleted"
+    if [[ $(podman machine inspect --format '{{.State}}' 2>/dev/null) == running ]]; then
+      podman machine stop >/dev/null 2>&1 || true; did=1
+      if ledger_has podman-machine default created && confirm "Delete the podman machine too (its images and volumes go with it)?"; then
+        podman machine rm -f >/dev/null 2>&1 && ok "podman machine deleted"
+        ledger_forget podman-machine default
+      fi
     fi
-  elif have systemctl; then
-    unit_release_user podman.socket
+  elif have systemctl && ledger_has user-unit podman.socket; then
+    unit_release_user podman.socket; ledger_forget user-unit podman.socket; did=1
   fi
-  ok "podman stopped"
+  if ((did)); then ok "podman stopped"; fi
 }
 
 containers_doctor() {
@@ -64,7 +77,9 @@ containers_doctor() {
   if have podman && podman info >/dev/null 2>&1; then check_ok "podman works ($(podman --version | awk '{print $3}'))"
   else check_bad "podman isn't working (podman info; on macOS: podman machine start)"; fi
   local dh; dh=$(cat "$(docker_host_file)" 2>/dev/null || true)
-  if [[ -n $dh && -S ${dh#unix://} ]]; then check_ok "Docker-compatible socket: $dh"
+  if docker_is_yours; then check_ok "docker is your own Docker (rig leaves it; Podman runs as podman)"
+  elif [[ -n $dh && -S ${dh#unix://} ]]; then check_ok "Docker-compatible socket: $dh"
+  elif ! is_darwin && ! have_user_systemd; then check_bad "Docker-compatible socket not running (no systemd here: podman system service --time=0 &)"
   else check_bad "Docker-compatible socket missing (rig containers sync)"; fi
 }
 

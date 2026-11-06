@@ -64,6 +64,7 @@ jobs:
           - {test: settings, image: "archlinux:latest"}
           - {test: wm, image: "archlinux:latest"}
           - {test: podman, image: "archlinux:latest"}
+          - {test: docker, image: "archlinux:latest"}
           - {test: hyprland, image: "archlinux:latest"}
           - {test: transfer, image: "archlinux:latest"}
     steps:

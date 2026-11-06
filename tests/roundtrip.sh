@@ -15,6 +15,7 @@ install_rig --profile minimal --select zoxide,eza,bat --yes
 check "install ok" '[[ $? -eq 0 ]] && grep -q "nvim bootstrap done" /tmp/install.log'
 chezmoi apply > /tmp/apply2.log 2>&1
 check "second apply re-runs nothing" '! grep -qE "installing with|setting up neovim|changing login shell" /tmp/apply2.log && [[ -z $(chezmoi status --exclude=scripts) ]]'
+check "moved files named, with where they went and where yours go now" 'grep -q "~/.zshrc  ->  ~/.local/state/rig/backup/" /tmp/install.log && grep -q "goes in ~/.config/zsh/local.zsh" /tmp/install.log && grep -q "~/.gitconfig  ->" /tmp/install.log' || grep -A12 "moved aside" /tmp/install.log
 check "zshenv is a symlink into the repo" '[[ $(readlink ~/.zshenv) == */dotfiles/home/dot_zshenv ]]'
 check "old Stow-style nvim link replaced by a real folder" '[[ ! -L ~/.config/nvim && -L ~/.config/nvim/init.lua ]]'
 check "login shell is zsh" '[[ $(getent passwd $(id -un) | cut -d: -f7) == */zsh ]]'
@@ -24,6 +25,7 @@ check "the old ~/.gitconfig still applies under rig's (its alias, its name)" '[[
 check "git pager is delta... only if delta selected (it isn't)" '[[ $(git config core.pager) == delta ]] || true'
 doc=$(rig doctor 2>&1)
 check "doctor: packages" '[[ $doc == *"all declared packages installed"* ]]'
+check "doctor: says what was moved aside, and where" '[[ $doc == *"moved aside when rig took over: "*"~/.zshrc"* ]]'
 check "doctor: nvim healthy" '[[ $doc == *"checkhealth: no errors"* ]]'
 # an install that was cut short: a parser with no version file (seen on a Mac)
 for b in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew; do [[ -x $b ]] && eval "$("$b" shellenv)"; done   # nvim from brew (Ubuntu)

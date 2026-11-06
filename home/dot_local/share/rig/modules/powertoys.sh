@@ -49,6 +49,7 @@ powertoys_setup() {
       local t; t=$(win_env TEMP)/rig-pt-$m.json
       if pt_json -Dsc "$(win_path "$dsc")" -Module "$m" -Save "$(win_path "$t")" -Want "$want" >/dev/null; then
         mv "$t" "$saved"; ledger_record powertoys-dsc "$m" "$saved"
+        say "  ${DIM}your PowerToys $m settings are saved in ${saved/#$HOME/\~} (rig uninstall sets them back)${N}"
       else warn "PowerToys: $m settings weren't applied"; failed=1; fi
     fi
   done

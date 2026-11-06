@@ -24,6 +24,7 @@ ensure_ssh_include() {
     # Include must come first so its settings apply to every host.
     { printf 'Include config.d/*\n\n'; cat "$cfg"; } >"$cfg.new" && mv "$cfg.new" "$cfg"; chmod 600 "$cfg"
     ledger_record ssh-include "$cfg" added
+    say "  ${DIM}added one line to the top of your ~/.ssh/config: Include config.d/* (rig's SSH settings; rig uninstall takes it out)${N}"
   fi
   if [[ ! -f $SSH_DIR/config.d/00-rig ]]; then
     {

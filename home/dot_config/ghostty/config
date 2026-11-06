@@ -31,3 +31,5 @@ copy-on-select = false
 shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
 
 config-file = ?config-os
+# this machine's own additions (not in the repo), last so they win
+config-file = ?local

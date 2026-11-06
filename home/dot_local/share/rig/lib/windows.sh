@@ -69,6 +69,7 @@ win_file_write() { # dest source
       local b; b="$RIG_STATE/win-backup/$(printf '%s' "$dest" | sha1sum | cut -c1-16)"
       mkdir -p "$(dirname "$b")" && cp "$dest" "$b"
       ledger_record win-file "$dest" "$b"
+      say "  ${DIM}replaced your $(win_path "$dest" 2>/dev/null || printf '%s' "$dest"); yours is saved in ${b/#$HOME/\~} (rig uninstall puts it back)${N}"
     else
       ledger_record win-file "$dest" none
     fi

@@ -12,3 +12,10 @@ for _, mod in ipairs({ "config.options", "config.filetypes", "config.pack", "con
   local ok, err = pcall(require, mod)
   if not ok then vim.notify(("%s failed to load:\n%s"):format(mod, err), vim.log.levels.ERROR) end
 end
+
+-- This machine's own additions (not in the repo): ~/.config/nvim/lua/local.lua
+local here = vim.fn.stdpath("config") .. "/lua/local.lua"
+if vim.uv.fs_stat(here) then
+  local ok, err = pcall(dofile, here)
+  if not ok then vim.notify(("local.lua failed to load:\n%s"):format(err), vim.log.levels.ERROR) end
+end

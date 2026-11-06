@@ -1,0 +1,13 @@
+# Where this machine's own additions go, per config rig takes over:
+# machine-local files, never in the repo, each loaded last so it wins. When
+# rig moves a file of yours aside, it says where it went and which of these
+# is the place for what you want back. The first entry whose path matches a
+# moved file (a folder ends in /) names its place; note: says more.
+local_files:
+  - {paths: [.gitconfig], file: "~/.config/git/local.gitconfig", note: "it still applies: rig's git config includes it, under rig's own settings"}
+  - {paths: [.zshrc, .zprofile, .zlogin, .zlogout, .zshenv, .config/zsh/], file: "~/.config/zsh/local.zsh"}
+  - {paths: [.tmux.conf, .config/tmux/], file: "~/.config/tmux/local.conf"}
+  - {paths: [.config/git/], file: "~/.config/git/local.gitconfig"}
+  - {paths: [.config/ghostty/], file: "~/.config/ghostty/local"}
+  - {paths: [.config/nvim/], file: "~/.config/nvim/lua/local.lua"}
+  - {paths: [.config/hypr/], file: "~/.config/hypr/local.lua"}

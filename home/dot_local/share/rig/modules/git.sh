@@ -28,6 +28,24 @@ git_doctor() {
   else
     check_bad "no git accounts yet (rig git add)"
   fi
+  git_global_written
+}
+
+# `git config --global` (yours, or a tool's: gh auth setup-git, an editor)
+# writes ~/.config/git/config, which is rig's (a link into the repo): git
+# swaps the link for a file of its own, and rig's git config stops reaching
+# this machine. Say what was added, and where it belongs.
+git_global_written() {
+  local cfg="$GIT_CFG/config" repo; repo="$(src_dir)/dot_config/git/config"
+  [[ -e $cfg && ! -L $cfg && -f $repo ]] || return 0
+  check_bad "rig's git config (~/.config/git/config) was replaced: something ran git config --global"
+  local added; added=$(comm -13 <(git config -f "$repo" --list | sort) <(git config -f "$cfg" --list | sort))
+  if [[ -n $added ]]; then
+    say "  what it added (this machine's settings belong in ~/.config/git/local.gitconfig):"
+    printf '%s\n' "$added" | sed 's/^/    /'
+  fi
+  say "  to fix: git config -f ~/.config/git/local.gitconfig <name> <value> for each line above, then:"
+  say "    rm ~/.config/git/config && chezmoi apply ~/.config/git/config"
 }
 
 # rig uninstall --identities: rig-created keys are archived, never deleted
