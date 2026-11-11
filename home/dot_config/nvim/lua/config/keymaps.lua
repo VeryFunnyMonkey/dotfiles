@@ -31,30 +31,5 @@ map("n", "<leader>cl", function() vim.diagnostic.open_float({ scope = "line" }) 
 
 -- lazygit in a floating terminal (prefix g does the same from tmux)
 map("n", "<leader>gg", function()
-  local buf = vim.api.nvim_create_buf(false, true)
-  local w = math.floor(vim.o.columns * 0.9)
-  local h = math.floor(vim.o.lines * 0.9)
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor", width = w, height = h,
-    col = math.floor((vim.o.columns - w) / 2), row = math.floor((vim.o.lines - h) / 2),
-    style = "minimal",
-  })
-  local job = vim.fn.jobstart({ "lazygit" }, {
-    term = true,
-    on_exit = function()
-      if vim.api.nvim_win_is_valid(win) then vim.api.nvim_win_close(win, true) end
-      if vim.api.nvim_buf_is_valid(buf) then vim.api.nvim_buf_delete(buf, { force = true }) end
-      vim.cmd.checktime()
-    end,
-  })
-  -- Out of terminal mode (a click, a focus change), keys reach nvim, not
-  -- lazygit: q still closes it, and coming back to the float types into it.
-  map("n", "q", function() vim.fn.jobstop(job) end, { buffer = buf, desc = "Close lazygit" })
-  vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained" }, {
-    buffer = buf,
-    callback = function()
-      if vim.api.nvim_get_current_buf() == buf then vim.cmd.startinsert() end
-    end,
-  })
-  vim.cmd.startinsert()
+  require("config.float").term({ "lazygit" }, { on_exit = vim.cmd.checktime })
 end, { desc = "lazygit" })
