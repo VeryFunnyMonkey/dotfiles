@@ -20,7 +20,14 @@ map("n", "<leader>E", function()
   if not mf.close() then mf.open(vim.uv.cwd()) end
 end, { desc = "Explorer (cwd)" })
 
-map("n", "<leader>go", function() require("mini.diff").toggle_overlay(0) end, { desc = "Diff overlay" })
+map("n", "<leader>go", function()
+  local diff = require("mini.diff")
+  if not diff.get_buf_data(0) then
+    vim.notify("No diff here: this buffer isn't a file", vim.log.levels.WARN)
+    return
+  end
+  diff.toggle_overlay(0)
+end, { desc = "Diff overlay" })
 
 -- mini.clue: press <leader>, g, [, ], z, <C-w>, ", ' or ` and wait for a menu of keys.
 local clue = require("mini.clue")
