@@ -115,13 +115,10 @@ revert_win_wt_default() { # settings.json previous-guid
 }
 
 winterm_teardown() {
-  local f k
-  for f in $(ledger_keys win-wt-default); do
-    revert_win_wt_default "$f" "$(ledger_last win-wt-default "$f")"; ledger_forget win-wt-default "$f"
-  done
-  win_file_restore "$(winterm_fragment_file)"
-  while IFS= read -r f; do win_file_restore "$f"; done < <(ledger_keys win-file | grep -F "$(winterm_fonts_dir)/JetBrainsMonoNerdFont-" || true)
-  while IFS= read -r k; do win_reg_restore "${k%|*}" "${k##*|}"; done < <(ledger_keys win-reg | grep -F "$WT_FONTS_KEY|JetBrainsMonoNerdFont-" || true)
+  ledger_undo_all win-wt-default
+  ledger_undo win-file "$(winterm_fragment_file)"
+  ledger_undo_all win-file "$(winterm_fonts_dir)/JetBrainsMonoNerdFont-"
+  ledger_undo_all win-reg "$WT_FONTS_KEY|JetBrainsMonoNerdFont-"
 }
 
 winterm_doctor() {

@@ -91,25 +91,6 @@ uninstall_archive() { # archive managed-files
     | tar -czf "$1" -C "$HOME" -T - 2>/dev/null || warn "archive incomplete"
 }
 
-backup_count() { [[ -f $RIG_STATE/backup.manifest ]] && wc -l <"$RIG_STATE/backup.manifest" | tr -d ' ' || echo 0; }
-
-# backup.manifest: kind \t relpath \t backupdir \t extra
-backup_restore_all() {
-  [[ -f $RIG_STATE/backup.manifest ]] || return 0
-  local kind rel dir
-  while IFS=$'\t' read -r kind rel dir _; do
-    if [[ $kind == created ]]; then rm -f "$HOME/$rel" && ok "removed ~/$rel (rig created it)"; continue; fi
-    local src="$dir/$rel" dst="$HOME/$rel"
-    [[ -e $src || -L $src ]] || continue
-    case $kind in
-      dirlink) [[ -d $dst && ! -L $dst ]] && { rmdir "$dst" 2>/dev/null || { warn "$dst not empty; leaving it"; continue; }; }
-               cp -P "$src" "$dst" ;;
-      *) mkdir -p "$(dirname "$dst")"; rm -rf "$dst"; cp -aP "$src" "$dst" ;;
-    esac
-    ok "restored ~/$rel"
-  done < <(tac_ "$RIG_STATE/backup.manifest")
-}
-
 chezmoi_forget() {
   local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi" def="${XDG_DATA_HOME:-$HOME/.local/share}/chezmoi"
   rm -rf "$cfg" "${XDG_CACHE_HOME:-$HOME/.cache}/chezmoi"

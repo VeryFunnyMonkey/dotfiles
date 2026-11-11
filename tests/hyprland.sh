@@ -52,6 +52,9 @@ doc=$(rig doctor 2>&1); check "doctor checks the Hyprland config" '[[ $doc == *"
 RIG_YES=1 rig remove hyprland > /tmp/remove.log 2>&1
 check "deselect: original greetd config back" '! grep -q "uwsm start" /etc/greetd/config.toml'
 check "deselect: Hyprland's configs gone" '[[ ! -e ~/.config/hypr/hyprland.lua && ! -e ~/.local/bin/desk ]]'
+check "deselect: its changes leave the ledger" '! grep -qE "^(etc-file	/etc/greetd|system-unit	(greetd|NetworkManager|bluetooth))" ~/.local/state/rig/system.log' || grep -E "etc-file|system-unit" ~/.local/state/rig/system.log
+rig modules sync --items > /tmp/sync2.log 2>&1
+check "deselect: a later sync doesn't undo it again" '! grep -qE "greetd|restored|disabled" /tmp/sync2.log' || cat /tmp/sync2.log
 
 ~/.local/bin/rig uninstall --everything --yes > /tmp/uninstall.log 2>&1
 check "uninstall ok" '[[ $? -eq 0 ]]' || tail -20 /tmp/uninstall.log

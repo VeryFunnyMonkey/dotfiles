@@ -46,8 +46,8 @@ glazewm_setup() {
 glazewm_teardown() {
   if ledger_has win-file "$(glazewm_config 2>/dev/null)" || ledger_has win-reg "$GLAZE_RUN_KEY|GlazeWM"; then
     if glazewm_running; then win_cmd taskkill /IM glazewm.exe >/dev/null 2>&1 || true; fi
-    win_file_restore "$(glazewm_config)"
-    win_reg_restore "$GLAZE_RUN_KEY" GlazeWM
+    ledger_undo win-file "$(glazewm_config)"
+    ledger_undo win-reg "$GLAZE_RUN_KEY|GlazeWM"
   fi
 }
 

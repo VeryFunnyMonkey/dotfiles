@@ -27,9 +27,8 @@ cmd_doctor() {
 
 # Your files rig moved aside when it took over (not a problem: where they are).
 moved_aside() {
-  local m=$RIG_STATE/backup.manifest
-  [[ -s $m ]] || return 0
-  local list; list=$(awk -F'\t' '{printf "%s~/%s", (NR > 1 ? ", " : ""), $2}' "$m")
+  local list; list=$(backup_paths | awk '{printf "%s~/%s", (NR > 1 ? ", " : ""), $0}')
+  [[ -n $list ]] || return 0
   say "  ${DIM}yours, moved aside when rig took over: $list (in ${RIG_STATE/#$HOME/\~}/backup; rig uninstall puts them back)${N}"
 }
 

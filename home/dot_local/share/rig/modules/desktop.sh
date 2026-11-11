@@ -87,17 +87,18 @@ desktop_services() {
 # Deselected: give the login back, turn off what rig turned on.
 desktop_teardown() {
   if ledger_has etc-file "$GREETD_CONFIG"; then
-    if [[ $(ledger_last system-unit greetd.service) != enabled ]] && [[ -n $(ledger_last system-unit greetd.service) ]]; then
+    # not ledger_undo: its revert stops the unit too, and greetd may be the
+    # session you're in
+    local was; was=$(ledger_last system-unit greetd.service)
+    if [[ -n $was && $was != enabled ]]; then
       warn "greetd was your login screen; it's off from the next boot (log in on the console, or enable another display manager)"
       sudo_ systemctl disable greetd.service 2>/dev/null || true
     fi
-    etc_file_restore "$GREETD_CONFIG"
+    ledger_forget system-unit greetd.service
+    ledger_undo etc-file "$GREETD_CONFIG"
   fi
-  local u; for u in NetworkManager.service bluetooth.service; do
-    if [[ -n $(ledger_last system-unit "$u") && $(ledger_last system-unit "$u") != enabled ]]; then
-      sudo_ systemctl disable --now "$u" 2>/dev/null || true
-    fi
-  done
+  ledger_undo system-unit NetworkManager.service
+  ledger_undo system-unit bluetooth.service
 }
 
 desktop_doctor() {
@@ -126,11 +127,6 @@ etc_file_write() { # path content
   fi
   sudo_ mkdir -p "$(dirname "$path")"
   printf '%s\n' "$2" | sudo_ tee "$path" >/dev/null
-}
-etc_file_restore() { # path
-  local prev; prev=$(ledger_last etc-file "$1")
-  [[ -n $prev ]] || return 0
-  revert_etc_file "$1" "$prev"
 }
 revert_etc_file() { # path backup|none
   if [[ $2 == none ]]; then sudo_ rm -f "$1" && ok "removed $1 (rig created it)"

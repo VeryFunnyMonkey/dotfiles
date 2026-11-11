@@ -74,10 +74,8 @@ powertoys_cmdpal() {
 }
 
 powertoys_teardown() {
-  local m; for m in $(ledger_keys powertoys-dsc); do
-    revert_powertoys_dsc "$m" "$(ledger_last powertoys-dsc "$m")"; ledger_forget powertoys-dsc "$m"
-  done
-  local f; f=$(cmdpal_file 2>/dev/null) && win_file_restore "$f"
+  ledger_undo_all powertoys-dsc
+  local f; f=$(cmdpal_file 2>/dev/null) && ledger_undo win-file "$f"
   return 0
 }
 revert_powertoys_dsc() { # module saved-file

@@ -1,7 +1,7 @@
 # The installer end to end: install.sh, profiles, add/remove, saving a profile, the menu, uninstall.
 pkgs > /tmp/pkgs-before.txt
 
-RIG_SOURCE=~/dotfiles sh ~/dotfiles/install.sh --profile desktop --select python,web,claude --yes > /tmp/install.log 2>&1
+install_rig --profile desktop --select python,web,claude --yes
 check "install.sh (non-interactive) ok" '[[ $? -eq 0 ]]'
 check "gum installed" 'command -v gum >/dev/null'
 check "profile + selection stored" 'grep -q "profile = \"desktop\"" ~/.config/chezmoi/chezmoi.toml && grep -q "\"python\"" ~/.config/chezmoi/chezmoi.toml'

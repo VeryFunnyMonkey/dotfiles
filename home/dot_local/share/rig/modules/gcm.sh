@@ -40,12 +40,6 @@ gitlocal_set() { # setting value... (several: a list, as git's credential.helper
   git config -f "$f" --unset-all "$1" 2>/dev/null || true
   for v in "${@:2}"; do git config -f "$f" --add "$1" "$v"; done
 }
-gitlocal_restore() { # setting
-  local prev; prev=$(ledger_last git-local "$1")
-  [[ -n $prev ]] || return 0
-  revert_git_local "$1" "$prev"
-  ledger_forget git-local "$1"
-}
 revert_git_local() { # setting previous|none
   local f; f=$(gitlocal_file)
   [[ -f $f ]] || return 0
@@ -65,7 +59,7 @@ gcm_setup() {
 }
 
 gcm_teardown() {
-  local s; for s in "${GCM_SETTINGS[@]}"; do gitlocal_restore "$s"; done
+  local s; for s in "${GCM_SETTINGS[@]}"; do ledger_undo git-local "$s"; done
 }
 
 gcm_doctor() {

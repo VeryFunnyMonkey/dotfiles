@@ -4,7 +4,7 @@
 # (winterm, powertoys, glazewm). Every change goes in the ledger first:
 #   win-file  key: a Linux path on the Windows drive   previous: a backup, or none
 #   win-reg   key: HKCU\path|name                      previous: TYPE|data, or none
-# A module undoes its own with win_file_restore / win_reg_restore; rig
+# A module undoes its own with ledger_undo win-file / win-reg; rig
 # uninstall replays the rest through revert_win_file / revert_win_reg.
 
 is_windows() { [[ ${RIG_WSL:-} == true ]] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; }
@@ -81,12 +81,6 @@ win_file_write() { # dest source
   fi
   mkdir -p "$(dirname "$dest")" && cp "$src" "$dest"
 }
-win_file_restore() { # dest
-  local prev; prev=$(ledger_last win-file "$1")
-  [[ -n $prev ]] || return 0
-  revert_win_file "$1" "$prev"
-  ledger_forget win-file "$1"
-}
 revert_win_file() { # dest backup|none
   if [[ $2 == none ]]; then rm -f "$1"; prune_empty "$(dirname "$1")"
   elif [[ -f $2 ]]; then cp "$2" "$1"; fi
@@ -106,12 +100,6 @@ win_reg_set() { # key name type data
   [[ $cur == "$3|$4" ]] && return 0
   if ! ledger_has win-reg "$1|$2"; then ledger_record win-reg "$1|$2" "${cur:-none}"; fi
   win_reg add "$1" /v "$2" /t "$3" /d "$4" /f >/dev/null
-}
-win_reg_restore() { # key name
-  local prev; prev=$(ledger_last win-reg "$1|$2")
-  [[ -n $prev ]] || return 0
-  revert_win_reg "$1|$2" "$prev"
-  ledger_forget win-reg "$1|$2"
 }
 revert_win_reg() { # key|name TYPE|data|none
   local key=${1%|*} name=${1##*|}

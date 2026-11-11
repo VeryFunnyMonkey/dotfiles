@@ -5,20 +5,20 @@
 # it back exactly. Already-processed targets are skipped (ledger: seen).
 set -euo pipefail
 SRC={{ .chezmoi.sourceDir | quote }}
-DEST={{ .chezmoi.destDir | quote }}
-STATE="${XDG_STATE_HOME:-$DEST/.local/state}/rig"
-mkdir -p "$STATE"; touch "$STATE/seen" "$STATE/backup.manifest"
-BK="$STATE/backup/$(date +%Y%m%d-%H%M%S)"
+# rig's own building blocks, straight from the repo (rig isn't applied yet):
+# the ledger writes the backup record, in the format uninstall reads back.
+# shellcheck disable=SC2034  # die's prefix, read by lib/base.sh
+TOOL=rig
+for _f in base sys machine ledger; do
+  # shellcheck source=/dev/null
+  source "$SRC/dot_local/share/rig/lib/$_f.sh"
+done
+unset _f
+ledger_init; touch "$RIG_STATE/seen" "$RIG_STATE/backup.manifest"
+BK="$RIG_STATE/backup/$(date +%Y%m%d-%H%M%S)"
 
-seen() { grep -qxF "$1" "$STATE/seen"; }
-mark() { printf '%s\n' "$1" >>"$STATE/seen"; }
 MOVED=()
-save() { # kind relpath
-  mkdir -p "$BK/$(dirname "$2")"
-  cp -aP "$DEST/$2" "$BK/$2"
-  printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$BK" "" >>"$STATE/backup.manifest"
-  MOVED+=("$2")
-}
+save() { backup_save "$1" "$2" "$BK"; MOVED+=("$2"); }   # kind relpath
 # where your own additions go now, for a moved file (.chezmoidata/local.yaml)
 local_for() { # relpath -> "file|note"
   case $1 in
@@ -37,10 +37,10 @@ fix_parents() {
   for part in $(dirname "$rel"); do
     [[ $part == . ]] && continue
     path=${path:+$path/}$part
-    if [[ -L $DEST/$path ]] && ! seen "dir:$path"; then
+    if [[ -L $HOME/$path ]] && ! backup_seen "dir:$path"; then
       save dirlink "$path"
-      rm "$DEST/$path"; mkdir -p "$DEST/$path"
-      mark "dir:$path"
+      rm "$HOME/$path"; mkdir -p "$HOME/$path"
+      backup_mark "dir:$path"
     fi
   done
 }
@@ -49,7 +49,7 @@ fix_parents() {
 # modules are left alone). A throwaway state file avoids the running apply's lock.
 tmpstate=$(mktemp)
 CZ=({{ .chezmoi.executable | quote }} --source "$SRC" --config {{ .chezmoi.configFile | quote }} \
-  --destination "$DEST" --persistent-state "$tmpstate")
+  --destination "$HOME" --persistent-state "$tmpstate")
 managed=$("${CZ[@]}" managed --include=files,symlinks --path-style=relative) || {
   rm -f "$tmpstate"
   echo "rig: couldn't list managed files; stopping before anything is overwritten" >&2
@@ -59,18 +59,18 @@ managed=$("${CZ[@]}" managed --include=files,symlinks --path-style=relative) || 
 while IFS= read -r t; do
   [[ -z $t ]] && continue
   fix_parents "$t"
-  seen "$t" && continue
-  if [[ -L $DEST/$t && $(readlink "$DEST/$t") == "$SRC"/* ]]; then mark "$t"; continue; fi
+  backup_seen "$t" && continue
+  if [[ -L $HOME/$t && $(readlink "$HOME/$t") == "$SRC"/* ]]; then backup_mark "$t"; continue; fi
   # Already exactly what chezmoi writes (e.g. applied earlier with scripts
   # skipped)? Then it's ours, not something to back up.
-  if [[ -f $DEST/$t && ! -L $DEST/$t ]] && "${CZ[@]}" cat "$DEST/$t" 2>/dev/null | cmp -s - "$DEST/$t"; then
-    mark "$t"; continue
+  if [[ -f $HOME/$t && ! -L $HOME/$t ]] && "${CZ[@]}" cat "$HOME/$t" 2>/dev/null | cmp -s - "$HOME/$t"; then
+    backup_mark "$t"; continue
   fi
-  if [[ -e $DEST/$t || -L $DEST/$t ]]; then
+  if [[ -e $HOME/$t || -L $HOME/$t ]]; then
     save file "$t"
-    rm -rf "${DEST:?}/$t"
+    rm -rf "${HOME:?}/$t"
   fi
-  mark "$t"
+  backup_mark "$t"
 done <<<"$managed"
 rm -f "$tmpstate"
 
@@ -80,20 +80,20 @@ rm -f "$tmpstate"
 # first, so what rig doesn't set itself (a credential helper, aliases, url
 # rewrites) still applies.
 for t in .zshrc .zprofile .zlogin .zlogout .gitconfig .tmux.conf; do
-  seen "$t" && continue
-  if [[ -e $DEST/$t || -L $DEST/$t ]]; then
+  backup_seen "$t" && continue
+  if [[ -e $HOME/$t || -L $HOME/$t ]]; then
     save file "$t"
-    if [[ $t == .gitconfig ]]; then cp -L "$DEST/$t" "$STATE/gitconfig-before-rig" 2>/dev/null || true; fi
-    rm -rf "${DEST:?}/$t"
+    if [[ $t == .gitconfig ]]; then cp -L "$HOME/$t" "$RIG_STATE/gitconfig-before-rig" 2>/dev/null || true; fi
+    rm -rf "${HOME:?}/$t"
   fi
-  mark "$t"
+  backup_mark "$t"
 done
 
 # Say what moved and where it went: nothing of yours disappears silently.
 if ((${#MOVED[@]})); then
   echo "rig: moved aside (rig's versions are in their place now; rig uninstall puts yours back):"
   for t in "${MOVED[@]}"; do
-    echo "  ~/$t  ->  ${BK/#$DEST/\~}/$t"
+    echo "  ~/$t  ->  ${BK/#$HOME/\~}/$t"
     w=$(local_for "$t")
     if [[ -n ${w#*|} ]]; then echo "      ${w#*|}"
     elif [[ -n $w ]]; then echo "      what you want back from it goes in ${w%%|*}"; fi
