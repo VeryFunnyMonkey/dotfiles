@@ -39,12 +39,21 @@ map("n", "<leader>gg", function()
     col = math.floor((vim.o.columns - w) / 2), row = math.floor((vim.o.lines - h) / 2),
     style = "minimal",
   })
-  vim.fn.jobstart({ "lazygit" }, {
+  local job = vim.fn.jobstart({ "lazygit" }, {
     term = true,
     on_exit = function()
       if vim.api.nvim_win_is_valid(win) then vim.api.nvim_win_close(win, true) end
       if vim.api.nvim_buf_is_valid(buf) then vim.api.nvim_buf_delete(buf, { force = true }) end
       vim.cmd.checktime()
+    end,
+  })
+  -- Out of terminal mode (a click, a focus change), keys reach nvim, not
+  -- lazygit: q still closes it, and coming back to the float types into it.
+  map("n", "q", function() vim.fn.jobstop(job) end, { buffer = buf, desc = "Close lazygit" })
+  vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained" }, {
+    buffer = buf,
+    callback = function()
+      if vim.api.nvim_get_current_buf() == buf then vim.cmd.startinsert() end
     end,
   })
   vim.cmd.startinsert()
