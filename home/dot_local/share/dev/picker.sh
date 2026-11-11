@@ -130,7 +130,7 @@ cmd_ls() {
   local out query key line kind name path dir mark
   # marks whether the folders are loaded, so typing reloads only once
   mark=$(mktemp "${TMPDIR:-/tmp}/dev-pick.XXXXXX"); rm -f "$mark"
-  trap 'rm -f "$mark"' RETURN
+  trap 'rm -f "$mark"; trap - RETURN' RETURN   # once: a RETURN trap outlives the function
   local self; self="bash $(printf %q "$0")"
   local on_change="if [ -n \"\$FZF_QUERY\" ]; then [ -e $mark ] || { : > $mark; echo \"reload($self _items --all)\"; }; else rm -f $mark; echo \"reload($self _items)\"; fi"
   while :; do
