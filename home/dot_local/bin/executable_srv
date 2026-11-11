@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The settings and colours below are used by the parts in share/srv/.
+# The settings below are used by the parts in share/srv/.
 # shellcheck disable=SC2034
 # srv: mount your servers' home folders at ~/Servers/<host>, over SSH.
 # rclone does the mounting: `rclone mount` (FUSE, built into Linux) on Linux,
@@ -24,22 +24,22 @@ for _b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/
 done
 unset _b
 
-if [[ -t 1 ]]; then B=$'\e[1m' DIM=$'\e[2m' G=$'\e[32m' Y=$'\e[33m' R=$'\e[31m' N=$'\e[0m'; else B='' DIM='' G='' Y='' R='' N=''; fi
-ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
-warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*" >&2; }
-bad()  { printf '  %s✗%s %s\n' "$R" "$N" "$*"; }
-die()  { printf '%ssrv:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
-have() { command -v "$1" >/dev/null 2>&1; }
 darwin() { [[ $(uname) == Darwin ]]; }
 
-# The parts live in share/srv (next to this file, so it also runs from the repo):
-# hosts, mounts, edit (add/rm), status, picker, connect (ssh/dev), import, doctor.
+# Output, colours and the picker: rig's lib/base.sh, shared by rig, dev, srv
+# and desk. The parts live in share/srv (next to this file, so it also runs
+# from the repo): hosts, mounts, edit (add/rm), status, picker, connect
+# (ssh/dev), import, doctor.
+TOOL=srv
+_share="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share" 2>/dev/null && pwd)" || _share="${XDG_DATA_HOME:-$HOME/.local/share}"
+# shellcheck source=/dev/null
+source "$_share/rig/lib/base.sh"
 SRV_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share/srv" 2>/dev/null && pwd)" || SRV_LIB="${XDG_DATA_HOME:-$HOME/.local/share}/srv"
 for _f in "$SRV_LIB"/*.sh; do
   # shellcheck source=/dev/null
   source "$_f"
 done
-unset _f
+unset _f _share
 
 main() {
   local cmd=${1:-}; (($#)) && shift

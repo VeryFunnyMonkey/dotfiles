@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The settings and colours below are used by the parts in share/dev/.
+# The settings below are used by the parts in share/dev/.
 # shellcheck disable=SC2034
 # dev: tmux workspaces. A workspace is a `.dev` file (in the repo, or kept on
 # this machine in ~/.config/dev/projects/); `dev` builds a tmux session from it
@@ -14,21 +14,21 @@ TEMPLATES="$DEV_CFG/templates"
 AGENT_FILE="$DEV_CFG/agent"
 PATH="$HOME/.local/bin:$PATH"
 
-if [[ -t 1 ]]; then B=$'\e[1m' DIM=$'\e[2m' G=$'\e[32m' Y=$'\e[33m' R=$'\e[31m' N=$'\e[0m'; else B='' DIM='' G='' Y='' R='' N=''; fi
-ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
-warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*" >&2; }
-die()  { printf '%sdev:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
-have() { command -v "$1" >/dev/null 2>&1; }
+# Output, colours and the picker: rig's lib/base.sh, shared by rig, dev, srv
+# and desk. The parts live in share/dev (next to this file, so it also runs
+# from the repo): projects, agent, build (sessions), workspace (init/edit),
+# picker, worktrees, help.
+TOOL=dev
+_share="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share" 2>/dev/null && pwd)" || _share="${XDG_DATA_HOME:-$HOME/.local/share}"
+# shellcheck source=/dev/null
+source "$_share/rig/lib/base.sh"
 have tmux || die "tmux isn't installed"
-
-# The parts live in share/dev (next to this file, so it also runs from the repo):
-# projects, agent, build (sessions), workspace (init/edit), picker, worktrees, help.
 DEV_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share/dev" 2>/dev/null && pwd)" || DEV_LIB="${XDG_DATA_HOME:-$HOME/.local/share}/dev"
 for _f in "$DEV_LIB"/*.sh; do
   # shellcheck source=/dev/null
   source "$_f"
 done
-unset _f
+unset _f _share
 
 main() {
   local args=()

@@ -1,8 +1,6 @@
 # shellcheck shell=bash
 # lib/sys.sh: small system helpers (commands, time, sudo, lists).
 
-have() { command -v "$1" >/dev/null 2>&1; }
-
 now() { date +%Y-%m-%dT%H:%M:%S; }
 
 # ------------------------------------------------------------- packages -------

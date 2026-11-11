@@ -1,5 +1,6 @@
 # One theme everywhere: gruvbox dark. Values feed the small *.tmpl fragments
-# (tmux/theme.conf, zsh/theme.zsh, git/theme.gitconfig). nvim uses gruvbox.nvim.
+# (tmux/theme.conf, zsh/theme.zsh, git/theme.gitconfig, lazygit/theme.yml,
+# rig/theme.sh for rig, dev, srv and desk; fzf's colours: .chezmoitemplates/fzf-colors). nvim uses gruvbox.nvim.
 theme:
   name: gruvbox-dark
   bat: gruvbox-dark

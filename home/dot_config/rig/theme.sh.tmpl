@@ -1,0 +1,7 @@
+# shellcheck shell=bash disable=SC2034
+# Rendered from .chezmoidata/theme.yaml: the theme for rig, dev, srv and desk
+# (loaded by rig's lib/base.sh). Edit the theme there, then `chezmoi apply`.
+{{- range $n, $v := .theme }}{{ if hasPrefix "#" (toString $v) }}
+THEME_{{ upper $n }}='{{ $v }}'
+{{- end }}{{ end }}
+FZF_COLORS='{{ includeTemplate "fzf-colors" . }}'

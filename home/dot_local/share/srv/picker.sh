@@ -13,9 +13,11 @@ cmd_pick() {
   done <"$HOSTS"
   if [[ -z $lines ]]; then lines="+"$'\t'"(add a host)"$'\t'$'\t'$'\n'; fi
   local out key line mark
-  out=$(printf '%s' "$lines" | fzf --ansi --delimiter='\t' --no-sort --prompt='server> ' \
-        --header='enter mount/unmount · ctrl-d dev workspace · ctrl-s ssh · ctrl-a add · ctrl-e edit · ctrl-x unmount' \
-        --preview="$0 _preview {2}" --preview-window=right,45% \
+  out=$(printf '%s' "$lines" | pick --ansi --delimiter='\t' --no-sort --prompt='server> ' \
+        --header=$'enter mount/unmount · ^d dev workspace · ^s ssh\n^a add · ^e edit · ^x unmount · ^/ preview' \
+        --header-first \
+        --preview="$0 _preview {2}" --preview-window='right,45%,border-left,wrap,noinfo' \
+        --bind "start,resize:transform:$PREVIEW_FIT" --bind 'ctrl-/:toggle-preview' \
         --expect=ctrl-d,ctrl-s,ctrl-a,ctrl-e,ctrl-x) || return 0
   key=$(head -n1 <<<"$out"); line=$(sed -n 2p <<<"$out")
   IFS=$'\t' read -r mark n _ <<<"$line"

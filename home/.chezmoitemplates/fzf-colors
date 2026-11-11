@@ -1,0 +1,1 @@
+bg+:{{ .theme.bg1 }},bg:-1,spinner:{{ .theme.aqua }},hl:{{ .theme.blue }},fg:{{ .theme.fg }},header:{{ .theme.blue }},info:{{ .theme.yellow }},pointer:{{ .theme.aqua }},marker:{{ .theme.aqua }},fg+:{{ .theme.fg }},prompt:{{ .theme.yellow }},hl+:{{ .theme.blue }},border:{{ .theme.bg2 }}

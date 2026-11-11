@@ -6,7 +6,13 @@ set -euo pipefail
 SHOTS="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
 NIGHT_TEMP=4000
 
-have() { command -v "$1" >/dev/null 2>&1; }
+# Output and `have`: rig's lib/base.sh, shared by rig, dev, srv and desk.
+# shellcheck disable=SC2034  # die's prefix, read by lib/base.sh
+TOOL=desk
+_share="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share" 2>/dev/null && pwd)" || _share="${XDG_DATA_HOME:-$HOME/.local/share}"
+# shellcheck source=/dev/null
+source "$_share/rig/lib/base.sh"
+unset _share
 notify() { if have notify-send; then notify-send -a desk "$@"; fi; }
 menu() { fuzzel --dmenu "$@"; }
 

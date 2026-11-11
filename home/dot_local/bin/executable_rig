@@ -5,7 +5,7 @@
 # This file only sets up the environment, loads rig's parts and dispatches.
 # The parts live in share/rig (next to this file, so rig also runs straight
 # from the repo):
-#   lib/       building blocks: output and prompts, machine state, the ledger,
+#   lib/       building blocks: output (base, also loaded by dev, srv, desk), prompts, machine state, the ledger,
 #              systemd units, the catalog, applying a selection, the module registry
 #   pkg/       packages: one set of functions per manager and per download; sync, drift
 #   modules/   one feature each (shell, git, nvim, containers, ...), see lib/modules.sh
@@ -24,11 +24,13 @@ if ! command -v brew >/dev/null 2>&1; then
 fi
 PATH="$HOME/.local/bin:$PATH"
 
+# shellcheck disable=SC2034  # die's prefix, read by lib/base.sh
+TOOL=rig
 RIG_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share/rig" 2>/dev/null && pwd)" || RIG_LIB="${XDG_DATA_HOME:-$HOME/.local/share}/rig"
-[[ -r $RIG_LIB/lib/sys.sh ]] || { echo "rig: its libraries are missing ($RIG_LIB); run chezmoi apply" >&2; exit 1; }
+[[ -r $RIG_LIB/lib/base.sh ]] || { echo "rig: its libraries are missing ($RIG_LIB); run chezmoi apply" >&2; exit 1; }
 
 # lib/ in dependency order, then everything else (each file only defines functions)
-for _f in "$RIG_LIB"/lib/{sys,ui,machine,ledger,units,windows,catalog,apply,modules}.sh \
+for _f in "$RIG_LIB"/lib/{base,sys,ui,machine,ledger,units,windows,catalog,apply,modules}.sh \
           "$RIG_LIB"/pkg/*.sh "$RIG_LIB"/modules/*.sh "$RIG_LIB"/modules/*/*.sh "$RIG_LIB"/commands/*.sh; do
   # shellcheck source=/dev/null
   [[ -r $_f ]] && source "$_f"

@@ -2,26 +2,7 @@
 # lib/ui.sh: everything rig prints or asks: messages, confirmations, the
 # terminal prompts used by walkthroughs, gum menu helpers, doctor checks.
 
-# ------------------------------------------------------------- output -------
-# shared by every part of rig
-# shellcheck disable=SC2034
-if [[ -t 1 ]]; then
-  B=$'\e[1m' DIM=$'\e[2m' R=$'\e[31m' G=$'\e[32m' Y=$'\e[33m' BL=$'\e[34m' N=$'\e[0m'
-else
-  B='' DIM='' R='' G='' Y='' BL='' N=''
-fi
-
-say()  { printf '%s\n' "$*"; }
-
-info() { printf '%s==>%s %s\n' "$BL" "$N" "$*"; }
-
-ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
-
-warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*" >&2; }
-
-bad()  { printf '  %s✗%s %s\n' "$R" "$N" "$*"; }
-
-die()  { printf '%srig:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+# Output (say, info, ok, warn, bad, die) and colours are in lib/base.sh.
 
 # ------------------------------------------------------------- asking -------
 
@@ -122,7 +103,8 @@ pick_many() { # header height ticked-rows(one per line) rows...
     if grep -qxF -- "${rows[i]}" <<<"$pre"; then tick[i]=1; else tick[i]=0; fi
   done
   ((height < n)) || height=$n
-  local hi=$'\e[38;5;212m' dim=$'\e[2m' off=$'\e[0m'
+  local hi dim=$'\e[2m' off=$'\e[0m'
+  hi=$(fg_hex "${THEME_AQUA:-}" $'\e[38;5;212m')
   pick_draw() {
     local out='' r p
     if ((drawn)); then out+=$'\e['"${drawn}F"; fi

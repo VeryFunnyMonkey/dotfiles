@@ -116,12 +116,6 @@ cmd_preview() { # kind name path
   fi
 }
 left_pane() { local a; a=$(agent_cmd 2>/dev/null || true); if [[ -n $a ]]; then printf 'your agent (%s)' "$a"; else printf 'a shell (no agent set: dev agent set <cmd>)'; fi; }
-PICK_COLORS='bg+:#3c3836,bg:-1,hl:#83a598,fg:#ebdbb2,header:#a89984,info:#fabd2f,pointer:#8ec07c,prompt:#fabd2f,hl+:#83a598,border:#504945'
-# The preview fits the space: beside the list when wide, below it when tall
-# enough, hidden when small (ctrl-/ toggles it). Re-checked on every resize.
-PREVIEW_FIT='if [ "$FZF_COLUMNS" -ge 100 ]; then echo "change-preview-window:right,45%,border-left,wrap,noinfo"; elif [ "$FZF_LINES" -ge 24 ]; then echo "change-preview-window:down,40%,border-top,wrap,noinfo"; else echo "change-preview-window:hidden"; fi'
-# options spelled out, so it looks the same in a tmux popup as in a shell
-pick() { fzf --height=100% --layout=reverse --border=none --info=hidden --no-scrollbar --gutter=' ' --color="$PICK_COLORS" "$@"; }
 
 # A typed path (~/x, /x, ./x) that's a folder: open exactly that folder.
 typed_dir() { # query -> absolute folder, or nothing
