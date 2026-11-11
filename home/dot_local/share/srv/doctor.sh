@@ -4,7 +4,7 @@
 cmd_doctor() {
   local fails=0
   if have rclone; then ok "rclone $(rclone version 2>/dev/null | head -n1 | awk '{print $2}')"; else bad "rclone missing (rig sync)"; fails=1; fi
-  if ! darwin; then
+  if ! is_darwin; then
     if have fusermount3 || have fusermount; then ok "FUSE"; else bad "fuse3 missing (rig sync)"; fails=1; fi
   fi
   local m; m=$(mounted_hosts | tr '\n' ' ')

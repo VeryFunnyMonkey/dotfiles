@@ -16,14 +16,6 @@ set -euo pipefail
 export HOMEBREW_NO_ASK=1
 USER=${USER:-$(id -un)}
 
-# Homebrew may not be on PATH yet (fresh shell right after it was installed).
-if ! command -v brew >/dev/null 2>&1; then
-  for _b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
-    [[ -x $_b ]] && { eval "$("$_b" shellenv)"; break; }
-  done
-fi
-PATH="$HOME/.local/bin:$PATH"
-
 # shellcheck disable=SC2034  # die's prefix, read by lib/base.sh
 TOOL=rig
 RIG_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share/rig" 2>/dev/null && pwd)" || RIG_LIB="${XDG_DATA_HOME:-$HOME/.local/share}/rig"
@@ -35,7 +27,11 @@ for _f in "$RIG_LIB"/lib/{base,sys,ui,machine,ledger,units,windows,catalog,apply
   # shellcheck source=/dev/null
   [[ -r $_f ]] && source "$_f"
 done
-unset _f _b
+unset _f
+# Homebrew may not be on PATH yet (a fresh shell right after it was installed);
+# your own ~/.local/bin goes first.
+brew_env
+PATH="$HOME/.local/bin:$PATH"
 
 main() {
   local cmd=${1:-help}; (($#)) && shift

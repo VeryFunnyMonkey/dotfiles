@@ -4,10 +4,7 @@
 
 # The toolchains Mason's servers need (Node for npm ones, Go, Rust), on PATH.
 nvim_env() {
-  local b
-  for b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
-    if [[ -x $b ]]; then eval "$("$b" shellenv)"; break; fi
-  done
+  brew_env
   with_node
   export GOPATH="$DATA_HOME/go" RUSTUP_HOME="$DATA_HOME/rustup" CARGO_HOME="$DATA_HOME/cargo"
   PATH="$CARGO_HOME/bin:$GOPATH/bin:$HOME/.local/bin:$PATH"

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
-# lib/base.sh: what every tool here starts from (rig, dev, srv, desk): output,
-# `have`, the theme's colours and the fzf picker. A tool sets TOOL (die's
-# prefix) before loading it.
+# lib/base.sh: what every tool here starts from (rig, dev, srv, desk, the
+# bootstrap): output, `have`, `is_darwin`, Homebrew on PATH, the theme's
+# colours and the fzf picker. A tool sets TOOL (die's prefix) before loading it.
 # shellcheck disable=SC2034
 
 # ------------------------------------------------------------- output -------
@@ -24,6 +24,19 @@ bad()  { printf '  %s✗%s %s\n' "$R" "$N" "$*"; }
 die()  { printf '%s%s:%s %s\n' "$R" "${TOOL:-rig}" "$N" "$*" >&2; exit 1; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
+
+is_darwin() { [[ $(uname) == Darwin ]]; }
+
+# Homebrew on PATH, when it's installed but this shell doesn't have it yet (a
+# fresh install, a script started without your shell's setup). Nothing when
+# there's no Homebrew; check with `have brew`.
+brew_env() {
+  local b
+  if have brew; then return 0; fi
+  for b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+    if [[ -x $b ]]; then eval "$("$b" shellenv)"; return 0; fi
+  done
+}
 
 # ------------------------------------------------------------- theme --------
 # THEME_<COLOUR> ('#rrggbb') and FZF_COLORS, rendered from theme.yaml. Not

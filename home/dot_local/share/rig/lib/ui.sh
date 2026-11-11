@@ -64,7 +64,7 @@ copy_clipboard() {
 
 open_url() {
   if have wslview; then wslview "$1"
-  elif have open && [[ $(uname) == Darwin ]]; then open "$1"
+  elif have open && is_darwin; then open "$1"
   elif have xdg-open; then xdg-open "$1" >/dev/null 2>&1
   else return 1; fi
 }

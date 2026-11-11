@@ -31,7 +31,7 @@ ensure_ssh_include() {
       echo "# Written by rig. Keys unlock once per login, then the agent holds them."
       echo "Host *"
       echo "  AddKeysToAgent yes"
-      if [[ $(uname) == Darwin ]]; then echo "  IgnoreUnknown UseKeychain"; echo "  UseKeychain yes"; fi
+      if is_darwin; then echo "  IgnoreUnknown UseKeychain"; echo "  UseKeychain yes"; fi
     } >"$SSH_DIR/config.d/00-rig"
     chmod 600 "$SSH_DIR/config.d/00-rig"
   fi

@@ -9,8 +9,6 @@ sudo_() { if [[ $EUID -eq 0 ]]; then "$@"; else sudo "$@"; fi; }
 # tac isn't on macOS; tail -r is BSD's
 tac_() { if have tac; then tac "$@"; else tail -r "$@"; fi; }
 
-is_darwin() { [[ $(uname) == Darwin ]]; }
-
 # Space-separated lists (selections, ids).
 
 in_list() { [[ " $2 " == *" $1 "* ]]; }

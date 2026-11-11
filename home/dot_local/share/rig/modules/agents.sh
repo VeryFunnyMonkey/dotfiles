@@ -13,7 +13,7 @@ agent_npm_pkg() { case $1 in copilot) echo @github/copilot ;; codex) echo @opena
 
 # How each agent is installed on this machine
 agent_method() {
-  local darwin=0; [[ $(uname) == Darwin ]] && darwin=1
+  local darwin=0; if is_darwin; then darwin=1; fi
   case $1 in
     claude) echo script ;;                        # native installer; updates itself
     copilot) ((darwin)) && echo "brew copilot-cli" || echo npm ;;

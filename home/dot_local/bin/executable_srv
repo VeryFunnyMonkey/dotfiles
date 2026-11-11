@@ -13,27 +13,24 @@ HOSTS="$SRV_CFG/hosts"
 MNT_ROOT="$HOME/Servers"
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/srv"
 LOGS="${XDG_STATE_HOME:-$HOME/.local/state}/srv"
-# What's mounted lives in a runtime folder, which is cleared at logout/reboot,
-# exactly when the mounts go away too.
-if [[ $(uname) == Darwin ]]; then RUNTIME="${TMPDIR:-/tmp}/srv"
-else RUNTIME="${XDG_RUNTIME_DIR:-/tmp/srv-$(id -u)}/srv"; fi
-MOUNTED="$RUNTIME/mounted"
-PATH="$HOME/.local/bin:$PATH"
-for _b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
-  if [[ -x $_b ]] && ! command -v brew >/dev/null 2>&1; then eval "$("$_b" shellenv)"; fi
-done
-unset _b
 
-darwin() { [[ $(uname) == Darwin ]]; }
-
-# Output, colours and the picker: rig's lib/base.sh, shared by rig, dev, srv
-# and desk. The parts live in share/srv (next to this file, so it also runs
-# from the repo): hosts, mounts, edit (add/rm), status, picker, connect
-# (ssh/dev), import, doctor.
+# Output, colours, the picker, is_darwin and brew_env: rig's lib/base.sh,
+# shared by rig, dev, srv and desk. The parts live in share/srv (next to this
+# file, so it also runs from the repo): hosts, mounts, edit (add/rm), status,
+# picker, connect (ssh/dev), import, doctor.
 TOOL=srv
 _share="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share" 2>/dev/null && pwd)" || _share="${XDG_DATA_HOME:-$HOME/.local/share}"
 # shellcheck source=/dev/null
 source "$_share/rig/lib/base.sh"
+brew_env
+PATH="$HOME/.local/bin:$PATH"
+
+# What's mounted lives in a runtime folder, which is cleared at logout/reboot,
+# exactly when the mounts go away too.
+if is_darwin; then RUNTIME="${TMPDIR:-/tmp}/srv"
+else RUNTIME="${XDG_RUNTIME_DIR:-/tmp/srv-$(id -u)}/srv"; fi
+MOUNTED="$RUNTIME/mounted"
+
 SRV_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../share/srv" 2>/dev/null && pwd)" || SRV_LIB="${XDG_DATA_HOME:-$HOME/.local/share}/srv"
 for _f in "$SRV_LIB"/*.sh; do
   # shellcheck source=/dev/null

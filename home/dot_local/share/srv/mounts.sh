@@ -3,7 +3,7 @@
 
 mount_point() { printf '%s/%s' "$MNT_ROOT" "$1"; }
 is_mounted() { # path
-  if darwin; then mount | grep -q " on $1 ("
+  if is_darwin; then mount | grep -q " on $1 ("
   else grep -q " $1 fuse" /proc/mounts 2>/dev/null; fi
 }
 state_add() { mkdir -p "$RUNTIME"; touch "$MOUNTED"; grep -qxF "$1" "$MOUNTED" || printf '%s\n' "$1" >>"$MOUNTED"; }
@@ -53,7 +53,7 @@ cmd_mount() {
     --cache-dir "$CACHE/$n" --log-file "$LOGS/$n.log" --log-level NOTICE
     --daemon
   )
-  if darwin; then
+  if is_darwin; then
     rclone nfsmount "${common[@]}" || die "mount failed (see ${LOGS/#$HOME/~}/$n.log)"
   else
     rclone mount "${common[@]}" --volname "$n" || die "mount failed (see ${LOGS/#$HOME/~}/$n.log)"
@@ -65,11 +65,11 @@ cmd_mount() {
 }
 
 unmount_once() {
-  if darwin; then umount "$1" 2>/dev/null
+  if is_darwin; then umount "$1" 2>/dev/null
   else fusermount3 -u "$1" 2>/dev/null || fusermount -u "$1" 2>/dev/null; fi
 }
 unmount_force() {
-  if darwin; then umount -f "$1" 2>/dev/null || diskutil unmount force "$1" >/dev/null 2>&1 || true
+  if is_darwin; then umount -f "$1" 2>/dev/null || diskutil unmount force "$1" >/dev/null 2>&1 || true
   else fusermount3 -uz "$1" 2>/dev/null || fusermount -uz "$1" 2>/dev/null || true; fi
 }
 users_of() { # what has the mount open

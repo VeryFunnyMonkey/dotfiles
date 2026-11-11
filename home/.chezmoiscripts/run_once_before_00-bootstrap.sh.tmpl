@@ -5,31 +5,36 @@
 set -euo pipefail
 export HOMEBREW_NO_ASK=1   # brew's own [y/n] (rig setup already asked)
 {{- $platform := includeTemplate "platform" . | trim }}
-STATE="${XDG_STATE_HOME:-$HOME/.local/state}/rig"
-mkdir -p "$STATE"; touch "$STATE/system.log"
-sudo_() { if [[ $EUID -eq 0 ]]; then "$@"; else sudo "$@"; fi; }
-have() { command -v "$1" >/dev/null 2>&1; }
-record() { printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$(date +%Y-%m-%dT%H:%M:%S)" >>"$STATE/system.log"; }
-touch "$STATE/packages.log"
+# rig's own building blocks, straight from the repo (rig isn't applied yet):
+# output, `have` and Homebrew on PATH (base), sudo_ (sys), where rig keeps its
+# state (machine) and the ledger, so what this installs is recorded exactly
+# the way rig reads it back.
+# shellcheck disable=SC2034  # die's prefix, read by lib/base.sh
+TOOL=rig
+for _f in base sys machine ledger; do
+  # shellcheck source=/dev/null
+  source {{ joinPath .chezmoi.sourceDir "dot_local/share/rig/lib" | quote }}/$_f.sh
+done
+unset _f
+ledger_init
 # Note each prerequisite in the ledger (packages.log) before installing it, so
 # `rig uninstall --packages` knows which ones were already there.
 note_pkgs() { # manager present-check-cmd pkgs...
-  local mgr=$1 check=$2 p; shift 2
+  local mgr=$1 check=$2 p st; shift 2
   for p in "$@"; do
-    awk -F'\t' -v m="$mgr" -v n="$p" '$1==m && $2==n {f=1} END {exit !f}' "$STATE/packages.log" && continue
     if $check "$p" >/dev/null 2>&1; then st=preexisting; else st=installed; fi
-    printf '%s\t%s\t%s\t%s\t%s\n' "$mgr" "$p" "$p" "$st" "$(date +%Y-%m-%dT%H:%M:%S)" >>"$STATE/packages.log"
+    ledger_pkg_record "$mgr" "$p" "$p" "$st"   # only the first time it's seen
   done
 }
 dpkg_has() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }
 
 install_brew() {
-  for b in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
-    [[ -x $b ]] && return 0
-  done
+  brew_env
+  if have brew; then return 0; fi
   echo "==> installing Homebrew"
   NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  record brew-installed homebrew -
+  ledger_record brew-installed homebrew -
+  brew_env
 }
 
 {{- if eq $platform "arch" }}
@@ -66,7 +71,6 @@ install_brew
 {{- else if eq $platform "darwin" }}
 install_brew
 # rig needs bash 4 or newer; macOS ships 3.2
-eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
 note_pkgs brew "brew list --formula" bash
 brew list --formula bash >/dev/null 2>&1 || brew install -q bash
 {{- else }}
