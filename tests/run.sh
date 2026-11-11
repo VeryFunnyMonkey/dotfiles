@@ -35,7 +35,7 @@ esac
 
 if [[ $needs == *server* ]]; then
   "$ctr" run -d --name "srvbox-$$" --hostname srvbox --network-alias srvbox --network "$net" "$(fq archlinux:latest)" sleep infinity >/dev/null
-  "$ctr" exec "srvbox-$$" bash -c 'pacman -Sy --noconfirm --needed openssh >/dev/null 2>&1 && ssh-keygen -A >/dev/null && useradd -m -s /bin/bash debian && mkdir -p /home/debian/.ssh && /usr/bin/sshd'
+  "$ctr" exec "srvbox-$$" bash -c 'pacman -Syu --noconfirm --needed openssh >/dev/null 2>&1 && ssh-keygen -A >/dev/null && useradd -m -s /bin/bash debian && mkdir -p /home/debian/.ssh && /usr/bin/sshd'
   "$ctr" exec -u tester "$c" bash -c 'mkdir -p ~/.ssh && ssh-keygen -q -t ed25519 -N "" -f ~/.ssh/id_ed25519'
   "$ctr" exec -u tester "$c" cat /home/tester/.ssh/id_ed25519.pub | "$ctr" exec -i "srvbox-$$" bash -c 'cat >> /home/debian/.ssh/authorized_keys && chown -R debian /home/debian/.ssh && chmod 600 /home/debian/.ssh/authorized_keys'
 fi
